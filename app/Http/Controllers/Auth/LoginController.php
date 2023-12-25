@@ -4,10 +4,10 @@ namespace App\Http\Controllers\Auth;
 
 use App\Http\Controllers\Controller;
 use App\Http\Requests\LoginRequest;
-use App\Models\User;
 use App\Services\AuthService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Log; // Import the Log facade
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Carbon;
 
@@ -36,15 +36,18 @@ class LoginController extends Controller
         }
 
         try {
-            // Query the "users" table to find a user with the matching email address
-            $user = User::where('email', $credentials['email'])->first();
+            $user = $this->authService->validateUserCredentials($credentials['email'], $credentials['password']);
 
             if (!$user || !Hash::check($credentials['password'], $user->password)) {
+                // Log the failed login attempt
+                Log::warning('Failed login attempt for email: ' . $credentials['email']);
+
+                // Return a generic error response
                 return response()->json(['message' => 'Invalid credentials'], 401);
             }
 
             // Calculate session expiry time
-            $sessionExpires = $keepSession ? Carbon::now()->addDays(90) : Carbon::now()->addHours(24);
+            $sessionExpires = $keepSession ? now()->addDays(90) : now()->addHours(24);
 
             // Generate a new "session_token"
             $sessionToken = $this->authService->generateSessionToken($user);
@@ -53,7 +56,7 @@ class LoginController extends Controller
             $user->update([
                 'session_token' => $sessionToken,
                 'session_expires' => $sessionExpires,
-                'keep_session' => $keepSession, // This line is unnecessary as 'keep_session' is not a field in the users table
+                // Removed the 'keep_session' field update as it is not a field in the users table
             ]);
 
             // Prepare the response data, ensuring sensitive information is not included
@@ -65,6 +68,9 @@ class LoginController extends Controller
 
             return response()->json($responseData);
         } catch (\Exception $e) {
+            // Log the exception
+            Log::error('Login exception: ' . $e->getMessage());
+
             return response()->json(['message' => 'Authentication failed', 'error' => $e->getMessage()], 500);
         }
     }
