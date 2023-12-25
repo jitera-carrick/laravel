@@ -58,7 +58,8 @@ Route::post('/password/email', function (Request $request) {
     });
 
     return response()->json([
+        'message' => 'Password reset email has been sent.',
         'reset_token' => $resetToken,
-        'expires_at' => $expiresAt,
+        'expires_at' => $expiresAt->toDateTimeString(),
     ]);
 })->middleware('throttle:6,1');
