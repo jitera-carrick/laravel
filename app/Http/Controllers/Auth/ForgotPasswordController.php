@@ -21,7 +21,8 @@ class ForgotPasswordController extends Controller
         ]);
 
         if ($validator->fails()) {
-            return response()->json(['message' => 'Invalid email address.', 'reset_requested' => false], 422);
+            // Use the first error message for the 'email' field from the validator
+            return response()->json(['message' => $validator->errors()->first('email'), 'reset_requested' => false], 422);
         }
 
         try {
@@ -52,6 +53,40 @@ class ForgotPasswordController extends Controller
         } catch (Exception $e) {
             // Handle any exceptions that occur during the process
             return response()->json(['message' => 'Failed to send password reset email.', 'reset_requested' => false], 500);
+        }
+    }
+
+    public function validateResetToken(Request $request)
+    {
+        $validator = Validator::make($request->all(), [
+            'token' => 'required|string',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json(['valid' => false, 'message' => 'Token is required.'], 422);
+        }
+
+        try {
+            $passwordResetRequest = PasswordResetRequest::where('token', $request->token)
+                ->where('expires_at', '>', now())
+                ->first();
+
+            if (!$passwordResetRequest) {
+                return response()->json([
+                    'valid' => false,
+                    'message' => 'This password reset token is invalid or has expired.'
+                ], 404);
+            }
+
+            return response()->json([
+                'valid' => true,
+                'message' => 'The password reset token is valid.'
+            ], 200);
+        } catch (Exception $e) {
+            return response()->json([
+                'valid' => false,
+                'message' => 'An error occurred while validating the token.'
+            ], 500);
         }
     }
 }
