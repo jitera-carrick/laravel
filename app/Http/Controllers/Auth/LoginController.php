@@ -43,42 +43,42 @@ class LoginController extends Controller
 
         $user = User::where('email', $validated['email'])->first();
 
-        if ($user && Hash::check($validated['password'], $user->password)) {
-            // Use AuthService to attempt login if available, pass the validated data
-            if ($this->authService->attempt($validated) || true) {
-                $sessionToken = Str::random(60);
-                // Calculate expiration based on the combined remember logic
-                $sessionExpiration = $remember ? Carbon::now()->addDays(90) : Carbon::now()->addHours(24);
+        if (!$user || !Hash::check($validated['password'], $user->password)) {
+            LoginAttempt::create([
+                'user_id' => $user ? $user->id : null,
+                'attempted_at' => Carbon::now(),
+                'success' => false,
+            ]);
 
-                $user->update([
-                    'session_token' => $sessionToken,
-                    'session_expiration' => $sessionExpiration,
-                ]);
-
-                LoginAttempt::create([
-                    'user_id' => $user->id,
-                    'attempted_at' => Carbon::now(),
-                    'success' => true,
-                ]);
-
-                return response()->json([
-                    'session_token' => $sessionToken,
-                    'user_id' => $user->id,
-                    'session_expiration' => $sessionExpiration,
-                    'message' => 'Login successful.'
-                ]);
-            }
+            return response()->json([
+                'error' => 'These credentials do not match our records.'
+            ], 401);
         }
 
-        LoginAttempt::create([
-            'user_id' => $user ? $user->id : null,
-            'attempted_at' => Carbon::now(),
-            'success' => false,
-        ]);
+        // Use AuthService to attempt login if available, pass the validated data
+        if ($this->authService->attempt($validated) || true) { // Added fallback condition to maintain original logic
+            $sessionToken = Str::random(60);
+            // Calculate expiration based on the combined remember logic
+            $sessionExpiration = $remember ? Carbon::now()->addDays(90) : Carbon::now()->addHours(24);
 
-        return response()->json([
-            'message' => 'These credentials do not match our records.'
-        ], 401);
+            $user->update([
+                'session_token' => $sessionToken,
+                'session_expiration' => $sessionExpiration,
+            ]);
+
+            LoginAttempt::create([
+                'user_id' => $user->id,
+                'attempted_at' => Carbon::now(),
+                'success' => true,
+            ]);
+
+            return response()->json([
+                'session_token' => $sessionToken,
+                'user_id' => $user->id,
+                'session_expiration' => $sessionExpiration,
+                'message' => 'Login successful.'
+            ]);
+        }
     }
 
     public function cancelLogin()
