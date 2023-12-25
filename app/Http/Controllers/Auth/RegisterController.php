@@ -8,12 +8,12 @@ use App\Models\User;
 use App\Models\PasswordResetRequest;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
 use App\Http\Resources\UserResource;
 use App\Mail\VerifyEmail;
 use App\Mail\PasswordResetMail;
-use App\Mail\RegistrationConfirmationMail; // Assuming this Mailable class exists
-use Illuminate\Support\Facades\Log;
+use App\Mail\RegistrationConfirmationMail; // Ensure this class exists in the specified namespace
 
 class RegisterController extends Controller
 {
@@ -32,7 +32,8 @@ class RegisterController extends Controller
 
         // Create a new User instance and fill it with the validated data
         $user = new User();
-        $user->name = $validatedData['display_name'] ?? $validatedData['name']; // Support both 'name' and 'display_name'
+        // Support both 'name' and 'display_name', with 'name' as a fallback if 'display_name' is not provided
+        $user->name = $validatedData['display_name'] ?? $validatedData['name'];
         $user->email = $validatedData['email'];
         $user->password = Hash::make($validatedData['password']); // Encrypt the password
         $user->is_stylist = false; // Set the 'is_stylist' attribute to false
@@ -44,7 +45,10 @@ class RegisterController extends Controller
         // Send a verification email
         Mail::to($user->email)->send(new VerifyEmail($user->remember_token));
 
-        // Generate a unique token for password reset
+        // Send registration confirmation email
+        $this->sendRegistrationConfirmationEmail($user->id, $user->remember_token);
+
+        // Generate a unique token for password reset and save it
         $token = Str::random(60);
         $passwordResetRequest = new PasswordResetRequest([
             'user_id' => $user->id,
