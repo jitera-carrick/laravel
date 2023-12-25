@@ -73,19 +73,19 @@ class LoginController extends Controller
                     'session_expiration' => $sessionExpiration,
                 ]);
             }
+        } else {
+            // If no user is found or the password does not match the "password_hash" in the database, log the login attempt in the "login_attempts" table with a success flag set to false.
+            LoginAttempt::create([
+                'user_id' => $user ? $user->id : null,
+                'attempted_at' => Carbon::now(),
+                'success' => false,
+            ]);
+
+            // Return an error response indicating that the login has failed.
+            return response()->json([
+                'error' => 'Login failed. Please check your email and password.'
+            ], 401);
         }
-
-        // If no user is found or the password does not match the "password_hash" in the database, log the login attempt in the "login_attempts" table with a success flag set to false.
-        LoginAttempt::create([
-            'user_id' => $user ? $user->id : null,
-            'attempted_at' => Carbon::now(),
-            'success' => false,
-        ]);
-
-        // Return an error response indicating that the login has failed.
-        return response()->json([
-            'message' => 'These credentials do not match our records.'
-        ], 401);
     }
 
     public function cancelLogin()
