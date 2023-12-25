@@ -25,6 +25,7 @@ class LoginAttempt extends Model
         'attempted_at',
         'success',
         'user_id',
+        'status', // New column
     ];
 
     /**
@@ -44,6 +45,7 @@ class LoginAttempt extends Model
     protected $casts = [
         'attempted_at' => 'datetime',
         'success' => 'boolean',
+        'status' => 'string', // New column
     ];
 
     /**
