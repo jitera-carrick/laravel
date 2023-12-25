@@ -36,28 +36,36 @@ class LoginController extends Controller
         }
 
         try {
-            $user = $this->authService->validateUserCredentials($credentials['email'], $credentials['password']);
+            // Query the "users" table to find a user with the matching email address
+            $user = User::where('email', $credentials['email'])->first();
 
-            if (!$user) {
+            if (!$user || !Hash::check($credentials['password'], $user->password)) {
                 return response()->json(['message' => 'Invalid credentials'], 401);
             }
 
             // Calculate session expiry time
-            $sessionExpires = $keepSession ? now()->addDays(90) : now()->addHours(24);
+            $sessionExpires = $keepSession ? Carbon::now()->addDays(90) : Carbon::now()->addHours(24);
 
-            // Update user's session token and expiry
+            // Generate a new "session_token"
             $sessionToken = $this->authService->generateSessionToken($user);
+
+            // Update the user's record with the new "session_token" and "session_expires"
             $user->update([
                 'session_token' => $sessionToken,
                 'session_expires' => $sessionExpires,
+                'keep_session' => $keepSession, // This line is unnecessary as 'keep_session' is not a field in the users table
             ]);
 
-            return response()->json([
+            // Prepare the response data, ensuring sensitive information is not included
+            $responseData = [
                 'session_token' => $sessionToken,
-                'session_expires' => $sessionExpires,
-            ]);
+                'session_expires' => $sessionExpires->toDateTimeString(),
+                'user' => $user->makeHidden(['password', 'password_hash', 'remember_token', 'session_token'])->toArray(),
+            ];
+
+            return response()->json($responseData);
         } catch (\Exception $e) {
-            return response()->json(['message' => 'Authentication failed'], 500);
+            return response()->json(['message' => 'Authentication failed', 'error' => $e->getMessage()], 500);
         }
     }
 
