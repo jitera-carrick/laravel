@@ -7,13 +7,13 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Facades\Hash;
-use Illuminate\Support\Str;
 use App\Models\User;
 use App\Models\PasswordResetRequest;
 use App\Models\StylistRequest;
 use App\Models\Image;
 use App\Mail\PasswordResetSuccessMail; // Assuming this Mailable class exists
 use App\Mail\PasswordResetConfirmationMail; // Assuming this Mailable exists
+use App\Mail\PasswordSetConfirmationMail; // Assuming this Mailable exists for password set confirmation
 use Exception;
 
 class ForgotPasswordController extends Controller
@@ -44,8 +44,8 @@ class ForgotPasswordController extends Controller
         }
 
         // Ensure the new password complies with the password policy
-        if (!preg_match('/[a-zA-Z]/', $request->password) || !preg_match('/[0-9]/', $request->password)) {
-            return response()->json(['message' => 'The password must be a mix of letters and numbers.'], 422);
+        if (!preg_match('/^(?=.*[a-zA-Z])(?=.*\d).{6,}$/', $request->password)) {
+            return response()->json(['message' => 'Password does not meet the policy requirements.'], 422);
         }
 
         // Retrieve the password reset request
@@ -65,14 +65,23 @@ class ForgotPasswordController extends Controller
         }
 
         $user->password = Hash::make($request->password);
+        $user->email_verified_at = now(); // Mark the email as verified
         $user->save();
 
-        // Update the password reset request status
-        $passwordResetRequest->status = 'completed';
-        $passwordResetRequest->save();
+        // Update the password reset request status or delete it
+        if (isset($passwordResetRequest->status)) {
+            $passwordResetRequest->status = 'completed';
+            $passwordResetRequest->save();
+        } else {
+            $passwordResetRequest->delete(); // Delete the password reset request to invalidate the token
+        }
 
         // Send confirmation email
-        Mail::to($user->email)->send(new PasswordResetSuccessMail()); // Assuming this Mailable class exists
+        if (class_exists(PasswordSetConfirmationMail::class)) {
+            Mail::to($user->email)->send(new PasswordSetConfirmationMail()); // Send the password set confirmation email
+        } else {
+            Mail::to($user->email)->send(new PasswordResetSuccessMail()); // Send the password reset success email
+        }
 
         // Return a success response
         return response()->json(['message' => 'Your password has been successfully updated.'], 200);
