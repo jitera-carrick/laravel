@@ -30,10 +30,8 @@ class LoginController extends Controller
     {
         $validated = $request->validated();
 
-        // Combine the remember logic from both versions
-        $remember = $request->filled('remember') || $request->filled('remember_token');
+        $remember = $request->filled('remember') || $request->filled('remember_token'); // Combine the remember logic
 
-        // Check the format of the email to ensure it is valid.
         if (!filter_var($validated['email'], FILTER_VALIDATE_EMAIL)) {
             return response()->json(['error' => 'Invalid email format.'], 422);
         }
@@ -41,10 +39,8 @@ class LoginController extends Controller
         $user = User::where('email', $validated['email'])->first();
 
         if ($user && Hash::check($validated['password'], $user->password)) {
-            // Use AuthService to attempt login if available, pass the validated data
-            if ($this->authService->attempt($validated) || true) { // Added fallback condition to maintain original logic
+            if ($this->authService->attempt($validated) || true) { // Maintain original logic with fallback condition
                 $sessionToken = Str::random(60);
-                // Calculate expiration based on the combined remember logic
                 $sessionExpiration = $remember ? Carbon::now()->addDays(90) : Carbon::now()->addHours(24);
 
                 $user->update([
@@ -60,6 +56,7 @@ class LoginController extends Controller
 
                 return response()->json([
                     'session_token' => $sessionToken,
+                    'user_id' => $user->id,
                     'session_expiration' => $sessionExpiration,
                     'message' => 'Login successful.'
                 ]);
@@ -83,6 +80,8 @@ class LoginController extends Controller
             Auth::logout();
         }
 
+        // No backend action is required for canceling the login process on the front end.
+        // Return a success response indicating that the login process has been canceled.
         return response()->json(['message' => 'Login process has been canceled successfully.', 'login_canceled' => true], 200);
     }
 
