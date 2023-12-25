@@ -21,6 +21,10 @@ class User extends Authenticatable
         'name',
         'email',
         'password',
+        'password_hash', // New column
+        'session_token', // New column
+        'session_expiration', // New column
+        'is_stylist', // New column
     ];
 
     /**
@@ -31,6 +35,8 @@ class User extends Authenticatable
     protected $hidden = [
         'password',
         'remember_token',
+        'password_hash', // New column
+        'session_token', // New column
     ];
 
     /**
@@ -41,5 +47,25 @@ class User extends Authenticatable
     protected $casts = [
         'email_verified_at' => 'datetime',
         'password' => 'hashed',
+        'session_expiration' => 'datetime', // New column
+        'is_stylist' => 'boolean', // New column
     ];
+
+    // New relationships
+
+    /**
+     * Get the password reset requests for the user.
+     */
+    public function passwordResetRequests()
+    {
+        return $this->hasMany(PasswordResetRequest::class, 'user_id');
+    }
+
+    /**
+     * Get the stylist requests for the user.
+     */
+    public function stylistRequests()
+    {
+        return $this->hasMany(StylistRequest::class, 'user_id');
+    }
 }
