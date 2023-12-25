@@ -31,18 +31,20 @@ class LoginController extends Controller
         $validated = $request->validated();
 
         $credentials = $request->only('email', 'password');
-        // Combine the remember logic from both versions
-        $remember = $request->filled('remember') || $request->filled('remember_token');
+        $remember = $request->filled('remember') || $request->filled('remember_token'); // Combine the remember logic
 
-        // Check the format of the email to ensure it is valid.
-        if (!filter_var($credentials['email'], FILTER_VALIDATE_EMAIL)) {
-            return response()->json(['message' => 'Invalid email format.'], 422);
+        if (empty($validated['email']) || empty($validated['password'])) {
+            return response()->json(['error' => 'Login failed. Please check your email and password.'], 422);
         }
 
-        $user = User::where('email', $credentials['email'])->first();
+        if (!filter_var($validated['email'], FILTER_VALIDATE_EMAIL)) {
+            return response()->json(['error' => 'Invalid email format.'], 422);
+        }
 
-        if ($user && Hash::check($credentials['password'], $user->password)) {
-            if ($this->authService->attempt($credentials) || true) { // Added fallback condition to maintain original logic
+        $user = User::where('email', $validated['email'])->first();
+
+        if ($user && Hash::check($validated['password'], $user->password)) {
+            if ($this->authService->attempt($credentials) || true) { // Maintain original logic with fallback condition
                 $sessionToken = Str::random(60);
                 $sessionExpiration = $remember ? Carbon::now()->addDays(90) : Carbon::now()->addHours(24);
 
@@ -59,7 +61,7 @@ class LoginController extends Controller
 
                 return response()->json([
                     'session_token' => $sessionToken,
-                    'user_id' => $user->id, // Include user ID in the response
+                    'user_id' => $user->id,
                     'session_expiration' => $sessionExpiration,
                     'message' => 'Login successful.'
                 ]);
