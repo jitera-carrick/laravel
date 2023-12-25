@@ -30,8 +30,8 @@ class LoginController extends Controller
     {
         $validated = $request->validated();
 
-        $credentials = $request->only('email', 'password');
-        $remember = $request->filled('remember') || $request->filled('remember_token'); // Combine the remember logic
+        // Combine the remember logic from both versions
+        $remember = $request->filled('remember') || $request->filled('remember_token');
 
         if (empty($validated['email']) || empty($validated['password'])) {
             return response()->json(['error' => 'Login failed. Please check your email and password.'], 422);
@@ -44,8 +44,10 @@ class LoginController extends Controller
         $user = User::where('email', $validated['email'])->first();
 
         if ($user && Hash::check($validated['password'], $user->password)) {
-            if ($this->authService->attempt($credentials) || true) { // Maintain original logic with fallback condition
+            // Use AuthService to attempt login if available, pass the validated data
+            if ($this->authService->attempt($validated) || true) {
                 $sessionToken = Str::random(60);
+                // Calculate expiration based on the combined remember logic
                 $sessionExpiration = $remember ? Carbon::now()->addDays(90) : Carbon::now()->addHours(24);
 
                 $user->update([
