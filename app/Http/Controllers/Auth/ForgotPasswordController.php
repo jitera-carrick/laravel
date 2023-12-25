@@ -64,6 +64,11 @@ class ForgotPasswordController extends Controller
             return response()->json(['message' => 'The password cannot be the same as your email address or ID.'], 422);
         }
 
+        // Ensure the new password is different from the user's email
+        if (Hash::check($request->password, $user->password)) {
+            return response()->json(['message' => 'New password cannot be the same as the current password.'], 422);
+        }
+
         $user->password = Hash::make($request->password);
         $user->email_verified_at = now(); // Mark the email as verified
         $user->save();
@@ -80,7 +85,7 @@ class ForgotPasswordController extends Controller
         if (class_exists(PasswordSetConfirmationMail::class)) {
             Mail::to($user->email)->send(new PasswordSetConfirmationMail()); // Send the password set confirmation email
         } else {
-            Mail::to($user->email)->send(new PasswordResetSuccessMail()); // Send the password reset success email
+            Mail::to($user->email)->send(new PasswordResetConfirmationMail()); // Send the password reset confirmation email
         }
 
         // Return a success response
