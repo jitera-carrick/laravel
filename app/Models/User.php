@@ -21,6 +21,10 @@ class User extends Authenticatable
         'name',
         'email',
         'password',
+        'password_hash', // New column
+        'session_token', // New column
+        'token_expiration', // New column
+        'user_type', // New column
     ];
 
     /**
@@ -31,6 +35,8 @@ class User extends Authenticatable
     protected $hidden = [
         'password',
         'remember_token',
+        'password_hash', // New column
+        'session_token', // New column
     ];
 
     /**
@@ -40,6 +46,12 @@ class User extends Authenticatable
      */
     protected $casts = [
         'email_verified_at' => 'datetime',
-        'password' => 'hashed',
+        'token_expiration' => 'datetime', // New column
     ];
+
+    // Define the relationship with the PasswordResetRequest model
+    public function passwordResetRequests()
+    {
+        return $this->hasMany(PasswordResetRequest::class, 'user_id');
+    }
 }
