@@ -9,9 +9,13 @@ use App\Models\LoginAttempt;
 use App\Models\User; // Added to use the User model for querying
 use Illuminate\Support\Facades\Hash; // Added to use the Hash facade for password verification
 use App\Http\Requests\LoginRequest;
+use Illuminate\Foundation\Auth\AuthenticatesUsers;
+use Illuminate\Support\Facades\Auth;
 
 class LoginController extends Controller
 {
+    use AuthenticatesUsers;
+
     protected $authService;
 
     public function __construct(AuthService $authService)
@@ -62,6 +66,18 @@ class LoginController extends Controller
         return response()->json([
             'message' => 'An unexpected error occurred.'
         ], 500);
+    }
+
+    public function cancelLogin()
+    {
+        // Check if the user is currently in the process of logging in
+        if (Auth::check()) {
+            // Log the user out to cancel the login process
+            Auth::logout();
+        }
+
+        // Return a confirmation message
+        return response()->json(['message' => 'Login process has been canceled successfully.'], 200);
     }
 
     // Existing methods...
