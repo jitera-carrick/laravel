@@ -6,6 +6,7 @@ use Illuminate\Http\Request;
 use App\Models\StylistRequest;
 use App\Models\Image;
 use Illuminate\Support\Facades\Validator;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
 
@@ -30,7 +31,7 @@ class StylistRequestController extends Controller
                 'menu' => 'required|string',
                 'hair_concerns' => 'required|string',
                 'images' => 'sometimes|array',
-                'images.*' => 'image' // Change validation rule to 'image' to validate image files
+                'images.*' => 'image|distinct|min:3|max:5120' // Validate image format and size (5MB max)
             ]);
 
             if ($validator->fails()) {
@@ -54,20 +55,17 @@ class StylistRequestController extends Controller
             // If images are provided, create entries for each image
             $imagePaths = [];
             if ($request->has('images')) {
-                foreach ($request->file('images') as $imageFile) { // Change to file method to handle uploaded files
+                foreach ($request->file('images') as $imageFile) {
                     // Validate image format and size here if needed
-                    // For example, using Laravel's built-in validation
                     $imageValidator = Validator::make(['image' => $imageFile], [
-                        'image' => 'image|max:2048' // Example validation for image type and max size 2MB
+                        'image' => 'image|distinct|min:3|max:5120' // Validate image format and size (5MB max)
                     ]);
 
                     if ($imageValidator->fails()) {
                         throw new \Exception("Invalid image format or size");
                     }
 
-                    // Assuming the Image model has a method to handle the file upload and return the file path
-                    $filePath = $imageFile->store('stylist_requests', 'public'); // Store the image and get the path
-
+                    $filePath = Storage::put('stylist_requests', $imageFile); // Store the image and get the path
                     $image = new Image([
                         'file_path' => $filePath,
                         'stylist_request_id' => $stylistRequest->id
