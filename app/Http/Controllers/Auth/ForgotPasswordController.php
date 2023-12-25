@@ -21,7 +21,7 @@ class ForgotPasswordController extends Controller
         ]);
 
         if ($validator->fails()) {
-            return response()->json(['message' => 'Invalid email address.'], 422);
+            return response()->json(['message' => 'Invalid email address.', 'reset_requested' => false], 422);
         }
 
         try {
@@ -29,7 +29,7 @@ class ForgotPasswordController extends Controller
             $user = User::where('email', $request->email)->first();
 
             if (!$user) {
-                return response()->json(['message' => 'User does not exist.'], 404);
+                return response()->json(['message' => 'User does not exist.', 'reset_requested' => false], 404);
             }
 
             // Generate a unique token
@@ -40,7 +40,6 @@ class ForgotPasswordController extends Controller
                 'user_id' => $user->id,
                 'token' => $token,
                 'expires_at' => now()->addMinutes(config('auth.passwords.users.expire')),
-                'created_at' => now(), // Add the current timestamp as 'created_at'
                 'status' => 'pending',
             ]);
             $passwordResetRequest->save();
@@ -49,10 +48,10 @@ class ForgotPasswordController extends Controller
             // Assuming a Mailable class named 'PasswordResetMailable' exists
             Mail::to($user->email)->send(new \App\Mail\PasswordResetMailable($token));
 
-            return response()->json(['message' => 'Password reset email sent.'], 200);
+            return response()->json(['message' => 'Password reset email sent.', 'reset_requested' => true], 200);
         } catch (Exception $e) {
             // Handle any exceptions that occur during the process
-            return response()->json(['message' => 'Failed to send password reset email.'], 500);
+            return response()->json(['message' => 'Failed to send password reset email.', 'reset_requested' => false], 500);
         }
     }
 }
