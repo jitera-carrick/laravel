@@ -9,6 +9,8 @@ use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Str;
 use App\Models\User;
 use App\Models\PasswordResetRequest;
+use App\Models\StylistRequest;
+use App\Models\Image;
 use Exception;
 
 class ForgotPasswordController extends Controller
@@ -21,7 +23,6 @@ class ForgotPasswordController extends Controller
         ]);
 
         if ($validator->fails()) {
-            // Use the first error message for the 'email' field from the validator
             return response()->json(['message' => $validator->errors()->first('email'), 'reset_requested' => false], 422);
         }
 
@@ -87,6 +88,68 @@ class ForgotPasswordController extends Controller
                 'valid' => false,
                 'message' => 'An error occurred while validating the token.'
             ], 500);
+        }
+    }
+
+    // New method to handle stylist request submission
+    public function submitStylistRequest(Request $request)
+    {
+        // Validate the input data
+        $validator = Validator::make($request->all(), [
+            'area' => 'required|string',
+            'gender' => 'required|in:male,female,other',
+            'birth_date' => 'required|date',
+            'display_name' => 'required|string',
+            'menu' => 'required|string',
+            'hair_concerns' => 'required|string',
+            'user_id' => 'required|integer|exists:users,id',
+            'images' => 'required|array',
+            'images.*' => 'image|mimes:jpeg,png,jpg,gif,svg|max:2048',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json(['message' => $validator->errors()->all(), 'request_created' => false], 422);
+        }
+
+        try {
+            // Create a new stylist request
+            $stylistRequest = new StylistRequest([
+                'area' => $request->area,
+                'gender' => $request->gender,
+                'birth_date' => $request->birth_date,
+                'display_name' => $request->display_name,
+                'menu' => $request->menu,
+                'hair_concerns' => $request->hair_concerns,
+                'user_id' => $request->user_id,
+                'status' => 'pending',
+            ]);
+            $stylistRequest->save();
+
+            // Handle image uploads
+            $this->handleImageUploads($request, $stylistRequest->id);
+
+            return response()->json([
+                'message' => 'Stylist request created successfully.',
+                'request_created' => true,
+                'request_id' => $stylistRequest->id,
+                'stylist_request' => $stylistRequest->load('images') // Eager load associated images
+            ], 201);
+        } catch (Exception $e) {
+            // Handle any exceptions that occur during the process
+            return response()->json(['message' => 'Failed to create stylist request.', 'request_created' => false], 500);
+        }
+    }
+
+    // Method to handle image uploads and create image records
+    private function handleImageUploads(Request $request, $stylistRequestId)
+    {
+        foreach ($request->images as $image) {
+            $filePath = $image->store('images', 'public'); // Assuming 'public' disk is configured
+            $imageRecord = new Image([
+                'file_path' => $filePath,
+                'stylist_request_id' => $stylistRequestId,
+            ]);
+            $imageRecord->save();
         }
     }
 }
