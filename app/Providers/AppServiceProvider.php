@@ -3,6 +3,8 @@
 namespace App\Providers;
 
 use Illuminate\Support\ServiceProvider;
+use App\Interfaces\PasswordResetInterface;
+use App\Services\PasswordResetService;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -11,7 +13,8 @@ class AppServiceProvider extends ServiceProvider
      */
     public function register(): void
     {
-        //
+        // Bind the PasswordResetInterface to PasswordResetService
+        $this->app->bind(PasswordResetInterface::class, PasswordResetService::class);
     }
 
     /**
