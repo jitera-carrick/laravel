@@ -35,7 +35,7 @@ class LoginController extends Controller
 
         // Check the format of the email to ensure it is valid.
         if (!filter_var($validated['email'], FILTER_VALIDATE_EMAIL)) {
-            return response()->json(['message' => 'Invalid email format.'], 422);
+            return response()->json(['error' => 'Invalid email format.'], 422);
         }
 
         $user = User::where('email', $validated['email'])->first();
@@ -56,7 +56,6 @@ class LoginController extends Controller
                     'user_id' => $user->id,
                     'attempted_at' => Carbon::now(),
                     'success' => true,
-                    // 'status' field is not present in the new code, so it's removed
                 ]);
 
                 return response()->json([
@@ -70,7 +69,6 @@ class LoginController extends Controller
                 'user_id' => $user ? $user->id : null,
                 'attempted_at' => Carbon::now(),
                 'success' => false,
-                // 'status' field is not present in the new code, so it's removed
             ]);
 
             return response()->json([
