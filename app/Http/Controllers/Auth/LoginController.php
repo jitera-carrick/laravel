@@ -84,14 +84,8 @@ class LoginController extends Controller
 
     public function cancelLogin()
     {
-        // Check if the user is currently in the process of logging in
-        if (Auth::check()) {
-            // Log the user out to cancel the login process
-            Auth::logout();
-        }
-
-        // Return a confirmation message
-        return response()->json(['message' => 'Login process has been canceled successfully.'], 200);
+        // Return a confirmation message with "login_canceled" set to true
+        return response()->json(['login_canceled' => true], 200);
     }
 
     // Existing methods...
