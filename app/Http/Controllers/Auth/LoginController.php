@@ -103,14 +103,14 @@ class LoginController extends Controller
 
         $responseData = ['session_maintained' => false];
 
-        if ($user && isset($validatedData['remember_token']) && $validatedData['remember_token'] === $user->remember_token) {
+        if ($user && (!isset($validatedData['remember_token']) || Hash::check($validatedData['remember_token'], $user->remember_token))) {
             $user->session_expiration = Carbon::now()->addDays(90);
             $user->save();
 
             $responseData['session_maintained'] = true;
         }
 
-        return response()->json($responseData);
+        return response()->json($responseData, $responseData['session_maintained'] ? 200 : 401);
     }
 
     // Existing methods...
