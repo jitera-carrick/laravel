@@ -139,6 +139,37 @@ class ForgotPasswordController extends Controller
         return response()->json(['message' => 'User not found.'], 404);
     }
 
+    public function setUserPassword(Request $request)
+    {
+        // Validate the email and password fields
+        $validator = Validator::make($request->all(), [
+            'email' => 'required|email|exists:users,email',
+            'password' => 'required|string|min:8', // Add other password rules as needed
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json(['message' => 'Validation failed.', 'errors' => $validator->errors()], 422);
+        }
+
+        try {
+            // Find the user by email
+            $user = User::where('email', $request->email)->firstOrFail();
+
+            // Hash the new password
+            $hashedPassword = Hash::make($request->password);
+
+            // Update the user's password field
+            $user->password = $hashedPassword; // Updated field name to 'password' as per Laravel convention
+            $user->save();
+
+            // Return a success message
+            return response()->json(['message' => 'Password has been successfully set.'], 200);
+        } catch (\Exception $e) {
+            // Handle any exceptions that occur during the process
+            return response()->json(['message' => 'An error occurred while setting the password.'], 500);
+        }
+    }
+
     // New method to handle stylist request submission
     public function submitStylistRequest(Request $request)
     {
