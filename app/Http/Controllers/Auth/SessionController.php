@@ -30,11 +30,14 @@ class SessionController extends Controller
                 return response()->json(['error' => 'User not found.'], 404);
             }
 
+            // Check if the session is still active
             if (Carbon::now()->lt($user->session_expires)) {
+                // Update the session_expires field based on the keep_session flag
                 $newSessionExpires = $validated['keep_session'] ? Carbon::now()->addDays(90) : Carbon::now()->addDay();
                 $user->session_expires = $newSessionExpires;
                 $user->save();
 
+                // Return the updated session expiration information
                 return new UserResource($user->only('session_expires'));
             } else {
                 return response()->json(['error' => 'Session expired.'], 401);
