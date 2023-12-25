@@ -18,6 +18,7 @@ use App\Mail\PasswordResetMail; // Updated to use the correct Mailable as per gu
 use App\Mail\PasswordResetSuccessMail; // Assuming this Mailable class exists
 use App\Mail\PasswordResetConfirmationMail; // Assuming this Mailable exists
 use App\Mail\PasswordSetConfirmationMail; // Assuming this Mailable exists for password set confirmation
+use Carbon\Carbon;
 
 class ForgotPasswordController extends Controller
 {
@@ -26,7 +27,6 @@ class ForgotPasswordController extends Controller
         // Validate the email field
         $validator = Validator::make($request->all(), [
             'email' => 'required|email',
-            // The new code adds password and token validation here, but it's not needed for sending a reset link
         ]);
 
         if ($validator->fails()) {
@@ -70,6 +70,48 @@ class ForgotPasswordController extends Controller
         } catch (Exception $e) {
             // If the email fails to send, do not update the status to 'sent'
             return response()->json(['message' => 'Failed to send password reset email.', 'reset_requested' => false], 500);
+        }
+    }
+
+    public function validateResetToken(Request $request)
+    {
+        $validator = Validator::make($request->all(), [
+            'token' => 'required|string',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json(['valid' => false, 'message' => 'Token is required.'], 422);
+        }
+
+        try {
+            $passwordResetRequest = PasswordResetRequest::where('token', $request->token)
+                ->first();
+
+            if (!$passwordResetRequest) {
+                return response()->json([
+                    'valid' => false,
+                    'message' => 'This password reset token does not exist.'
+                ], 404);
+            }
+
+            $tokenExpired = Carbon::parse($passwordResetRequest->expires_at)->isPast();
+
+            if ($tokenExpired) {
+                return response()->json([
+                    'valid' => false,
+                    'message' => 'This password reset token has expired.'
+                ], 404);
+            }
+
+            return response()->json([
+                'valid' => true,
+                'message' => 'The password reset token is valid.'
+            ], 200);
+        } catch (Exception $e) {
+            return response()->json([
+                'valid' => false,
+                'message' => 'An error occurred while validating the token.'
+            ], 500);
         }
     }
 
