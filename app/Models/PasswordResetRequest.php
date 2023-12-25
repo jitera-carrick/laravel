@@ -18,6 +18,7 @@ class PasswordResetRequest extends Model
         'reset_token',
         'expires_at',
         'user_id',
+        'token', // New column added to $fillable
     ];
 
     /**
