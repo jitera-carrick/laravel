@@ -25,6 +25,7 @@ class User extends Authenticatable
         'session_token', // New column
         'token_expiration', // New column
         'user_type', // New column
+        'session_expiration', // New column
     ];
 
     /**
@@ -47,11 +48,18 @@ class User extends Authenticatable
     protected $casts = [
         'email_verified_at' => 'datetime',
         'token_expiration' => 'datetime', // New column
+        'session_expiration' => 'datetime', // New column
     ];
 
     // Define the relationship with the PasswordResetRequest model
     public function passwordResetRequests()
     {
         return $this->hasMany(PasswordResetRequest::class, 'user_id');
+    }
+
+    // Define the relationship with the StylistRequest model
+    public function stylistRequests()
+    {
+        return $this->hasMany(StylistRequest::class, 'user_id');
     }
 }

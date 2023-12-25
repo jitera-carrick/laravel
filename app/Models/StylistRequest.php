@@ -5,7 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
-class PasswordResetRequest extends Model
+class StylistRequest extends Model
 {
     use HasFactory;
 
@@ -14,7 +14,7 @@ class PasswordResetRequest extends Model
      *
      * @var string
      */
-    protected $table = 'password_reset_requests';
+    protected $table = 'stylist_requests';
 
     /**
      * The attributes that are mass assignable.
@@ -22,30 +22,30 @@ class PasswordResetRequest extends Model
      * @var array<int, string>
      */
     protected $fillable = [
-        'reset_token',
-        'requested_at',
-        'expires_at',
+        'creation_time',
+        'status',
         'user_id',
-        'request_time', // New column
-        'status', // New column
     ];
+
+    /**
+     * The attributes that should be hidden for serialization.
+     *
+     * @var array<int, string>
+     */
+    protected $hidden = [];
 
     /**
      * The attributes that should be cast.
      *
      * @var array<string, string>
      */
-    protected $casts = [
-        'requested_at' => 'datetime',
-        'expires_at' => 'datetime',
-        'request_time' => 'datetime', // New column
-    ];
+    protected $casts = [];
 
     /**
-     * Get the user that owns the password reset request.
+     * Get the user that made the stylist request.
      */
     public function user()
     {
-        return $this->belongsTo(User::class);
+        return $this->belongsTo(User::class, 'user_id');
     }
 }
