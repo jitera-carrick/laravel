@@ -6,12 +6,14 @@ use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Validator;
+use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Str;
 use App\Models\User;
 use App\Models\PasswordResetRequest;
 use App\Models\StylistRequest;
 use App\Models\Image;
 use Exception;
+use App\Mail\PasswordResetConfirmationMail; // Assuming this Mailable exists
 
 class ForgotPasswordController extends Controller
 {
@@ -47,7 +49,6 @@ class ForgotPasswordController extends Controller
             $passwordResetRequest->save();
 
             // Send the password reset email
-            // Assuming a Mailable class named 'PasswordResetMailable' exists
             Mail::to($user->email)->send(new \App\Mail\PasswordResetMailable($token));
 
             return response()->json(['message' => 'Password reset email sent.', 'reset_requested' => true], 200);
@@ -89,6 +90,53 @@ class ForgotPasswordController extends Controller
                 'message' => 'An error occurred while validating the token.'
             ], 500);
         }
+    }
+
+    public function resetPassword(Request $request)
+    {
+        // Validate the input
+        $validator = Validator::make($request->all(), [
+            'token' => 'required',
+            'password' => 'required|confirmed|min:6|different:email',
+            // Add regex for mix of letters and numbers if needed
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json(['message' => 'Validation failed.', 'errors' => $validator->errors()], 422);
+        }
+
+        // Ensure the new password complies with the password policy
+        if (!preg_match('/^(?=.*[a-zA-Z])(?=.*\d).{6,}$/', $request->password)) {
+            return response()->json(['message' => 'Password does not meet the policy requirements.'], 422);
+        }
+
+        // Find the password reset request
+        $passwordReset = PasswordResetRequest::where('token', $request->token)
+            ->where('status', 'pending')
+            ->where('expires_at', '>', now())
+            ->first();
+
+        if (!$passwordReset) {
+            return response()->json(['message' => 'Invalid or expired token.'], 404);
+        }
+
+        // Find the user and update the password
+        $user = $passwordReset->user;
+        if ($user) {
+            $user->password = Hash::make($request->password);
+            $user->save();
+
+            // Update the password reset request status
+            $passwordReset->status = 'completed';
+            $passwordReset->save();
+
+            // Send confirmation email
+            Mail::to($user->email)->send(new PasswordResetConfirmationMail()); // Assuming this Mailable exists
+
+            return response()->json(['message' => 'Password has been successfully updated.'], 200);
+        }
+
+        return response()->json(['message' => 'User not found.'], 404);
     }
 
     // New method to handle stylist request submission
