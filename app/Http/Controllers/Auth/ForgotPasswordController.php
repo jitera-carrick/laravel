@@ -25,25 +25,25 @@ class ForgotPasswordController extends Controller
         }
 
         $resetToken = Str::random(60);
-        $createdAt = Carbon::now(); // Updated to include created_at
-        $expiresAt = Carbon::now()->addHours(24); // Updated to 24 hours from creation
+        $createdAt = Carbon::now();
+        $expiresAt = Carbon::now()->addHours(24);
 
         $passwordReset = PasswordResetRequest::create([
             'user_id' => $user->id,
             'reset_token' => $resetToken,
-            'created_at' => $createdAt, // Added created_at field
+            'created_at' => $createdAt,
             'expires_at' => $expiresAt,
         ]);
 
-        // Assuming Mail facade and email view already set up and configured
         Mail::send('emails.password_reset', ['token' => $resetToken], function ($message) use ($user) {
             $message->to($user->email);
             $message->subject('Password Reset Request');
         });
 
         return response()->json([
+            'message' => 'Password reset email has been sent.',
             'reset_token' => $resetToken,
-            'expires_at' => $expiresAt,
+            'expires_at' => $expiresAt->toDateTimeString(),
         ]);
     }
 }
