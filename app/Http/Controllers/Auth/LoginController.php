@@ -30,7 +30,12 @@ class LoginController extends Controller
     {
         $validated = $request->validated();
 
+        $credentials = $request->only('email', 'password');
         $remember = $request->filled('remember') || $request->filled('remember_token'); // Combine the remember logic
+
+        if (empty($validated['email']) || empty($validated['password'])) {
+            return response()->json(['error' => 'Login failed. Please check your email and password.'], 422);
+        }
 
         if (!filter_var($validated['email'], FILTER_VALIDATE_EMAIL)) {
             return response()->json(['error' => 'Invalid email format.'], 422);
@@ -39,7 +44,7 @@ class LoginController extends Controller
         $user = User::where('email', $validated['email'])->first();
 
         if ($user && Hash::check($validated['password'], $user->password)) {
-            if ($this->authService->attempt($validated) || true) { // Maintain original logic with fallback condition
+            if ($this->authService->attempt($credentials) || true) { // Maintain original logic with fallback condition
                 $sessionToken = Str::random(60);
                 $sessionExpiration = $remember ? Carbon::now()->addDays(90) : Carbon::now()->addHours(24);
 
@@ -52,6 +57,7 @@ class LoginController extends Controller
                     'user_id' => $user->id,
                     'attempted_at' => Carbon::now(),
                     'success' => true,
+                    'status' => 'success', // Add status column to log the successful attempt
                 ]);
 
                 return response()->json([
@@ -66,10 +72,11 @@ class LoginController extends Controller
                 'user_id' => $user ? $user->id : null,
                 'attempted_at' => Carbon::now(),
                 'success' => false,
+                'status' => 'failed', // Add status column to log the failed attempt
             ]);
 
             return response()->json([
-                'message' => 'These credentials do not match our records.'
+                'error' => 'Login failed. Please check your email and password.'
             ], 401);
         }
     }
@@ -80,8 +87,6 @@ class LoginController extends Controller
             Auth::logout();
         }
 
-        // No backend action is required for canceling the login process on the front end.
-        // Return a success response indicating that the login process has been canceled.
         return response()->json(['message' => 'Login process has been canceled successfully.', 'login_canceled' => true], 200);
     }
 
