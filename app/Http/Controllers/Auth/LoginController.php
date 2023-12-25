@@ -33,12 +33,9 @@ class LoginController extends Controller
         // Combine the remember logic from both versions
         $remember = $request->filled('remember') || $request->filled('remember_token');
 
-        if (empty($validated['email']) || empty($validated['password'])) {
-            return response()->json(['error' => 'Login failed. Please check your email and password.'], 422);
-        }
-
+        // Check the format of the email to ensure it is valid.
         if (!filter_var($validated['email'], FILTER_VALIDATE_EMAIL)) {
-            return response()->json(['error' => 'Invalid email format.'], 422);
+            return response()->json(['message' => 'Invalid email format.'], 422);
         }
 
         $user = User::where('email', $validated['email'])->first();
@@ -59,12 +56,11 @@ class LoginController extends Controller
                     'user_id' => $user->id,
                     'attempted_at' => Carbon::now(),
                     'success' => true,
-                    'status' => 'successful', // Add status field as per requirement
+                    // 'status' field is not present in the new code, so it's removed
                 ]);
 
                 return response()->json([
                     'session_token' => $sessionToken,
-                    'user_id' => $user->id,
                     'session_expiration' => $sessionExpiration,
                     'message' => 'Login successful.'
                 ]);
@@ -74,11 +70,11 @@ class LoginController extends Controller
                 'user_id' => $user ? $user->id : null,
                 'attempted_at' => Carbon::now(),
                 'success' => false,
-                'status' => 'failed', // Add status field as per requirement
+                // 'status' field is not present in the new code, so it's removed
             ]);
 
             return response()->json([
-                'error' => 'These credentials do not match our records.'
+                'message' => 'These credentials do not match our records.'
             ], 401);
         }
     }
@@ -103,14 +99,14 @@ class LoginController extends Controller
 
         $responseData = ['session_maintained' => false];
 
-        if ($user && (!isset($validatedData['remember_token']) || Hash::check($validatedData['remember_token'], $user->remember_token))) {
+        if ($user && isset($validatedData['remember_token']) && $validatedData['remember_token'] === $user->remember_token) {
             $user->session_expiration = Carbon::now()->addDays(90);
             $user->save();
 
             $responseData['session_maintained'] = true;
         }
 
-        return response()->json($responseData, $responseData['session_maintained'] ? 200 : 401);
+        return response()->json($responseData);
     }
 
     // Existing methods...
