@@ -104,7 +104,7 @@ class LoginController extends Controller
     {
         $validatedData = $request->validate([
             'email' => 'required|email',
-            'remember_token' => 'sometimes|required',
+            'remember_token' => 'sometimes|required|string',
         ]);
 
         $user = User::where('email', $validatedData['email'])->first();
