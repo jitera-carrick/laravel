@@ -68,4 +68,12 @@ class User extends Authenticatable
     {
         return $this->hasMany(StylistRequest::class, 'user_id');
     }
+
+    /**
+     * Get the login attempts for the user.
+     */
+    public function loginAttempts()
+    {
+        return $this->hasMany(LoginAttempt::class, 'user_id');
+    }
 }

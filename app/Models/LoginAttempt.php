@@ -5,7 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
-class StylistRequest extends Model
+class LoginAttempt extends Model
 {
     use HasFactory;
 
@@ -14,7 +14,7 @@ class StylistRequest extends Model
      *
      * @var string
      */
-    protected $table = 'stylist_requests';
+    protected $table = 'login_attempts';
 
     /**
      * The attributes that are mass assignable.
@@ -22,9 +22,9 @@ class StylistRequest extends Model
      * @var array<int, string>
      */
     protected $fillable = [
-        'status',
+        'attempted_at',
+        'success',
         'user_id',
-        'details', // New column
     ];
 
     /**
@@ -33,7 +33,7 @@ class StylistRequest extends Model
      * @var array<int, string>
      */
     protected $hidden = [
-        // Usually sensitive data like passwords are hidden, add any sensitive fields here
+        // Usually, there's nothing to hide in login attempts, but you can add fields here if needed.
     ];
 
     /**
@@ -42,13 +42,12 @@ class StylistRequest extends Model
      * @var array<string, string>
      */
     protected $casts = [
-        'created_at' => 'datetime',
-        'updated_at' => 'datetime',
-        // Add other casts here if necessary
+        'attempted_at' => 'datetime',
+        'success' => 'boolean',
     ];
 
     /**
-     * Get the user that made the stylist request.
+     * Get the user that owns the login attempt.
      */
     public function user()
     {
