@@ -6,11 +6,13 @@ use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use App\Services\AuthService;
 use App\Models\LoginAttempt;
-use App\Models\User; // Added to use the User model for querying
-use Illuminate\Support\Facades\Hash; // Added to use the Hash facade for password verification
+use App\Models\User;
+use Illuminate\Support\Facades\Hash;
 use App\Http\Requests\LoginRequest;
 use Illuminate\Foundation\Auth\AuthenticatesUsers;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Str;
+use Carbon\Carbon;
 
 class LoginController extends Controller
 {
@@ -25,13 +27,10 @@ class LoginController extends Controller
 
     public function login(LoginRequest $request)
     {
-        $credentials = $request->only('email', 'password');
+        $validated = $request->validated();
 
-        // Validate the input to ensure that the email and password fields are not empty.
-        $request->validate([
-            'email' => 'required|email',
-            'password' => 'required',
-        ]);
+        $credentials = $request->only('email', 'password');
+        $remember = $request->filled('remember_token');
 
         // Check the format of the email to ensure it is valid.
         if (!filter_var($credentials['email'], FILTER_VALIDATE_EMAIL)) {
@@ -41,31 +40,46 @@ class LoginController extends Controller
         // Query the "users" table to find a user with the matching email address.
         $user = User::where('email', $credentials['email'])->first();
 
-        // If no user is found or the password does not match the "password_hash" in the database
-        if (!$user || !Hash::check($credentials['password'], $user->password_hash)) {
-            // Record the login attempt in the "login_attempts" table with the "user_id" (if available), current timestamp as "attempted_at", and "success" set to false.
-            LoginAttempt::create([
-                'user_id' => $user ? $user->id : null,
-                'attempted_at' => now(),
-                'success' => false,
-            ]);
+        // If a user is found and the password is correct
+        if ($user && Hash::check($credentials['password'], $user->password)) {
+            // Use the AuthService to attempt to log the user in
+            if ($this->authService->attempt($credentials)) {
+                // Generate session token and calculate expiration
+                $sessionToken = Str::random(60);
+                $sessionExpiration = $remember ? Carbon::now()->addDays(90) : Carbon::now()->addHours(24);
 
-            // Return an error message indicating that the login has failed.
-            return response()->json([
-                'message' => 'These credentials do not match our records.'
-            ], 401);
+                // Update user with new session token and expiration
+                $user->update([
+                    'session_token' => $sessionToken,
+                    'session_expiration' => $sessionExpiration,
+                ]);
+
+                // Record the login attempt in the "login_attempts" table with the "user_id", current timestamp as "attempted_at", and "success" set to true.
+                LoginAttempt::create([
+                    'user_id' => $user->id,
+                    'attempted_at' => Carbon::now(),
+                    'success' => true,
+                ]);
+
+                // Return the "session_token" to the client to maintain the user's session.
+                return response()->json([
+                    'session_token' => $sessionToken,
+                    'session_expiration' => $sessionExpiration,
+                ]);
+            }
         }
 
-        // If authentication is successful, proceed with the original logic
-        if ($this->authService->attempt($credentials)) {
-            // Authentication passed...
-            // Return success response or redirect to intended location
-        }
+        // If the user is not found or the password is incorrect, log the failed login attempt
+        LoginAttempt::create([
+            'user_id' => $user ? $user->id : null,
+            'attempted_at' => Carbon::now(),
+            'success' => false,
+        ]);
 
-        // This part should not be reached if the above conditions are met, but it's here as a fallback
+        // Return an error message indicating that the login has failed.
         return response()->json([
-            'message' => 'An unexpected error occurred.'
-        ], 500);
+            'message' => 'These credentials do not match our records.'
+        ], 401);
     }
 
     public function cancelLogin()
