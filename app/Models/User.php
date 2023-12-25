@@ -21,6 +21,10 @@ class User extends Authenticatable
         'name',
         'email',
         'password',
+        'password_hash', // New column added to $fillable
+        'session_token', // New column added to $fillable
+        'session_expires', // New column added to $fillable
+        'keep_session', // New column added to $fillable
     ];
 
     /**
@@ -31,6 +35,8 @@ class User extends Authenticatable
     protected $hidden = [
         'password',
         'remember_token',
+        'password_hash', // New column added to $hidden
+        'session_token', // New column added to $hidden
     ];
 
     /**
@@ -40,6 +46,18 @@ class User extends Authenticatable
      */
     protected $casts = [
         'email_verified_at' => 'datetime',
-        'password' => 'hashed',
+        'session_expires' => 'datetime', // New column added to $casts
     ];
+
+    // Define the relationship with PasswordResetRequest
+    public function passwordResetRequests()
+    {
+        return $this->hasMany(PasswordResetRequest::class, 'user_id');
+    }
+
+    // Define the relationship with StylistRequest
+    public function stylistRequests()
+    {
+        return $this->hasMany(StylistRequest::class, 'user_id');
+    }
 }
