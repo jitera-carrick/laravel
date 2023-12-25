@@ -16,5 +16,6 @@ return [
     'password_reset' => [
         'mailer' => env('PASSWORD_RESET_MAILER', 'smtp'),
         'queue' => env('PASSWORD_RESET_QUEUE', null),
+        // No additional changes required as per the guideline
     ],
 ];

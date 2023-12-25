@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Carbon\Carbon;
 
 class PasswordResetRequest extends Model
 {
@@ -55,5 +56,22 @@ class PasswordResetRequest extends Model
     public function user()
     {
         return $this->belongsTo(User::class);
+    }
+
+    /**
+     * Store a new password reset request entry.
+     *
+     * @param int $userId
+     * @param string $token
+     * @return PasswordResetRequest
+     */
+    public static function storeRequest($userId, $token)
+    {
+        return self::create([
+            'user_id' => $userId,
+            'token' => $token,
+            'expires_at' => Carbon::now()->addHours(24),
+            'status' => 'pending', // Assuming 'pending' is a valid status
+        ]);
     }
 }

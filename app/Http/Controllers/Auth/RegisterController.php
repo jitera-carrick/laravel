@@ -14,6 +14,7 @@ use App\Http\Resources\UserResource;
 use App\Mail\VerifyEmail;
 use App\Mail\PasswordResetMail;
 use App\Mail\RegistrationConfirmationMail; // Ensure this class exists in the specified namespace
+use Illuminate\Support\Carbon;
 
 class RegisterController extends Controller
 {
@@ -53,7 +54,7 @@ class RegisterController extends Controller
         $passwordResetRequest = new PasswordResetRequest([
             'user_id' => $user->id,
             'token' => $token,
-            'expires_at' => now()->addDay(),
+            'expires_at' => Carbon::now()->addHours(24), // Use Carbon for consistency
             'status' => 'pending'
         ]);
         $passwordResetRequest->save();
@@ -75,11 +76,11 @@ class RegisterController extends Controller
 
             Log::info('Registration confirmation email sent to user: ' . $user->email);
 
-            return response()->json(['email_sent_status' => 'success'], 200);
+            // The response here is not necessary as this method is called within the register method and should not return a response itself.
         } catch (\Exception $e) {
             Log::error('Failed to send registration confirmation email: ' . $e->getMessage());
 
-            return response()->json(['email_sent_status' => 'failed'], 500);
+            // The response here is not necessary as this method is called within the register method and should not return a response itself.
         }
     }
 

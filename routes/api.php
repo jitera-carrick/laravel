@@ -8,6 +8,7 @@ use App\Models\User;
 use Illuminate\Support\Str;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Mail;
 
 /*
@@ -59,4 +60,48 @@ Route::post('/password/email', function (Request $request) {
 
     // Return a success response
     return response()->json(['reset_requested' => true]);
+})->middleware('api');
+
+// Updated route for sending reset password link to use ForgotPasswordController
+Route::post('/password/email', [ForgotPasswordController::class, 'sendResetLinkEmail'])->middleware('api');
+
+// New route for registering user account
+Route::post('/register', function (Request $request) {
+    // Validate the input
+    $validator = Validator::make($request->all(), [
+        'email' => 'required|email|unique:users,email',
+        'display_name' => 'required',
+        'password' => 'required',
+    ]);
+
+    if ($validator->fails()) {
+        return response()->json(['registration' => false, 'errors' => $validator->errors()], 400);
+    }
+
+    // Encrypt the password
+    $encryptedPassword = Hash::make($request->password);
+
+    // Create a new user entry
+    $user = User::create([
+        'email' => $request->email,
+        'password' => $encryptedPassword,
+        'display_name' => $request->display_name,
+    ]);
+
+    // Generate a unique token for password reset
+    $token = Str::random(60);
+    DB::table('password_reset_requests')->insert([
+        'user_id' => $user->id,
+        'token' => $token,
+        'expires_at' => Carbon::now()->addHours(24),
+    ]);
+
+    // Send an email with the password reset link
+    Mail::send('emails.register', ['token' => $token], function ($message) use ($user) {
+        $message->to($user->email);
+        $message->subject('Set Your Password');
+    });
+
+    // Return the user_id
+    return response()->json(['user_id' => $user->id]);
 })->middleware('api');
