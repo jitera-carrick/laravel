@@ -30,69 +30,69 @@ class LoginController extends Controller
     {
         $validated = $request->validated();
 
-        $credentials = $request->only('email', 'password');
-        $remember = $request->filled('remember_token');
-
-        // Validate the input to ensure that the email and password fields are not empty.
-        if (empty($credentials['email']) || empty($credentials['password'])) {
-            return response()->json(['error' => 'Login failed. Please check your email and password.'], 422);
+        // Ensure that the 'email' and 'password' fields are not empty
+        if (empty($validated['email']) || empty($validated['password'])) {
+            return response()->json(['message' => 'Email and password are required.'], 422);
         }
 
         // Check the format of the email to ensure it is valid.
-        if (!filter_var($credentials['email'], FILTER_VALIDATE_EMAIL)) {
-            return response()->json(['error' => 'Invalid email format.'], 422);
+        if (!filter_var($validated['email'], FILTER_VALIDATE_EMAIL)) {
+            return response()->json(['message' => 'Invalid email format.'], 422);
         }
 
         // Query the "users" table to find a user with the matching email address.
-        $user = User::where('email', $credentials['email'])->first();
+        $user = User::where('email', $validated['email'])->first();
 
-        // If a user is found and the password is correct
-        if ($user && Hash::check($credentials['password'], $user->password)) {
+        // If a user is found, verify the password by comparing the provided password with the "password_hash" in the database.
+        // Note: The "password_hash" column should exist in the "users" table. If it doesn't, you should use the existing "password" column.
+        if ($user && Hash::check($validated['password'], $user->password)) {
             // Use the AuthService to attempt to log the user in
-            if ($this->authService->attempt($credentials)) {
-                // Generate session token and calculate expiration
+            if ($this->authService->attempt($validated)) {
+                // Determine if "Keep Session" is selected
+                $remember = $request->filled('remember_token');
+
+                // Generate a session token
                 $sessionToken = Str::random(60);
+                // Set the expiration based on "Keep Session" selection
                 $sessionExpiration = $remember ? Carbon::now()->addDays(90) : Carbon::now()->addHours(24);
 
-                // Update user with new session token and expiration
+                // Update the user's 'session_token' and 'session_expiration'
                 $user->update([
                     'session_token' => $sessionToken,
                     'session_expiration' => $sessionExpiration,
                 ]);
 
-                // Record the login attempt in the "login_attempts" table with the "user_id", current timestamp as "attempted_at", and "success" set to true.
+                // Log the login attempt
                 LoginAttempt::create([
                     'user_id' => $user->id,
                     'attempted_at' => Carbon::now(),
                     'success' => true,
                 ]);
 
-                // Return the "session_token" to the client to maintain the user's session.
+                // Return a JSON response with the 'session_token' and 'session_expiration'
                 return response()->json([
                     'session_token' => $sessionToken,
                     'session_expiration' => $sessionExpiration,
                 ]);
             }
-        } else {
-            // If no user is found or the password does not match the "password_hash" in the database, log the login attempt in the "login_attempts" table with a success flag set to false.
-            LoginAttempt::create([
-                'user_id' => $user ? $user->id : null,
-                'attempted_at' => Carbon::now(),
-                'success' => false,
-            ]);
-
-            // Return an error response indicating that the login has failed.
-            return response()->json([
-                'error' => 'Login failed. Please check your email and password.'
-            ], 401);
         }
+
+        // Log the failed attempt
+        LoginAttempt::create([
+            'user_id' => $user ? $user->id : null,
+            'attempted_at' => Carbon::now(),
+            'success' => false,
+        ]);
+
+        // Return a 401 response with an error message
+        return response()->json(['message' => 'These credentials do not match our records.'], 401);
     }
 
     public function cancelLogin()
     {
         // Check if the user is currently in the process of logging in
         if (Auth::check()) {
-            // Log the user out to cancel the login process
+            // Log the user out
             Auth::logout();
         }
 
@@ -102,22 +102,29 @@ class LoginController extends Controller
 
     public function maintainSession(Request $request)
     {
+        // Validate the input to ensure that the 'email' field is not empty
         $validatedData = $request->validate([
             'email' => 'required|email',
             'remember_token' => 'sometimes|required|string',
         ]);
 
+        // Use the `User` model to query the "users" table for a user with the matching email address.
         $user = User::where('email', $validatedData['email'])->first();
 
+        // Initialize the response data
         $responseData = ['session_maintained' => false];
 
+        // If a user is found and the "remember_token" is provided and matches the user's remember_token
         if ($user && isset($validatedData['remember_token']) && $validatedData['remember_token'] === $user->remember_token) {
+            // Update the "session_expiration" in the "users" table to extend the session by a predefined duration, such as 90 days.
             $user->session_expiration = Carbon::now()->addDays(90);
             $user->save();
 
+            // Set the response data indicating the session was extended
             $responseData['session_maintained'] = true;
         }
 
+        // Return a JSON response with a "session_maintained" boolean key
         return response()->json($responseData);
     }
 
