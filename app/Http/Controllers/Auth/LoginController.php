@@ -7,7 +7,7 @@ use App\Http\Requests\LoginRequest;
 use App\Services\AuthService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Hash;
-use Illuminate\Support\Facades\Log; // Import the Log facade
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
@@ -27,9 +27,10 @@ class LoginController extends Controller
         $keepSession = $request->input('keep_session', false);
 
         // Validate the input
-        $validator = Validator::make($credentials, [
+        $validator = Validator::make($request->all(), [
             'email' => 'required|email',
             'password' => 'required',
+            'keep_session' => 'sometimes|boolean', // Added validation rule for 'keep_session'
         ]);
 
         if ($validator->fails()) {
@@ -39,7 +40,7 @@ class LoginController extends Controller
         try {
             $user = $this->authService->validateUserCredentials($credentials['email'], $credentials['password']);
 
-            if (!$user || !Hash::check($credentials['password'], $user->password)) {
+            if (!$user || !Hash::check($credentials['password'], $user->password_hash)) { // Updated to use 'password_hash' field
                 // Log the failed login attempt
                 Log::warning('Failed login attempt for email: ' . $credentials['email']);
 
@@ -57,7 +58,7 @@ class LoginController extends Controller
             $user->update([
                 'session_token' => $sessionToken,
                 'session_expires' => $sessionExpires,
-                'keep_session' => $keepSession, // Keep this line from the new code to store the 'keep_session' preference
+                'keep_session' => $keepSession,
             ]);
 
             // Prepare the response data, ensuring sensitive information is not included
@@ -92,6 +93,9 @@ class LoginController extends Controller
                 return response()->json(['message' => 'No ongoing login process to cancel.'], 200);
             }
         } catch (\Exception $e) {
+            // Log the exception
+            Log::error('Cancel login exception: ' . $e->getMessage()); // Added more descriptive log message
+
             return response()->json(['message' => 'Failed to cancel login process'], 500);
         }
     }
