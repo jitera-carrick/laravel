@@ -31,7 +31,7 @@ return [
     | users are actually retrieved out of your database or other storage
     | mechanisms used by this application to persist your user's data.
     |
-    | Supported: "session"
+    | Supported: "session", "token"
     |
     */
 
@@ -39,6 +39,12 @@ return [
         'web' => [
             'driver' => 'session',
             'provider' => 'users',
+        ],
+        // Adding a guard for long-term sessions if "Keep Session" feature is implemented
+        'long-term-session' => [
+            'driver' => 'session',
+            'provider' => 'users',
+            'cookie' => 'long_term_session', // This is a custom cookie name for long-term sessions
         ],
     ],
 

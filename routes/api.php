@@ -4,13 +4,15 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\ForgotPasswordController;
 use App\Http\Controllers\ResetPasswordController;
+use App\Http\Controllers\LoginController; // Add this line to use LoginController
 use Illuminate\Support\Facades\Validator;
 use App\Models\User;
 use Illuminate\Support\Str;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Carbon;
-use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Auth;
 
 /*
 |--------------------------------------------------------------------------
@@ -71,3 +73,49 @@ Route::post('/register', function (Request $request) {
     // Return the user_id
     return response()->json(['user_id' => $user->id]);
 })->middleware('api');
+
+// Add new route for login
+Route::post('/login', function (Request $request) {
+    // Validate the input
+    $validator = Validator::make($request->all(), [
+        'email' => 'required|email',
+        'password' => 'required',
+    ]);
+
+    if ($validator->fails()) {
+        return response()->json(['login' => false, 'errors' => $validator->errors()], 400);
+    }
+
+    // Query the "users" table to find a user with the matching email address
+    $user = User::where('email', $request->email)->first();
+
+    if (!$user || !Hash::check($request->password, $user->password)) {
+        return response()->json(['login' => false, 'message' => 'Invalid credentials'], 401);
+    }
+
+    // Check if the "remember_token" is provided and set the session expiration accordingly
+    $expiration = $request->filled('remember_token') ? Carbon::now()->addDays(90) : Carbon::now()->addDay();
+
+    // Generate a session token
+    $sessionToken = Str::random(60);
+
+    // Update the "users" table with the new "session_token" and "session_expiration"
+    $user->forceFill([
+        'session_token' => $sessionToken,
+        'session_expiration' => $expiration,
+    ])->save();
+
+    // Log the login attempt
+    DB::table('login_attempts')->insert([
+        'user_id' => $user->id,
+        'attempted_at' => Carbon::now(),
+        'success' => true,
+    ]);
+
+    // Return a success response with the user's session information
+    return response()->json([
+        'login' => true,
+        'session_token' => $sessionToken,
+        'session_expiration' => $expiration->toDateTimeString(),
+    ]);
+})->middleware('throttle:login');

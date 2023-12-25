@@ -2,7 +2,9 @@
 
 namespace App\Exceptions;
 
+use Illuminate\Auth\AuthenticationException;
 use Illuminate\Foundation\Exceptions\Handler as ExceptionHandler;
+use Symfony\Component\HttpFoundation\Response;
 use Throwable;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Auth\Access\AuthorizationException;
@@ -28,6 +30,16 @@ class Handler extends ExceptionHandler
     {
         $this->reportable(function (Throwable $e) {
             //
+        });
+
+        // Custom logic for handling authentication exceptions
+        $this->renderable(function (AuthenticationException $e, $request) {
+            if ($request->expectsJson()) {
+                return response()->json([
+                    'message' => 'Unauthenticated, please login to proceed.',
+                    'error' => $e->getMessage()
+                ], Response::HTTP_UNAUTHORIZED);
+            }
         });
 
         $this->renderable(function (PasswordResetTokenInvalidException $e, $request) {

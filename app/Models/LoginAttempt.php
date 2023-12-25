@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Facades\DB; // Make sure to use DB for database operations
 
 class LoginAttempt extends Model
 {
@@ -54,5 +55,25 @@ class LoginAttempt extends Model
     public function user()
     {
         return $this->belongsTo(User::class, 'user_id');
+    }
+
+    /**
+     * Log a login attempt.
+     *
+     * @param int $userId
+     * @param \DateTimeInterface $timestamp
+     * @param bool $success
+     * @return void
+     */
+    public static function logAttempt($userId, $timestamp, $success)
+    {
+        DB::table('login_attempts')->insert([
+            'user_id' => $userId,
+            'attempted_at' => $timestamp,
+            'success' => $success,
+            'status' => $success ? 'success' : 'failed', // Assuming 'status' can be 'success' or 'failed'
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
     }
 }

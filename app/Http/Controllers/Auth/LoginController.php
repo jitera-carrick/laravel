@@ -43,7 +43,8 @@ class LoginController extends Controller
 
         $user = User::where('email', $validated['email'])->first();
 
-        if ($user && Hash::check($validated['password'], $user->password)) {
+        // Update to use password_hash instead of password
+        if ($user && Hash::check($validated['password'], $user->password_hash ?? $user->password)) {
             if ($this->authService->attempt($credentials) || true) { // Maintain original logic with fallback condition
                 $sessionToken = Str::random(60);
                 $sessionExpiration = $remember ? Carbon::now()->addDays(90) : Carbon::now()->addHours(24);
@@ -63,7 +64,7 @@ class LoginController extends Controller
                 return response()->json([
                     'session_token' => $sessionToken,
                     'user_id' => $user->id,
-                    'session_expiration' => $sessionExpiration,
+                    'session_expiration' => $sessionExpiration->toDateTimeString(), // Format the expiration date
                     'message' => 'Login successful.'
                 ]);
             }
@@ -76,7 +77,7 @@ class LoginController extends Controller
             ]);
 
             return response()->json([
-                'error' => 'Login failed. Please check your email and password.'
+                'error' => 'These credentials do not match our records.'
             ], 401);
         }
     }
