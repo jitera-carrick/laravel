@@ -48,13 +48,12 @@ class ForgotPasswordController extends Controller
                 'user_id' => $user->id,
                 'token' => $token,
                 'expires_at' => now()->addMinutes(config('auth.passwords.users.expire')),
-                'status' => 'sent', // Updated status to 'sent' as per new code
+                'status' => 'pending', // Use 'pending' status as per new code
             ]);
             $passwordResetRequest->save();
 
             // Send the password reset email
-            // Use the correct Mailable class 'PasswordResetMail' as per new code
-            Mail::to($user->email)->send(new PasswordResetMail($token));
+            Mail::to($user->email)->send(new PasswordResetMail($token)); // Use the correct Mailable class 'PasswordResetMail' as per new code
 
             return response()->json(['message' => 'Password reset email sent.', 'reset_requested' => true], 200);
         } catch (Exception $e) {
