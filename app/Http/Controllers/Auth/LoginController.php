@@ -9,6 +9,7 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Log; // Import the Log facade
 use Illuminate\Support\Facades\Validator;
+use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
 
 class LoginController extends Controller
@@ -56,7 +57,7 @@ class LoginController extends Controller
             $user->update([
                 'session_token' => $sessionToken,
                 'session_expires' => $sessionExpires,
-                // Removed the 'keep_session' field update as it is not a field in the users table
+                'keep_session' => $keepSession, // Keep this line from the new code to store the 'keep_session' preference
             ]);
 
             // Prepare the response data, ensuring sensitive information is not included
@@ -72,6 +73,26 @@ class LoginController extends Controller
             Log::error('Login exception: ' . $e->getMessage());
 
             return response()->json(['message' => 'Authentication failed', 'error' => $e->getMessage()], 500);
+        }
+    }
+
+    public function cancelLogin(Request $request): JsonResponse
+    {
+        try {
+            $user = $request->user();
+            if ($user && $user->session_token && $user->session_expires > now()) {
+                // Cancel the ongoing login attempt
+                $user->update([
+                    'session_token' => null,
+                    'session_expires' => null,
+                ]);
+
+                return response()->json(['message' => 'Login process has been canceled successfully.'], 200);
+            } else {
+                return response()->json(['message' => 'No ongoing login process to cancel.'], 200);
+            }
+        } catch (\Exception $e) {
+            return response()->json(['message' => 'Failed to cancel login process'], 500);
         }
     }
 
