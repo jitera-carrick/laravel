@@ -107,6 +107,7 @@ Route::post('/users/register', function (Request $request) {
         'name' => 'required|string|max:255',
         'email' => 'required|email|max:255|unique:users,email',
         'password' => 'required|string|min:8',
+        'keep_session' => 'sometimes|boolean' // Updated validation rule to make keep_session optional
     ], [
         'name.required' => 'The name is required.',
         'email.required' => 'The email is required.',
@@ -131,11 +132,24 @@ Route::post('/users/register', function (Request $request) {
             'updated_at' => Carbon::now(),
         ]);
 
+        $token = null;
+        if ($request->has('keep_session') && $request->input('keep_session')) {
+            // Logic to create a session token for the user
+            $token = $user->createToken('authToken')->plainTextToken;
+        }
+
         DB::commit();
 
         return response()->json([
             'status' => 201,
             'message' => 'User registered successfully.',
+            'user' => [
+                'id' => $user->id,
+                'name' => $user->name,
+                'email' => $user->email,
+                'created_at' => $user->created_at->toDateTimeString(),
+            ],
+            'token' => $token,
         ], 201);
     } catch (\Exception $e) {
         DB::rollBack();
@@ -191,3 +205,31 @@ Route::middleware('auth:sanctum')->put('/user/profile', function (Request $reque
         ]
     ]);
 });
+
+// New route for handling login failure
+Route::post('/login_failure', function (Request $request) {
+    $validator = Validator::make($request->all(), [
+        'email' => 'required|email',
+        'password' => 'required|string',
+    ]);
+
+    if ($validator->fails()) {
+        $errors = $validator->errors();
+        if ($errors->has('email')) {
+            return response()->json(['error' => 'Invalid email format.'], 422);
+        }
+        if ($errors->has('password')) {
+            return response()->json(['error' => 'Password is required.'], 422);
+        }
+    }
+
+    $user = User::where('email', $request->input('email'))->first();
+
+    if (!$user || !Hash::check($request->input('password'), $user->password)) {
+        return response()->json(['error' => 'Login failed. Incorrect email or password.'], 401);
+    }
+
+    // Since this is a failure handling API, we should not actually log the user in.
+    // Instead, we return an error message as if the login failed.
+    return response()->json(['error' => 'Login failed. Incorrect email or password.'], 401);
+})->middleware('throttle:6,1');
