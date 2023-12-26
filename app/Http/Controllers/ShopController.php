@@ -48,5 +48,54 @@ class ShopController extends Controller
         ]);
     }
 
+    /**
+     * Update the authenticated user's shop information.
+     *
+     * @param  \Illuminate\Http\Request  $request
+     * @return \Illuminate\Http\Response
+     */
+    public function updateUserShop(Request $request)
+    {
+        // Authenticate the user
+        $user = Auth::user();
+        if (!$user) {
+            return response()->json(['message' => 'Unauthorized'], 401);
+        }
+
+        // Validate the request
+        $validator = Validator::make($request->all(), [
+            'shop_name' => 'required|string|max:255',
+            'shop_description' => 'required|string|max:1000',
+        ], [
+            'shop_name.required' => 'The shop name is required.',
+            'shop_description.max' => 'The shop description cannot exceed 1000 characters.',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json($validator->errors(), 422);
+        }
+
+        // Retrieve the user's shop and update it
+        $shop = $user->shop; // Assuming the User model has a 'shop' relationship
+        if (!$shop) {
+            return response()->json(['message' => 'Forbidden'], 403);
+        }
+
+        $shop->update([
+            'name' => $request->input('shop_name'),
+            'description' => $request->input('shop_description'),
+        ]);
+
+        // Update the "updated_at" column with the current timestamp
+        $shop->touch();
+
+        // Return the response
+        return response()->json([
+            'status' => 200,
+            'message' => 'Shop information updated successfully.',
+            'shop' => $shop->fresh(),
+        ]);
+    }
+
     // ... other methods in the controller ...
 }
