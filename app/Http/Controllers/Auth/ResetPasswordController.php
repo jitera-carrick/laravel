@@ -19,11 +19,33 @@ class ResetPasswordController extends Controller
      * Validate the password reset token.
      *
      * @param Request $request
+     * @param string|null $token
      * @return \Illuminate\Http\JsonResponse
      */
-    public function validateResetToken(Request $request)
+    public function validateResetToken(Request $request, $token = null)
     {
-        // ... (existing code remains unchanged)
+        if (empty($token)) {
+            // Check if token is provided in the request body if not in URL
+            $token = $request->input('token');
+            if (empty($token)) {
+                return response()->json(['message' => 'Token is required.'], 400);
+            }
+        }
+
+        $passwordResetRequest = PasswordResetRequest::where('token', $token)
+                            ->where('expires_at', '>', now())
+                            ->first();
+
+        if (!$passwordResetRequest) {
+            return response()->json([
+                'message' => 'Invalid or expired token.'
+            ], 404);
+        }
+
+        return response()->json([
+            'status' => 200,
+            'message' => 'Token is valid. You can proceed to reset your password.'
+        ], 200);
     }
 
     /**
@@ -114,4 +136,6 @@ class ResetPasswordController extends Controller
 
         return response()->json(['status' => 200, 'message' => $message]);
     }
+
+    // Add any new methods below this line
 }
