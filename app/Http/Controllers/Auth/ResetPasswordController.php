@@ -8,6 +8,8 @@ use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Facades\Hash;
 use App\Models\User;
 use App\Models\PasswordResetRequest;
+use App\Mail\PasswordResetMail;
+use Illuminate\Support\Facades\Mail;
 use Exception;
 
 class ResetPasswordController extends Controller
@@ -48,46 +50,50 @@ class ResetPasswordController extends Controller
 
     public function reset(Request $request)
     {
-        // Validate the request
+        // Merge the validation rules and custom error messages from both versions
         $validator = Validator::make($request->all(), [
             'email' => 'required|email|exists:users,email',
-            // Merged password validation rules to include complexity requirements from existing code
-            'password' => 'required|confirmed|min:8|regex:/[a-z]/|regex:/[A-Z]/|regex:/[0-9]/|regex:/[@$!%*#?&]/', 
+            'password' => 'required|confirmed|min:8|regex:/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*#?&]).+$/',
             'token' => 'required|string',
         ], [
-            // Custom error messages for password validation from existing code
             'password.min' => 'The password must be at least 8 characters.',
             'password.regex' => 'The password must include at least one uppercase letter, one lowercase letter, one number, and one special character (@$!%*#?&).',
         ]);
 
         if ($validator->fails()) {
-            // Return a generic message to avoid giving specific details about the failure from existing code
             return response()->json(['message' => 'There was an error with your request. Please ensure all fields are filled out correctly.'], 422);
         }
 
         try {
-            // Check if the token is valid
+            // Retrieve the PasswordResetRequest using the provided token and ensure it has not expired
             $passwordResetRequest = PasswordResetRequest::where('token', $request->token)
                 ->where('expires_at', '>', now())
+                ->where('status', '!=', 'completed')
                 ->first();
 
             if (!$passwordResetRequest) {
-                // Return a generic message to avoid revealing token status from existing code
                 return response()->json(['message' => 'A password reset link has been sent to the provided email if it exists in our system.'], 200);
             }
 
-            // Update the user's password
+            // Find the associated user and update their password
             $user = User::where('email', $request->email)->first();
+            if (Hash::check($request->password, $user->password)) {
+                return response()->json(['message' => 'The password cannot be the same as the current password.'], 400);
+            }
+
             $user->password = Hash::make($request->password);
             $user->save();
 
-            // Invalidate the token
-            $passwordResetRequest->delete();
+            // Set the status of the PasswordResetRequest to 'completed' and save the changes
+            $passwordResetRequest->status = 'completed';
+            $passwordResetRequest->save();
 
-            // Always display a message indicating that a password reset email has been sent from existing code
+            // Send a confirmation email to the user
+            Mail::to($user->email)->send(new PasswordResetMail());
+
+            // Always display a message indicating that a password reset email has been sent
             return response()->json(['message' => 'Your password has been reset successfully. A confirmation email has been sent.'], 200);
         } catch (Exception $e) {
-            // Return a generic error message to avoid revealing sensitive information from existing code
             return response()->json(['message' => 'An error occurred while processing your request. Please try again later.'], 500);
         }
     }
