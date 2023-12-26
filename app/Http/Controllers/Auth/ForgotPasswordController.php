@@ -9,6 +9,7 @@ use App\Models\User;
 use App\Models\PasswordResetRequest;
 use Illuminate\Support\Str;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\Validator; // Import Validator facade
 
 class ForgotPasswordController extends Controller
 {
@@ -47,6 +48,45 @@ class ForgotPasswordController extends Controller
 
         return response()->json([
             'message' => 'Password reset email has been sent.',
+        ]);
+    }
+
+    // New method
+    public function requestPasswordReset(Request $request)
+    {
+        $validator = Validator::make($request->all(), [
+            'email' => 'required|email',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json($validator->errors(), 422);
+        }
+
+        $user = User::where('email', $request->email)->first();
+
+        if (!$user) {
+            return response()->json(['message' => 'Email not found.'], 404);
+        }
+
+        $resetToken = Str::random(60);
+        $expiresAt = Carbon::now()->addHours(24);
+
+        PasswordResetRequest::create([
+            'email' => $user->email, // Changed from 'user_id' to 'email' to match the requirement
+            'reset_token' => $resetToken,
+            'created_at' => Carbon::now(),
+            'expires_at' => $expiresAt,
+        ]);
+
+        Mail::send('emails.password_reset', ['token' => $resetToken], function ($message) use ($user) {
+            $message->to($user->email);
+            $message->subject('Password Reset Request');
+            $message->from(config('mail.from.address'), config('mail.from.name'));
+        });
+
+        return response()->json([
+            'status' => 200,
+            'message' => 'Password reset link sent successfully.'
         ]);
     }
 }
