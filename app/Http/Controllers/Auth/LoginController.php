@@ -89,6 +89,34 @@ class LoginController extends Controller
         }
     }
 
+    // New authenticateLogin method
+    public function authenticateLogin(LoginRequest $request)
+    {
+        // Since the new code does not use AuthService, we will not use it here either.
+        // We will use the validation provided by LoginRequest, which is assumed to have the necessary rules defined.
+        $validated = $request->validated();
+
+        if (Auth::attempt($validated)) {
+            $user = Auth::user();
+            // Assuming the User model has methods to generate session tokens
+            $user->generateSessionToken();
+
+            return response()->json([
+                'status' => 200,
+                'user' => [
+                    'id' => $user->id,
+                    'email' => $user->email,
+                    'session_token' => $user->session_token,
+                    'session_expiration' => $user->session_expiration,
+                ]
+            ], 200);
+        } else {
+            return response()->json([
+                'message' => 'Unauthorized, please check your credentials and try again.'
+            ], 401);
+        }
+    }
+
     public function cancelLogin()
     {
         // Since no backend action is required, we directly return a success response.
@@ -125,6 +153,8 @@ class LoginController extends Controller
 
     // Other existing methods...
 
+    // The recordLoginAttempt method from the new code is not conflicting with the existing code.
+    // It can be added as a new method to the controller.
     public function recordLoginAttempt(Request $request)
     {
         // The recordLoginAttempt method from the new code is not conflicting with the existing code.

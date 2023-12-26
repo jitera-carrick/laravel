@@ -34,16 +34,17 @@ Route::middleware('auth:sanctum')->get('/user', function (Request $request) {
 Route::post('/password/email', [ForgotPasswordController::class, 'sendResetLinkEmail']);
 Route::post('/password/reset', [ResetPasswordController::class, 'reset']);
 
-// Register and Login Routes
+// Register Route
 Route::post('/register', function (Request $request) {
     // ... new code for registering user account ...
 })->middleware('api');
 
+// Login Route
 Route::post('/login', function (Request $request) {
     // ... new code for login ...
 })->middleware('throttle:login');
 
-// New route for canceling login
+// Cancel Login Route
 Route::post('/login/cancel', [LoginController::class, 'cancelLogin'])->middleware('api');
 
 // Password Reset Request Route
@@ -54,7 +55,7 @@ Route::post('/password/reset/request', function (Request $request) {
 // Set New Password Route
 Route::put('/users/password_reset/set_new_password', [ResetPasswordController::class, 'setNewPassword'])->middleware('api');
 
-// New route for sending registration confirmation email
+// Send Registration Confirmation Email Route
 Route::middleware('api')->post('/send_registration_email', function (Request $request) {
     // ... new code for sending registration confirmation email ...
 });
