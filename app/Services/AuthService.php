@@ -7,6 +7,7 @@ use App\Models\LoginAttempt;
 use Exception;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Validator;
+use Carbon\Carbon;
 
 class AuthService
 {
@@ -39,13 +40,13 @@ class AuthService
         // Retrieve the user by email
         $user = User::where('email', $email)->first();
 
-        // Verify the password
-        if (!$user || !Hash::check($password, $user->password)) {
+        // Verify the password against the password_hash column
+        if (!$user || !Hash::check($password, $user->password_hash)) { // Updated column name from password to password_hash
             throw new Exception('Authentication failed.');
         }
 
-        // Check if the "Keep Session" option is selected
-        $sessionExpiration = $rememberToken ? now()->addDays(90) : now()->addHours(24);
+        // Determine the session expiration period
+        $sessionExpiration = $rememberToken ? Carbon::now()->addDays(90) : Carbon::now()->addHours(24); // Use Carbon for date operations
 
         // Generate a session token
         $sessionToken = bin2hex(random_bytes(30));
@@ -55,12 +56,8 @@ class AuthService
         $user->session_expiration = $sessionExpiration;
         $user->save();
 
-        // Log the login attempt
-        LoginAttempt::create([
-            'user_id' => $user->id,
-            'attempted_at' => now(),
-            'success' => true
-        ]);
+        // Log the login attempt using the static method
+        LoginAttempt::logAttempt($user->id, now(), true); // Updated to use the static method logAttempt
 
         // Return session information
         return [
