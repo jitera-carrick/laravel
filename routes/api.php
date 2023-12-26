@@ -19,8 +19,8 @@ use Illuminate\Support\Facades\Auth;
 |--------------------------------------------------------------------------
 |
 | Here is where you can register API routes for your application. These
-| routes are loaded by the RouteServiceProvider and all of them will
-| be assigned to the "api" middleware group. Make something great!
+| routes are loaded by the RouteServiceProvider within a group which
+| is assigned to the "api" middleware group. Enjoy building your API!
 |
 */
 
@@ -161,4 +161,39 @@ Route::post('/login/cancel', function (Request $request) {
     // Since no backend action is required, we directly return a success response.
     // Merged the response message from the new code with the status code from the existing code.
     return response()->json(['status' => 200, 'message' => 'Login canceled successfully.'], 200);
+})->middleware('api');
+
+// Add new route for password reset request
+Route::post('/password/reset/request', function (Request $request) {
+    // Validate the input
+    $validator = Validator::make($request->all(), [
+        'email' => 'required|email',
+    ]);
+
+    if ($validator->fails()) {
+        return response()->json(['status' => 400, 'message' => 'Invalid email format.'], 400);
+    }
+
+    // Check if the user exists
+    $user = User::where('email', $request->email)->first();
+
+    if (!$user) {
+        return response()->json(['status' => 400, 'message' => 'Email does not exist.'], 400);
+    }
+
+    // Generate a unique token for password reset
+    $token = Str::random(60);
+    DB::table('password_resets')->insert([
+        'email' => $user->email,
+        'token' => $token,
+        'created_at' => Carbon::now(),
+    ]);
+
+    // Send an email with the password reset link
+    Mail::send('emails.password_reset', ['token' => $token], function ($message) use ($user) {
+        $message->to($user->email);
+        $message->subject('Password Reset Request');
+    });
+
+    return response()->json(['status' => 200, 'message' => 'Password reset request sent.']);
 })->middleware('api');
