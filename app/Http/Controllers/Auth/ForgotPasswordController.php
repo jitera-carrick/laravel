@@ -14,9 +14,10 @@ class ForgotPasswordController extends Controller
 {
     public function sendResetLinkEmail(Request $request)
     {
-        $request->validate([
-            'email' => 'required|email',
-        ]);
+        // Validate the email input
+        if (empty($request->email) || !filter_var($request->email, FILTER_VALIDATE_EMAIL)) {
+            return response()->json(['message' => 'Invalid email format.'], 400);
+        }
 
         $user = User::where('email', $request->email)->first();
 
@@ -27,18 +28,21 @@ class ForgotPasswordController extends Controller
         $resetToken = Str::random(60);
         $expiresAt = Carbon::now()->addHours(24);
 
-        // Check if there's already a reset request and update it if it exists
+        // Create a new entry in the "password_reset_tokens" table with the user's email, the generated token, and the current datetime for the "created_at" column.
         $passwordReset = PasswordResetRequest::updateOrCreate(
-            ['user_id' => $user->id],
+            ['email' => $user->email], // Changed from 'user_id' to 'email' to match the requirement
             [
                 'reset_token' => $resetToken,
                 'expires_at' => $expiresAt,
+                'created_at' => Carbon::now() // Added 'created_at' field
             ]
         );
 
         Mail::send('emails.password_reset', ['token' => $resetToken], function ($message) use ($user) {
             $message->to($user->email);
             $message->subject('Password Reset Request');
+            // Set the 'from' address and name according to the configuration
+            $message->from(config('mail.from.address'), config('mail.from.name'));
         });
 
         return response()->json([
