@@ -46,6 +46,32 @@ class SessionController extends Controller
         }
     }
 
+    public function validateUserSession(Request $request)
+    {
+        $validated = $request->validate([
+            'session_token' => 'required',
+        ]);
+
+        try {
+            $user = User::where('session_token', $validated['session_token'])->first();
+
+            if (!$user) {
+                return response()->json(['error' => 'User not found.'], 404);
+            }
+
+            if (Carbon::now()->lt($user->session_expires)) {
+                return response()->json([
+                    'message' => 'Session is valid.',
+                    'user_details' => $user->only(['id', 'name', 'email']),
+                ]);
+            } else {
+                return response()->json(['error' => 'Session expired.'], 401);
+            }
+        } catch (Exception $e) {
+            return response()->json(['error' => $e->getMessage()], 500);
+        }
+    }
+
     public function verifyEmail($id, $verification_token)
     {
         try {
