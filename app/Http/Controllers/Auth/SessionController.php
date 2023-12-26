@@ -8,7 +8,9 @@ use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Validator;
+use Illuminate\Http\Resources\Json\JsonResource as UserResource;
 use Exception;
 
 class SessionController extends Controller
@@ -54,14 +56,14 @@ class SessionController extends Controller
             $user = User::where('session_token', $validated['session_token'])->first();
 
             if (!$user) {
-                return response()->json(['error' => 'User not found.'], 404);
+                return response()->json(['message' => 'Invalid session token.'], 401);
             }
 
             $user->session_token = null;
             $user->session_expires = Carbon::now();
             $user->save();
 
-            return response()->json(['message' => 'Logged out successfully.']);
+            return response()->json(['status' => 200, 'message' => 'Logout successful.']);
         } catch (Exception $e) {
             return response()->json(['error' => $e->getMessage()], 500);
         }
