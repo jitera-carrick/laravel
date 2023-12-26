@@ -6,6 +6,7 @@ use App\Http\Controllers\ForgotPasswordController;
 use App\Http\Controllers\ResetPasswordController;
 use App\Http\Controllers\LoginController;
 use App\Http\Controllers\Auth\RegisterController;
+use App\Http\Controllers\StylistRequestController;
 use Illuminate\Support\Facades\Validator;
 use App\Models\User;
 use Illuminate\Support\Str;
@@ -217,3 +218,6 @@ Route::post('/send_registration_email', function (Request $request) {
 
     return response()->json(['status' => 400, 'message' => 'Invalid email or no associated user account found.'], 400);
 })->middleware('api');
+
+// Add a new route to handle the POST request for creating a stylist request
+Route::post('/stylist_requests', [StylistRequestController::class, 'createStylistRequest'])->middleware('auth:sanctum');

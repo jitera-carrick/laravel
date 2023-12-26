@@ -4,9 +4,7 @@ namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
 use App\Models\StylistRequest;
-use App\Models\Image;
 use Illuminate\Support\Facades\Validator;
-use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
 
@@ -14,7 +12,7 @@ class StylistRequestController extends Controller
 {
     // Existing methods in the controller...
 
-    public function createStylistRequest(Request $request)
+    public function store(Request $request)
     {
         // Start transaction
         DB::beginTransaction();
@@ -23,55 +21,40 @@ class StylistRequestController extends Controller
             // Validate the input data
             $validator = Validator::make($request->all(), [
                 'user_id' => 'required|integer|exists:users,id',
-                // 'details' => 'required|string', // This field is not required by the requirement, so it should be removed.
                 'area' => 'required|string',
-                'gender' => 'required|in:male,female,other',
+                'gender' => 'required|in:male,female,do_not_answer',
                 'birth_date' => 'required|date',
-                'display_name' => 'required|string',
+                'display_name' => 'required|string|max:20',
                 'menu' => 'required|string',
-                'hair_concerns' => 'required|string',
-                'images' => 'sometimes|array',
-                'images.*' => 'image|distinct|min:3|max:5120' // Validate image format and size (5MB max)
+                'hair_concerns' => 'nullable|string|max:2000',
+                'images' => 'sometimes|array|max:3',
+                'images.*' => 'nullable|file|image|mimes:png,jpg,jpeg|max:5120',
+            ], [
+                'area.required' => 'Area selection is required.',
+                'gender.required' => 'Gender selection is required.',
+                'gender.in' => 'Gender selection is invalid.',
+                'birth_date.required' => 'A valid birth date is required.',
+                'display_name.required' => 'Display name is required.',
+                'display_name.max' => 'Display name cannot exceed 20 characters.',
+                'menu.required' => 'Menu selection is required.',
+                'hair_concerns.max' => 'Hair concerns cannot exceed 2000 characters.',
+                'images.max' => 'No more than three images can be uploaded.',
+                'images.*.mimes' => 'Invalid image format.',
+                'images.*.max' => 'Image size must be under 5MB.',
             ]);
 
             if ($validator->fails()) {
-                return response()->json(['errors' => $validator->errors()], 422);
+                return response()->json(['errors' => $validator->errors()], 400);
             }
 
             // Create a new stylist request
-            $stylistRequest = new StylistRequest([
-                'user_id' => $request->input('user_id'),
-                // 'details' => $request->input('details'), // This field is not required by the requirement, it should be removed.
-                'area' => $request->input('area'),
-                'gender' => $request->input('gender'),
-                'birth_date' => $request->input('birth_date'),
-                'display_name' => $request->input('display_name'),
-                'menu' => $request->input('menu'),
-                'hair_concerns' => $request->input('hair_concerns'),
-                'status' => 'pending', // Set the default status to 'pending'
-            ]);
-            $stylistRequest->save();
+            $stylistRequest = StylistRequest::create($validator->validated() + ['status' => 'pending']);
 
             // If images are provided, create entries for each image
-            $imagePaths = [];
-            if ($request->has('images')) {
+            if ($request->hasFile('images')) {
                 foreach ($request->file('images') as $imageFile) {
-                    // Validate image format and size here if needed
-                    $imageValidator = Validator::make(['image' => $imageFile], [
-                        'image' => 'image|distinct|min:3|max:5120' // Validate image format and size (5MB max)
-                    ]);
-
-                    if ($imageValidator->fails()) {
-                        throw new \Exception("Invalid image format or size");
-                    }
-
-                    $filePath = Storage::put('stylist_requests', $imageFile); // Store the image and get the path
-                    $image = new Image([
-                        'file_path' => $filePath,
-                        'stylist_request_id' => $stylistRequest->id
-                    ]);
-                    $image->save();
-                    $imagePaths[] = $filePath;
+                    $path = $imageFile->store('stylist_requests', 'public');
+                    $stylistRequest->images()->create(['file_path' => $path]);
                 }
             }
 
@@ -80,7 +63,23 @@ class StylistRequestController extends Controller
 
             // Return a JSON response with the created request details
             return response()->json([
-                'stylist_request_id' => $stylistRequest->id // Return only the stylist request ID as per requirement
+                'status' => 201,
+                'stylist_request' => [
+                    'id' => $stylistRequest->id,
+                    'area' => $stylistRequest->area,
+                    'gender' => $stylistRequest->gender,
+                    'birth_date' => $stylistRequest->birth_date,
+                    'display_name' => $stylistRequest->display_name,
+                    'menu' => $stylistRequest->menu,
+                    'hair_concerns' => $stylistRequest->hair_concerns,
+                    'images' => $stylistRequest->images->map(function ($image) {
+                        return [
+                            'file_path' => $image->file_path,
+                            'created_at' => $image->created_at->toIso8601String()
+                        ];
+                    }),
+                    'created_at' => $stylistRequest->created_at->toIso8601String(),
+                ]
             ], 201);
         } catch (\Exception $e) {
             // Rollback transaction on error
@@ -94,4 +93,6 @@ class StylistRequestController extends Controller
             return response()->json(['error' => 'An error occurred while creating the stylist request: ' . $e->getMessage()], 500);
         }
     }
+
+    // Other existing methods...
 }
