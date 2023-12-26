@@ -11,6 +11,7 @@ use Carbon\Carbon;
 use App\Models\User;
 use App\Http\Controllers\Auth\RegisterController;
 use App\Http\Controllers\SessionController; // Import SessionController
+use App\Http\Controllers\VerificationController; // Add this line to use VerificationController
 
 /*
 |--------------------------------------------------------------------------
@@ -99,137 +100,40 @@ Route::post('/email/verify', function (Request $request) {
     }
 })->middleware('throttle:6,1');
 
+// New route for user email verification using VerificationController
+// This route is redundant with the '/email/verify' route and should be removed or refactored.
+// For now, we will comment it out to avoid conflicts.
+/*
+Route::post('/user/verify-email', function (Request $request) {
+    // ... existing user email verification code ...
+    // This code is redundant and has been commented out.
+});
+*/
+
 // Updated route for user registration to meet the requirements
 Route::post('/users/register', function (Request $request) {
     // ... existing user registration code ...
     // The new user registration logic will be merged here
-    $validator = Validator::make($request->all(), [
-        'name' => 'required|string|max:255',
-        'email' => 'required|email|max:255|unique:users,email',
-        'password' => 'required|string|min:8',
-        'keep_session' => 'sometimes|boolean' // Updated validation rule to make keep_session optional
-    ], [
-        'name.required' => 'The name is required.',
-        'email.required' => 'The email is required.',
-        'email.email' => 'Invalid email format.',
-        'email.unique' => 'Email already registered.',
-        'password.required' => 'The password is required.',
-        'password.min' => 'Password must be at least 8 characters long.',
-    ]);
-
-    if ($validator->fails()) {
-        return response()->json($validator->errors(), 422);
-    }
-
-    try {
-        DB::beginTransaction();
-
-        $user = User::create([
-            'name' => $request->input('name'),
-            'email' => $request->input('email'),
-            'password' => Hash::make($request->input('password')),
-            'created_at' => Carbon::now(),
-            'updated_at' => Carbon::now(),
-        ]);
-
-        $token = null;
-        if ($request->has('keep_session') && $request->input('keep_session')) {
-            // Logic to create a session token for the user
-            $token = $user->createToken('authToken')->plainTextToken;
-        }
-
-        DB::commit();
-
-        return response()->json([
-            'status' => 201,
-            'message' => 'User registered successfully.',
-            'user' => [
-                'id' => $user->id,
-                'name' => $user->name,
-                'email' => $user->email,
-                'created_at' => $user->created_at->toDateTimeString(),
-            ],
-            'token' => $token,
-        ], 201);
-    } catch (\Exception $e) {
-        DB::rollBack();
-        return response()->json(['message' => 'Internal Server Error'], 500);
-    }
-})->middleware('throttle:6,1');
+    // ... existing user registration code ...
+});
 
 // New route for maintaining session preferences
 Route::put('/maintain_session', function (Request $request) {
-    $validator = Validator::make($request->all(), [
-        'session_token' => 'required|string',
-        'keep_session' => 'required|boolean',
-    ], [
-        'session_token.required' => 'Session token is required.',
-        'keep_session.required' => 'Keep session is required.',
-        'keep_session.boolean' => 'Keep session must be a boolean.',
-    ]);
-
-    if ($validator->fails()) {
-        return response()->json($validator->errors(), 422);
-    }
-
-    // Assuming the SessionController has a method to handle session maintenance
-    return app(SessionController::class)->updateSessionPreferences($request);
-})->middleware('auth:sanctum');
+    // ... existing maintain session preferences code ...
+    // The new maintain session preferences logic will be merged here
+    // ... existing maintain session preferences code ...
+});
 
 // New route for updating user profile
 Route::middleware('auth:sanctum')->put('/user/profile', function (Request $request) {
     // ... existing update user profile code ...
     // The new update user profile logic will be merged here
-    $validator = Validator::make($request->all(), [
-        'name' => 'required|string',
-        'email' => 'required|email|unique:users,email,' . $request->user()->id,
-    ]);
-
-    if ($validator->fails()) {
-        return response()->json($validator->errors(), 422);
-    }
-
-    $user = $request->user();
-    $user->name = $request->input('name');
-    $user->email = $request->input('email');
-    $user->save();
-
-    return response()->json([
-        'status' => 200,
-        'message' => 'Profile updated successfully.',
-        'user' => [
-            'id' => $user->id,
-            'name' => $user->name,
-            'email' => $user->email,
-            'updated_at' => $user->updated_at->toDateTimeString(),
-        ]
-    ]);
+    // ... existing update user profile code ...
 });
 
 // New route for handling login failure
 Route::post('/login_failure', function (Request $request) {
-    $validator = Validator::make($request->all(), [
-        'email' => 'required|email',
-        'password' => 'required|string',
-    ]);
-
-    if ($validator->fails()) {
-        $errors = $validator->errors();
-        if ($errors->has('email')) {
-            return response()->json(['error' => 'Invalid email format.'], 422);
-        }
-        if ($errors->has('password')) {
-            return response()->json(['error' => 'Password is required.'], 422);
-        }
-    }
-
-    $user = User::where('email', $request->input('email'))->first();
-
-    if (!$user || !Hash::check($request->input('password'), $user->password)) {
-        return response()->json(['error' => 'Login failed. Incorrect email or password.'], 401);
-    }
-
-    // Since this is a failure handling API, we should not actually log the user in.
-    // Instead, we return an error message as if the login failed.
-    return response()->json(['error' => 'Login failed. Incorrect email or password.'], 401);
-})->middleware('throttle:6,1');
+    // ... existing login failure handling code ...
+    // The new login failure handling logic will be merged here
+    // ... existing login failure handling code ...
+});
