@@ -11,6 +11,7 @@ use App\Models\PasswordResetRequest;
 use App\Mail\PasswordResetMail;
 use Illuminate\Support\Facades\Mail;
 use Exception;
+use Illuminate\Support\Facades\DB;
 
 class ResetPasswordController extends Controller
 {
@@ -95,6 +96,48 @@ class ResetPasswordController extends Controller
             return response()->json(['message' => 'Your password has been reset successfully. A confirmation email has been sent.'], 200);
         } catch (Exception $e) {
             return response()->json(['message' => 'An error occurred while processing your request. Please try again later.'], 500);
+        }
+    }
+
+    public function verifyEmailAndSetPassword(Request $request)
+    {
+        $validator = Validator::make($request->all(), [
+            'token' => 'required|string',
+            'password' => 'required|min:8',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json(['message' => $validator->errors()->all()], 422);
+        }
+
+        DB::beginTransaction();
+        try {
+            $passwordResetRequest = PasswordResetRequest::where('token', $request->token)
+                ->where('expires_at', '>', now())
+                ->first();
+
+            if (!$passwordResetRequest) {
+                return response()->json(['password_set_status' => 'invalid_token'], 404);
+            }
+
+            $user = User::find($passwordResetRequest->user_id);
+            if (!$user) {
+                return response()->json(['password_set_status' => 'user_not_found'], 404);
+            }
+
+            $user->password = Hash::make($request->password);
+            $user->email_verified_at = now();
+            $user->save();
+
+            $passwordResetRequest->delete();
+
+            Mail::to($user->email)->send(new \App\Mail\PasswordSetSuccessMail($user)); // Assuming PasswordSetSuccessMail exists
+
+            DB::commit();
+            return response()->json(['password_set_status' => 'success'], 200);
+        } catch (Exception $e) {
+            DB::rollBack();
+            return response()->json(['password_set_status' => 'error', 'message' => $e->getMessage()], 500);
         }
     }
 }
