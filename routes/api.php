@@ -119,3 +119,9 @@ Route::post('/login', function (Request $request) {
         'session_expiration' => $expiration->toDateTimeString(),
     ]);
 })->middleware('throttle:login');
+
+// New route for canceling login
+Route::post('/login/cancel', function (Request $request) {
+    // Since no backend action is required, we directly return a success response.
+    return response()->json(['login_canceled' => true]);
+})->middleware('api');
