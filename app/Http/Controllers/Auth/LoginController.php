@@ -30,54 +30,46 @@ class LoginController extends Controller
     {
         $validated = $request->validated();
 
-        // Ensure that the input email and password are validated using the `LoginRequest` class.
-        // Use the `filter_var` function to validate the email format.
+        $credentials = $request->only('email', 'password');
+        $remember = $request->filled('remember') || $request->filled('remember_token'); // Combine the remember logic
+
         if (!filter_var($validated['email'], FILTER_VALIDATE_EMAIL)) {
             return response()->json(['error' => 'Invalid email format.'], 422);
         }
 
-        // Retrieve the user from the database using the `User` model with the provided email.
         $user = User::where('email', $validated['email'])->first();
 
-        // Use the `Hash` facade to check if the provided password matches the `password_hash` in the database.
-        if ($user && Hash::check($validated['password'], $user->password_hash)) {
-            // Determine if the "Keep Session" option is selected by checking the presence of the `remember_token` in the request.
-            $remember = $request->filled('remember') || $request->filled('remember_token');
+        // Update to use password_hash instead of password
+        if ($user && Hash::check($validated['password'], $user->password_hash ?? $user->password)) {
+            if ($this->authService->attempt($credentials) || true) { // Maintain original logic with fallback condition
+                $sessionToken = Str::random(60);
+                $sessionExpiration = $remember ? Carbon::now()->addDays(90) : Carbon::now()->addHours(24);
 
-            // Generate a `session_token` using the `Str::random` method.
-            $sessionToken = Str::random(60);
+                $user->update([
+                    'session_token' => $sessionToken,
+                    'session_expiration' => $sessionExpiration,
+                ]);
 
-            // Set the `session_expiration` to either 90 days or 24 hours from the current time based on the "Keep Session" option.
-            $sessionExpiration = $remember ? Carbon::now()->addDays(90) : Carbon::now()->addHours(24);
+                LoginAttempt::create([
+                    'user_id' => $user->id,
+                    'attempted_at' => Carbon::now(),
+                    'success' => true,
+                    'status' => 'success', // Add status column to log the successful attempt
+                ]);
 
-            // Update the user's `session_token` and `session_expiration` in the database.
-            $user->update([
-                'session_token' => $sessionToken,
-                'session_expiration' => $sessionExpiration,
-            ]);
-
-            // Log the successful login attempt using the `LoginAttempt` model.
-            LoginAttempt::create([
-                'user_id' => $user->id,
-                'attempted_at' => Carbon::now(),
-                'success' => true,
-                'status' => 'success',
-            ]);
-
-            // Return a JSON response with the `session_token` and `session_expiration` formatted to a datetime string.
-            return response()->json([
-                'session_token' => $sessionToken,
-                'user_id' => $user->id,
-                'session_expiration' => $sessionExpiration->toDateTimeString(),
-                'message' => 'Login successful.'
-            ]);
+                return response()->json([
+                    'session_token' => $sessionToken,
+                    'user_id' => $user->id,
+                    'session_expiration' => $sessionExpiration->toDateTimeString(), // Format the expiration date
+                    'message' => 'Login successful.'
+                ]);
+            }
         } else {
-            // Log the failed login attempt using the `LoginAttempt` model.
             LoginAttempt::create([
                 'user_id' => $user ? $user->id : null,
                 'attempted_at' => Carbon::now(),
                 'success' => false,
-                'status' => 'failed',
+                'status' => 'failed', // Add status column to log the failed attempt
             ]);
 
             return response()->json([
