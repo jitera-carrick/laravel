@@ -122,4 +122,33 @@ class SessionController extends Controller
     }
 
     // ... (other existing methods)
+
+    // This method is added from the new code to handle session updates
+    public function updateUserSession(Request $request)
+    {
+        $validated = $request->validate([
+            'session_token' => 'required|string',
+            'keep_session' => 'required|boolean',
+        ]);
+
+        try {
+            $user = User::where('session_token', $validated['session_token'])->first();
+
+            if (!$user) {
+                return response()->json(['message' => 'Invalid session token.'], 404);
+            }
+
+            $newSessionExpires = $validated['keep_session'] ? Carbon::now()->addDays(90) : Carbon::now()->addDay();
+            $user->session_expires = $newSessionExpires;
+            $user->save();
+
+            return response()->json([
+                'status' => 200,
+                'message' => 'Session updated successfully.',
+                'session_expires' => $user->session_expires->toIso8601String(),
+            ], 200);
+        } catch (Exception $e) {
+            return response()->json(['message' => 'Internal Server Error'], 500);
+        }
+    }
 }
