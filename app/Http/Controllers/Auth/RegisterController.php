@@ -43,12 +43,6 @@ class RegisterController extends Controller
         // Save the new user instance to the database
         $user->save();
 
-        // Send a verification email
-        Mail::to($user->email)->send(new VerifyEmail($user->remember_token));
-
-        // Send registration confirmation email
-        $this->sendRegistrationConfirmationEmail($user->id, $user->remember_token);
-
         // Generate a unique token for password reset and save it
         $token = Str::random(60);
         $passwordResetRequest = new PasswordResetRequest([
@@ -59,28 +53,35 @@ class RegisterController extends Controller
         ]);
         $passwordResetRequest->save();
 
-        // Send an email to the user with the password reset link
-        Mail::to($user->email)->send(new PasswordResetMail($token));
+        // Send a verification email
+        Mail::to($user->email)->send(new VerifyEmail($user->remember_token));
+
+        // Send registration confirmation email
+        $emailSentStatus = $this->sendRegistrationConfirmationEmail($user->id, $token);
 
         // Return a UserResource instance as the response
-        return (new UserResource($user))->additional(['message' => 'Registration successful, verification email sent.']);
+        return (new UserResource($user))->additional([
+            'message' => 'Registration successful, verification email sent.',
+            'email_sent_status' => $emailSentStatus
+        ]);
     }
 
     public function sendRegistrationConfirmationEmail($userId, $token)
     {
         try {
             $user = User::findOrFail($userId);
-            $emailContent = new RegistrationConfirmationMail($token); // Assuming this Mailable class exists
+            $verificationUrl = url('/password/set/' . $token); // Replace with the actual URL for setting the password
+            $emailContent = new RegistrationConfirmationMail($verificationUrl); // Pass the URL to the Mailable
 
             Mail::to($user->email)->send($emailContent);
 
             Log::info('Registration confirmation email sent to user: ' . $user->email);
 
-            // The response here is not necessary as this method is called within the register method and should not return a response itself.
+            return true; // Email sent successfully
         } catch (\Exception $e) {
             Log::error('Failed to send registration confirmation email: ' . $e->getMessage());
 
-            // The response here is not necessary as this method is called within the register method and should not return a response itself.
+            return false; // Email sending failed
         }
     }
 
