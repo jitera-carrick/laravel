@@ -13,7 +13,7 @@ use Illuminate\Support\Str;
 use App\Http\Resources\UserResource;
 use App\Mail\VerifyEmail;
 use App\Mail\PasswordResetMail;
-use App\Mail\RegistrationConfirmationMail; // Ensure this class exists in the specified namespace
+use App\Mail\RegistrationConfirmationMail;
 use Illuminate\Support\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
@@ -30,14 +30,14 @@ class RegisterController extends Controller
             'email' => 'required|email|unique:users,email',
             'password' => [
                 'required',
-                'min:6', // Updated minimum length requirement back to 6 as per requirement
+                'min:6',
                 'different:email',
-                'regex:/^(?=.*[a-zA-Z])(?=.*\d).+$/' // Ensuring the password contains both letters and numbers
+                'regex:/^(?=.*[a-zA-Z])(?=.*\d).+$/'
             ],
             // Add any other validation rules from the new code here if needed
         ], [
             'email.unique' => 'Invalid email format or email already in use.',
-            'password.min' => 'Password does not meet the policy requirements.', // Reverted error message to meet the requirement
+            'password.min' => 'Password does not meet the policy requirements.',
             'password.different' => 'Password does not meet the policy requirements.',
             'password.regex' => 'Password does not meet the policy requirements.',
             // Add any other custom validation messages from the new code here if needed
@@ -113,33 +113,28 @@ class RegisterController extends Controller
     }
 
     // New method to send registration email as per the guideline
-    public function sendRegistrationEmail(Request $request)
+    public function sendRegistrationEmail(Request $request): JsonResponse
     {
         $validator = Validator::make($request->all(), [
-            'user_id' => 'required|exists:users,id',
+            'email' => 'required|email|exists:users,email',
+        ], [
+            'email.exists' => 'Invalid email or no associated user account found.',
         ]);
 
         if ($validator->fails()) {
-            return response()->json(['message' => 'User not found.'], 404);
+            return response()->json(['message' => $validator->errors()->first()], 422);
         }
 
-        $user = User::findOrFail($request->input('user_id'));
-        $token = Str::random(60);
+        $user = User::where('email', $request->input('email'))->firstOrFail();
 
-        // Save the token to the database (assuming you have a PasswordReset model)
-        PasswordResetRequest::create([
-            'user_id' => $user->id,
-            'token' => $token,
-            'expires_at' => Carbon::now()->addHours(24),
-            'status' => 'pending'
-        ]);
+        // Generate a unique token and store it in the database if needed
+        // Assuming there is a method in the User model to handle this
+        $token = $user->generateVerificationToken();
 
-        Mail::to($user->email)->send(new PasswordResetMail($token, $user));
+        // Send the email with the mailable class
+        Mail::to($user->email)->send(new RegistrationConfirmationMail($token));
 
-        return response()->json([
-            'status' => 200,
-            'message' => 'Registration confirmation email sent successfully.'
-        ]);
+        return response()->json(['status' => 200, 'message' => 'Registration confirmation email sent successfully.'], 200);
     }
 
     // Add any other existing methods here

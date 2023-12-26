@@ -183,3 +183,37 @@ Route::put('/verify_email_set_password', function (Request $request) {
 
     return response()->json(['status' => 200, 'message' => 'Email verified and password set successfully.']);
 })->middleware('api');
+
+// Add a new POST route `/api/send_registration_email` that maps to the `sendRegistrationEmail` method in the RegisterController.
+Route::post('/send_registration_email', function (Request $request) {
+    $validator = Validator::make($request->all(), [
+        'email' => 'required|email|exists:users,email',
+    ]);
+
+    if ($validator->fails()) {
+        return response()->json(['status' => 422, 'message' => 'Invalid email or no associated user account found.'], 422);
+    }
+
+    $user = User::where('email', $request->email)->first();
+
+    // Assuming the user must be recently created, we check if the user was created in the last 24 hours.
+    if ($user && $user->created_at->gt(Carbon::now()->subDay())) {
+        // Generate a unique token for password reset
+        $token = Str::random(60);
+        DB::table('password_reset_requests')->insert([
+            'user_id' => $user->id,
+            'token' => $token,
+            'expires_at' => Carbon::now()->addHours(24),
+        ]);
+
+        // Send an email with the password reset link
+        Mail::send('emails.register', ['token' => $token], function ($message) use ($user) {
+            $message->to($user->email);
+            $message->subject('Complete Your Registration');
+        });
+
+        return response()->json(['status' => 200, 'message' => 'Registration confirmation email sent successfully.']);
+    }
+
+    return response()->json(['status' => 400, 'message' => 'Invalid email or no associated user account found.'], 400);
+})->middleware('api');
