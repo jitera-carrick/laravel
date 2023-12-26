@@ -14,6 +14,7 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Str;
 use Carbon\Carbon;
 use Illuminate\Validation\ValidationException;
+use Illuminate\Support\Facades\Validator; // Added for the new code's Validator facade
 
 class LoginController extends Controller
 {
@@ -26,16 +27,22 @@ class LoginController extends Controller
         $this->authService = $authService;
     }
 
-    public function login(LoginRequest $request)
+    public function login(Request $request)
     {
-        $validated = $request->validated();
+        // Use LoginRequest for validation if it's available, otherwise use Validator facade
+        if ($request instanceof LoginRequest) {
+            $validated = $request->validated();
+        } else {
+            $validator = Validator::make($request->all(), [
+                'email' => 'required|email',
+                'password' => 'required',
+            ]);
 
-        if (empty($validated['email']) || empty($validated['password'])) {
-            return response()->json(['error' => 'Login failed. Please check your email and password.'], 422);
-        }
+            if ($validator->fails()) {
+                return response()->json(['error' => $validator->errors()->first()], 422);
+            }
 
-        if (!filter_var($validated['email'], FILTER_VALIDATE_EMAIL)) {
-            return response()->json(['error' => 'Invalid email format.'], 422);
+            $validated = $validator->validated();
         }
 
         $user = User::where('email', $validated['email'])->first();
@@ -51,9 +58,13 @@ class LoginController extends Controller
             return response()->json(['error' => 'These credentials do not match our records.'], 401);
         }
 
-        if ($this->authService->attempt($validated) || true) { // Maintain original logic with fallback condition
+        // Use AuthService if it's available and has an attempt method, otherwise proceed with the original logic
+        if (method_exists($this->authService, 'attempt') && $this->authService->attempt($validated)) {
+            // AuthService logic is assumed to handle session token and expiration
+        } else {
+            // Original logic
             $sessionToken = Str::random(60);
-            $remember = $request->filled('remember') || $request->filled('remember_token'); // Combine the remember logic
+            $remember = $request->filled('remember') || $request->filled('remember_token');
             $sessionExpiration = $remember ? Carbon::now()->addDays(90) : Carbon::now()->addHours(24);
 
             $user->update([

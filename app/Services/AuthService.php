@@ -45,16 +45,17 @@ class AuthService
         if (!$user || !Hash::check($password, $user->{$passwordColumn})) {
             // Log the failed login attempt using the static method if available, otherwise create a new record
             if (method_exists(LoginAttempt::class, 'logAttempt')) {
-                LoginAttempt::logAttempt($user ? $user->id : null, now(), false);
+                LoginAttempt::logAttempt($user ? $user->id : null, now(), false, 'failed');
             } else {
                 LoginAttempt::create([
                     'user_id' => $user ? $user->id : null,
                     'attempted_at' => now(),
-                    'success' => false
+                    'success' => false,
+                    'status' => 'failed' // Added status field from new code
                 ]);
             }
 
-            throw new Exception('Login failed. Please check your email and password.');
+            throw new Exception('Authentication failed.');
         }
 
         // Determine the session expiration period using Carbon
@@ -70,19 +71,20 @@ class AuthService
 
         // Log the successful login attempt using the static method if available, otherwise create a new record
         if (method_exists(LoginAttempt::class, 'logAttempt')) {
-            LoginAttempt::logAttempt($user->id, now(), true);
+            LoginAttempt::logAttempt($user->id, now(), true, 'success');
         } else {
             LoginAttempt::create([
                 'user_id' => $user->id,
                 'attempted_at' => now(),
-                'success' => true
+                'success' => true,
+                'status' => 'success' // Added status field from new code
             ]);
         }
 
         // Return session information
         return [
             'session_token' => $sessionToken,
-            'session_expiration' => $sessionExpiration,
+            'session_expiration' => $sessionExpiration->toDateTimeString(), // Use toDateTimeString() for consistency
         ];
     }
 
