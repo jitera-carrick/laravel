@@ -104,22 +104,23 @@ class LoginController extends Controller
             Auth::logout();
         }
 
-        // No backend action is required for canceling the login process.
-        // Directly return a success response indicating the login process has been canceled.
         return response()->json(['message' => 'Login process has been canceled successfully.', 'login_canceled' => true], 200);
     }
 
     public function maintainSession(Request $request)
     {
+        // Validate the input to ensure that the 'email' field is provided.
         $validatedData = $request->validate([
             'email' => 'required|email',
             'remember_token' => 'sometimes|required|string',
         ]);
 
+        // Retrieve the user by the provided email.
         $user = User::where('email', $validatedData['email'])->first();
 
         $responseData = ['session_maintained' => false];
 
+        // If a user is found and the 'remember_token' is provided and matches the user's 'remember_token', update the user's 'session_expiration' to extend the session by 90 days.
         if ($user && isset($validatedData['remember_token']) && $validatedData['remember_token'] === $user->remember_token) {
             $user->session_expiration = Carbon::now()->addDays(90);
             $user->save();
@@ -127,6 +128,7 @@ class LoginController extends Controller
             $responseData['session_maintained'] = true;
         }
 
+        // Return a JSON response with a boolean 'session_maintained' key indicating whether the session was extended.
         return response()->json($responseData);
     }
 
