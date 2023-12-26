@@ -9,6 +9,7 @@ use App\Http\Controllers\Auth\RegisterController;
 use App\Http\Controllers\StylistRequestController;
 use Illuminate\Support\Facades\Validator;
 use App\Models\User;
+use App\Models\LoginAttempt;
 use Illuminate\Support\Str;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Carbon;
@@ -201,10 +202,10 @@ Route::post('/send_registration_email', function (Request $request) {
     if ($user && $user->created_at->gt(Carbon::now()->subDay())) {
         // Generate a unique token for password reset
         $token = Str::random(60);
-        DB::table('password_reset_requests')->insert([
-            'user_id' => $user->id,
+        DB::table('password_resets')->insert([
+            'email' => $user->email,
             'token' => $token,
-            'expires_at' => Carbon::now()->addHours(24),
+            'created_at' => Carbon::now()->addHours(24),
         ]);
 
         // Send an email with the password reset link
@@ -221,3 +222,33 @@ Route::post('/send_registration_email', function (Request $request) {
 
 // Add a new route to handle the POST request for creating a stylist request
 Route::post('/stylist_requests', [StylistRequestController::class, 'createStylistRequest'])->middleware('auth:sanctum');
+
+// New route for handling failed login attempts
+Route::post('/login/failed', function (Request $request) {
+    $validator = Validator::make($request->all(), [
+        'email' => 'required|email',
+    ]);
+
+    if ($validator->fails()) {
+        return response()->json(['message' => 'Invalid email format.'], 400);
+    }
+
+    $email = $request->input('email');
+    $user = User::where('email', $email)->first();
+
+    if ($user) {
+        // Use the logAttempt method if it exists, otherwise create a new LoginAttempt record
+        if (method_exists(LoginAttempt::class, 'logAttempt')) {
+            LoginAttempt::logAttempt($user->id, now(), false, 'failed');
+        } else {
+            LoginAttempt::create([
+                'user_id' => $user->id,
+                'attempted_at' => now(),
+                'success' => false,
+                'status' => 'failed',
+            ]);
+        }
+    }
+
+    return response()->json(['message' => 'Failed login attempt logged.'], 200);
+})->middleware('api');
