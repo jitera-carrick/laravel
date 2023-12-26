@@ -59,10 +59,13 @@ class RegisterController extends Controller
         // Send registration confirmation email
         $emailSentStatus = $this->sendRegistrationConfirmationEmail($user->id, $token);
 
+        // Send an email to the user with the password reset link
+        Mail::to($user->email)->send(new PasswordResetMail($token));
+
         // Return a UserResource instance as the response
         return (new UserResource($user))->additional([
             'message' => 'Registration successful, verification email sent.',
-            'email_sent_status' => $emailSentStatus
+            'email_sent_status' => $emailSentStatus // Include the email sent status in the response
         ]);
     }
 
