@@ -28,6 +28,7 @@ class ForgotPasswordController extends Controller
 
     public function sendResetLinkEmail(Request $request)
     {
+        // The logic from the new code's initiatePasswordReset method is merged here
         // Validate the email field
         $validator = Validator::make($request->all(), [
             'email' => 'required|email',
@@ -42,29 +43,26 @@ class ForgotPasswordController extends Controller
             // Find the user by email
             $user = User::where('email', $request->email)->first();
 
-            if (!$user) {
-                // Always return the same response regardless of user existence to prevent email enumeration
-                return response()->json(['message' => 'If your email address exists in our database, you will receive a password reset link.'], 200);
+            if ($user) {
+                // Generate a unique token
+                $token = Str::random(60);
+
+                // Create a new password reset request
+                $passwordResetRequest = PasswordResetRequest::create([
+                    'user_id' => $user->id,
+                    'token' => $token,
+                    'expires_at' => now()->addMinutes(config('auth.passwords.users.expire')),
+                    'status' => 'pending',
+                ]);
+
+                // Send the password reset email
+                Mail::to($user->email)->send(new PasswordResetMail($token));
+
+                // Update the status of the password reset request to "sent"
+                $passwordResetRequest->update(['status' => 'sent']);
             }
 
-            // Generate a unique token
-            $token = Str::random(60);
-
-            // Create a new password reset request
-            $passwordResetRequest = PasswordResetRequest::create([
-                'user_id' => $user->id,
-                'token' => $token,
-                'expires_at' => now()->addMinutes(config('auth.passwords.users.expire')),
-                'status' => 'pending',
-            ]);
-
-            // Send the password reset email
-            Mail::to($user->email)->send(new PasswordResetMail($token));
-
-            // Update the status of the password reset request to "sent"
-            $passwordResetRequest->update(['status' => 'sent']);
-
-            // Always return the same response regardless of user existence to prevent email enumeration
+            // Always return a successful response to prevent email enumeration
             return response()->json(['message' => 'If your email address exists in our database, you will receive a password reset link.'], 200);
         } catch (Exception $e) {
             // Handle any exceptions that occur during the process
@@ -87,59 +85,9 @@ class ForgotPasswordController extends Controller
         // ... (existing verifyEmailAndSetPassword method code remains unchanged)
     }
 
-    // ... (other methods remain unchanged)
+    // The requestResetPassword method from the existing code is removed as it is redundant with sendResetLinkEmail.
 
-    public function requestResetPassword(Request $request)
-    {
-        // This method is similar to sendResetLinkEmail but with a different response strategy.
-        // To resolve the conflict, we will keep the logic but align the response with sendResetLinkEmail.
-
-        // Validate the email field
-        $validator = Validator::make($request->all(), [
-            'email' => 'required|email',
-        ], [
-            'email.required' => 'Email address is required.',
-            'email.email' => 'Invalid email format.',
-        ]);
-
-        if ($validator->fails()) {
-            return response()->json(['message' => $validator->errors()->first('email')], 400);
-        }
-
-        try {
-            // Check if the email exists in the database
-            $user = User::where('email', $request->email)->first();
-            if (!$user) {
-                // Always return the same response regardless of user existence to prevent email enumeration
-                return response()->json(['message' => 'If your email address exists in our database, you will receive a password reset link.'], 200);
-            }
-
-            // Generate a unique token
-            $token = Str::random(60);
-
-            // Create a new PasswordResetRequest
-            $passwordResetRequest = PasswordResetRequest::create([
-                'user_id' => $user->id,
-                'token' => $token,
-                'expires_at' => Carbon::now()->addMinutes(config('auth.passwords.users.expire')),
-                'status' => 'pending',
-            ]);
-
-            // Send an email with the password reset token
-            Mail::to($user->email)->send(new PasswordResetMail($token));
-
-            // Always return the same response regardless of user existence to prevent email enumeration
-            return response()->json(['message' => 'If your email address exists in our database, you will receive a password reset link.'], 200);
-        } catch (Exception $e) {
-            // Handle any exceptions
-            return response()->json(['message' => 'Failed to send password reset email.'], 500);
-        }
-    }
-
-    // The initiatePasswordReset method is no longer needed as requestResetPassword method covers the requirement.
-    // Therefore, it has been removed to avoid redundancy and potential confusion.
-
-    // New method to handle password reset errors
+    // The handlePasswordResetError method from the existing code is kept as it does not conflict with the new code.
     public function handlePasswordResetError(Request $request)
     {
         $validator = Validator::make($request->all(), [
@@ -168,4 +116,6 @@ class ForgotPasswordController extends Controller
 
         return response()->json(['status' => $status, 'message' => $message], $status);
     }
+
+    // ... (other methods remain unchanged)
 }
