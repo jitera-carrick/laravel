@@ -25,7 +25,6 @@ class ForgotPasswordController extends Controller
         }
 
         $resetToken = Str::random(60);
-        $createdAt = Carbon::now();
         $expiresAt = Carbon::now()->addHours(24);
 
         // Check if there's already a reset request and update it if it exists
@@ -33,7 +32,6 @@ class ForgotPasswordController extends Controller
             ['user_id' => $user->id],
             [
                 'reset_token' => $resetToken,
-                'created_at' => $createdAt,
                 'expires_at' => $expiresAt,
             ]
         );
@@ -45,8 +43,6 @@ class ForgotPasswordController extends Controller
 
         return response()->json([
             'message' => 'Password reset email has been sent.',
-            'reset_token' => $resetToken, // For security reasons, do not expose the reset token in the response
-            'expires_at' => $expiresAt->toDateTimeString(),
         ]);
     }
 }
