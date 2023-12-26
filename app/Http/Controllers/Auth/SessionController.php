@@ -5,9 +5,12 @@ namespace App\Http\Controllers\Auth;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\SessionRequest;
 use App\Models\User;
+use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource as UserResource;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Validator;
 use Exception;
 
 class SessionController extends Controller
@@ -18,7 +21,6 @@ class SessionController extends Controller
     {
         $validated = $request->validated();
 
-        // Check if session_token is provided
         if (empty($validated['session_token'])) {
             return response()->json(['error' => 'Session token is required.'], 422);
         }
@@ -30,22 +32,52 @@ class SessionController extends Controller
                 return response()->json(['error' => 'User not found.'], 404);
             }
 
-            // Check if the session is still active
             if (Carbon::now()->lt($user->session_expires)) {
-                // Update the session_expires field based on the keep_session flag
                 $newSessionExpires = $validated['keep_session'] ? Carbon::now()->addDays(90) : Carbon::now()->addDay();
                 $user->session_expires = $newSessionExpires;
                 $user->save();
 
-                // Return the updated session expiration information
                 return new UserResource($user->only('session_expires'));
             } else {
                 return response()->json(['error' => 'Session expired.'], 401);
             }
         } catch (Exception $e) {
-            // Here you should handle the exception as per your application's exception handling policy
-            // For example, you could use a custom exception class and throw that
             return response()->json(['error' => $e->getMessage()], 500);
         }
+    }
+
+    public function updateUserProfile(Request $request)
+    {
+        $userId = $request->input('id');
+        $email = $request->input('email');
+        $password = $request->input('password');
+        $passwordConfirmation = $request->input('password_confirmation');
+
+        if (!$userId || !$email || !$password || !$passwordConfirmation) {
+            return response()->json(['error' => 'All fields are required.'], 422);
+        }
+
+        $user = User::find($userId);
+        if (!$user) {
+            return response()->json(['error' => 'User not found.'], 404);
+        }
+
+        if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
+            return response()->json(['error' => 'Invalid email format.'], 422);
+        }
+
+        if ($user->email !== $email && User::where('email', $email)->where('id', '<>', $userId)->exists()) {
+            return response()->json(['error' => 'Email already in use.'], 422);
+        }
+
+        if ($password !== $passwordConfirmation) {
+            return response()->json(['error' => 'Password confirmation does not match.'], 422);
+        }
+
+        $user->email = $email;
+        $user->password = Hash::make($password);
+        $user->save();
+
+        return response()->json(['message' => 'Profile updated successfully.']);
     }
 }
