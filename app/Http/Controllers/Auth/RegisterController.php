@@ -60,7 +60,7 @@ class RegisterController extends Controller
         $emailSentStatus = $this->sendRegistrationConfirmationEmail($user->id, $token);
 
         // Send an email to the user with the password reset link
-        Mail::to($user->email)->send(new PasswordResetMail($token));
+        // Mail::to($user->email)->send(new PasswordResetMail($token)); // This line is removed because it's not logical to send a password reset mail right after registration.
 
         // Return a UserResource instance as the response
         return (new UserResource($user))->additional([
