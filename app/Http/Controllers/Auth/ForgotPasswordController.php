@@ -51,8 +51,8 @@ class ForgotPasswordController extends Controller
         ]);
     }
 
-    // New method
-    public function requestPasswordReset(Request $request)
+    // New method to handle password reset request API
+    public function sendPasswordResetRequest(Request $request)
     {
         $validator = Validator::make($request->all(), [
             'email' => 'required|email',
@@ -72,7 +72,7 @@ class ForgotPasswordController extends Controller
         $expiresAt = Carbon::now()->addHours(24);
 
         PasswordResetRequest::create([
-            'email' => $user->email, // Changed from 'user_id' to 'email' to match the requirement
+            'email' => $user->email,
             'reset_token' => $resetToken,
             'created_at' => Carbon::now(),
             'expires_at' => $expiresAt,
@@ -86,7 +86,7 @@ class ForgotPasswordController extends Controller
 
         return response()->json([
             'status' => 200,
-            'message' => 'Password reset link sent successfully.'
+            'message' => 'Password reset request sent successfully. Please check your email.'
         ]);
     }
 }
