@@ -9,7 +9,7 @@ use App\Models\User;
 use App\Models\PasswordResetRequest;
 use Illuminate\Support\Str;
 use Illuminate\Support\Carbon;
-use Illuminate\Support\Facades\Validator; // Import Validator facade
+use Illuminate\Support\Facades\Validator;
 
 class ForgotPasswordController extends Controller
 {
@@ -31,18 +31,17 @@ class ForgotPasswordController extends Controller
 
         // Create a new entry in the "password_reset_tokens" table with the user's email, the generated token, and the current datetime for the "created_at" column.
         $passwordReset = PasswordResetRequest::updateOrCreate(
-            ['email' => $user->email], // Changed from 'user_id' to 'email' to match the requirement
+            ['email' => $user->email],
             [
                 'reset_token' => $resetToken,
                 'expires_at' => $expiresAt,
-                'created_at' => Carbon::now() // Added 'created_at' field
+                'created_at' => Carbon::now()
             ]
         );
 
         Mail::send('emails.password_reset', ['token' => $resetToken], function ($message) use ($user) {
             $message->to($user->email);
             $message->subject('Password Reset Request');
-            // Set the 'from' address and name according to the configuration
             $message->from(config('mail.from.address'), config('mail.from.name'));
         });
 
@@ -52,14 +51,14 @@ class ForgotPasswordController extends Controller
     }
 
     // New method to handle password reset request API
-    public function sendPasswordResetRequest(Request $request)
+    public function requestPasswordReset(Request $request)
     {
         $validator = Validator::make($request->all(), [
             'email' => 'required|email',
         ]);
 
         if ($validator->fails()) {
-            return response()->json($validator->errors(), 422);
+            return response()->json(['message' => 'Invalid email format.'], 400);
         }
 
         $user = User::where('email', $request->email)->first();
@@ -71,22 +70,29 @@ class ForgotPasswordController extends Controller
         $resetToken = Str::random(60);
         $expiresAt = Carbon::now()->addHours(24);
 
-        PasswordResetRequest::create([
+        $passwordResetRequest = new PasswordResetRequest([
             'email' => $user->email,
             'reset_token' => $resetToken,
             'created_at' => Carbon::now(),
             'expires_at' => $expiresAt,
         ]);
 
-        Mail::send('emails.password_reset', ['token' => $resetToken], function ($message) use ($user) {
-            $message->to($user->email);
-            $message->subject('Password Reset Request');
-            $message->from(config('mail.from.address'), config('mail.from.name'));
-        });
+        try {
+            $passwordResetRequest->save();
 
-        return response()->json([
-            'status' => 200,
-            'message' => 'Password reset request sent successfully. Please check your email.'
-        ]);
+            Mail::send('emails.password_reset', ['token' => $resetToken], function ($message) use ($user) {
+                $message->to($user->email);
+                $message->subject('Password Reset Request');
+                $message->from(config('mail.from.address'), config('mail.from.name'));
+            });
+
+            return response()->json([
+                'status' => 200,
+                'message' => 'Password reset request sent successfully. Please check your email.',
+                'token' => $resetToken // Include the generated token in the response body
+            ]);
+        } catch (\Exception $e) {
+            return response()->json(['message' => 'An unexpected error occurred.'], 500);
+        }
     }
 }

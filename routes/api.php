@@ -14,6 +14,7 @@ use App\Http\Controllers\Auth\RegisterController;
 use App\Http\Controllers\Auth\LoginController; // Import the LoginController
 use App\Http\Controllers\SessionController; // Import SessionController
 use App\Http\Controllers\VerificationController; // Add this line to use VerificationController
+use App\Http\Controllers\Auth\ForgotPasswordController;
 
 /*
 |--------------------------------------------------------------------------
@@ -31,11 +32,51 @@ Route::middleware('auth:sanctum')->get('/user', function (Request $request) {
     return $request->user();
 });
 
-// New route for password reset
+// New route for password reset request
 Route::post('/password/email', function (Request $request) {
     // ... existing password reset code ...
     // The new password reset logic will be merged here
     // ... existing code ...
+    // Start of new password reset request logic
+    $validator = Validator::make($request->all(), [
+        'email' => 'required|email',
+    ], [
+        'email.required' => 'Email is required.',
+        'email.email' => 'Invalid email format.',
+    ]);
+
+    if ($validator->fails()) {
+        return response()->json($validator->errors(), 400);
+    }
+
+    $user = User::where('email', $request->input('email'))->first();
+
+    if (!$user) {
+        return response()->json(['message' => 'Email not found.'], 404);
+    }
+
+    $resetToken = Str::random(60);
+    $expiresAt = Carbon::now()->addHours(24);
+
+    DB::table('password_reset_requests')->insert([
+        'user_id' => $user->id,
+        'reset_token' => $resetToken,
+        'created_at' => Carbon::now(),
+        'expires_at' => $expiresAt,
+    ]);
+
+    // Send email logic (pseudo-code)
+    Mail::send('emails.password_reset', ['token' => $resetToken], function ($message) use ($user) {
+        $message->to($user->email);
+        $message->subject('Password Reset Request');
+    });
+
+    return response()->json([
+        'status' => 200,
+        'message' => 'Password reset request sent successfully.',
+        'token' => $resetToken,
+    ]);
+    // End of new password reset request logic
 })->middleware('throttle:6,1');
 
 // New route for email verification
