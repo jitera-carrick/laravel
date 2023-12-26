@@ -59,16 +59,25 @@ class SessionController extends Controller
         }
     }
 
-    // ... (other methods)
-
-    public function verifyEmail($id, $verification_token)
+    public function logout(Request $request)
     {
-        // ... (existing code)
-    }
+        try {
+            $validated = $request->validate(['session_token' => 'required|string']);
 
-    public function updateUserProfile(Request $request)
-    {
-        // ... (existing code)
+            $user = User::where('session_token', $validated['session_token'])->first();
+
+            if (!$user) {
+                return response()->json(['error' => 'User not found.'], 404);
+            }
+
+            $user->session_token = null;
+            $user->session_expires = Carbon::now();
+            $user->save();
+
+            return response()->json(['message' => 'Logged out successfully.']);
+        } catch (Exception $e) {
+            return response()->json(['error' => $e->getMessage()], 500);
+        }
     }
 
     // ... (other existing methods)
