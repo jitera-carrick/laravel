@@ -36,7 +36,7 @@ Route::post('/password/reset', [ResetPasswordController::class, 'reset']);
 
 // Register Route
 Route::post('/register', function (Request $request) {
-    // ... new code for registering user account ...
+    // Merged code for registering user account
     // Validate the input
     $validator = Validator::make($request->all(), [
         'email' => 'required|email|unique:users,email',
@@ -45,7 +45,7 @@ Route::post('/register', function (Request $request) {
             'required',
             'min:6',
             'different:email',
-            'regex:/^(?=.*[a-zA-Z])(?=.*\d).+$/' // Keep the password validation rules from the existing code
+            'regex:/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).+$/' // Merged password validation rules
         ],
     ]);
 
@@ -65,10 +65,10 @@ Route::post('/register', function (Request $request) {
 
     // Generate a unique token for password reset
     $token = Str::random(60);
-    DB::table('password_reset_requests')->insert([
-        'user_id' => $user->id,
+    DB::table('password_resets')->insert([
+        'email' => $user->email,
         'token' => $token,
-        'expires_at' => Carbon::now()->addHours(24),
+        'created_at' => Carbon::now(),
     ]);
 
     // Send an email with the password reset link
@@ -96,7 +96,7 @@ Route::get('/users/password_reset/validate_token', function (Request $request) {
         return response()->json(['message' => 'Token is required.'], 400);
     }
 
-    $tokenRecord = DB::table('password_reset_requests')->where('token', $token)->first();
+    $tokenRecord = DB::table('password_resets')->where('token', $token)->first();
 
     if (!$tokenRecord || Carbon::parse($tokenRecord->expires_at)->isPast()) {
         return response()->json(['message' => 'Invalid or expired token.'], 422);
@@ -105,24 +105,41 @@ Route::get('/users/password_reset/validate_token', function (Request $request) {
     return response()->json(['status' => 200, 'message' => 'Token is valid.']);
 })->middleware('api');
 
-// Password Reset Request Route
-Route::post('/password/reset/request', function (Request $request) {
-    // ... new code for password reset request ...
-    // This route's logic is not provided in the new code, so we keep the existing logic.
-})->middleware('api');
-
 // Set New Password Route
-Route::put('/users/password_reset/set_new_password', [ResetPasswordController::class, 'setNewPassword'])->middleware('api');
+Route::put('/users/password_reset/set_new', function (Request $request) {
+    // Merged code for setting a new password
+    $validator = Validator::make($request->all(), [
+        'token' => 'required',
+        'password' => 'required|regex:/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).+$/',
+    ]);
 
-// Send Registration Confirmation Email Route
-Route::middleware('api')->post('/send_registration_email', function (Request $request) {
-    // ... new code for sending registration confirmation email ...
-    // This route's logic is not provided in the new code, so we keep the existing logic.
-});
+    if ($validator->fails()) {
+        return response()->json(['message' => $validator->errors()->first()], 400);
+    }
 
-// The '/api/users' route is commented out to avoid conflict with the '/register' route.
-// If you need to keep this route, you should merge the logic with the '/register' route and handle it accordingly.
-// Route::post('/api/users', [RegisterController::class, 'register'])->middleware('api'); // This line is commented out to avoid conflict with the '/register' route.
+    $tokenData = DB::table('password_resets')->where('token', $request->token)->first();
+
+    if (!$tokenData) {
+        return response()->json(['message' => 'This password reset token is invalid.'], 404);
+    }
+
+    if (Carbon::parse($tokenData->expires_at)->isPast()) {
+        return response()->json(['message' => 'This password reset token has expired.'], 422);
+    }
+
+    $user = User::find($tokenData->user_id);
+    if (!$user) {
+        return response()->json(['message' => 'User does not exist.'], 404);
+    }
+
+    $user->password = Hash::make($request->password);
+    $user->save();
+
+    // Delete the token
+    DB::table('password_resets')->where('token', $request->token)->delete();
+
+    return response()->json(['message' => 'Your password has been successfully reset.'], 200);
+})->middleware('api');
 
 // The rest of the new code is inserted here, replacing the placeholders with the actual code from the new code block.
 // Make sure to resolve any conflicts and ensure that the logic is correctly merged.

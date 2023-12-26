@@ -35,7 +35,7 @@ class ResetPasswordController extends Controller
     public function setNewPassword(Request $request)
     {
         $validator = Validator::make($request->all(), [
-            'token' => 'required|string',
+            'token' => 'required|string|exists:password_reset_requests,token',
             'password' => 'required|string|min:8|regex:/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*#?&]).+$/',
         ], [
             'token.required' => 'Token is required.',
@@ -67,7 +67,7 @@ class ResetPasswordController extends Controller
 
             $passwordResetRequest->delete();
 
-            return response()->json(['status' => 200, 'message' => 'Your password has been successfully updated.'], 200);
+            return response()->json(['status' => 200, 'message' => 'Your password has been successfully reset.'], 200);
         } catch (Exception $e) {
             return response()->json(['message' => 'An unexpected error occurred. Please try again later.'], 500);
         }
