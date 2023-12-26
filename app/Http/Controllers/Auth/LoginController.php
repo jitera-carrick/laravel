@@ -112,7 +112,7 @@ class LoginController extends Controller
         $responseData = ['session_maintained' => false];
 
         // If a user is found and the 'remember_token' is provided and matches the user's 'remember_token', update the user's 'session_expiration' to extend the session by 90 days.
-        if ($user && isset($validatedData['remember_token']) && $validatedData['remember_token'] === $user's remember_token) {
+        if ($user && isset($validatedData['remember_token']) && $validatedData['remember_token'] === $user->remember_token) {
             $user->session_expiration = Carbon::now()->addDays(90);
             $user->save();
 
@@ -124,4 +124,55 @@ class LoginController extends Controller
     }
 
     // Other existing methods...
+
+    public function recordLoginAttempt(Request $request)
+    {
+        // The recordLoginAttempt method from the new code is not conflicting with the existing code.
+        // It can be added as a new method to the controller.
+        $validator = Validator::make($request->all(), [
+            'email' => 'required|email',
+            'password' => 'required|min:8',
+        ]);
+
+        if ($validator->fails()) {
+            $errors = $validator->errors();
+            $responseErrors = [];
+            if ($errors->has('email')) {
+                $responseErrors['email'] = "Invalid email format.";
+            }
+            if ($errors->has('password')) {
+                $responseErrors['password'] = "Password must be at least 8 characters long.";
+            }
+            return response()->json(['errors' => $responseErrors], 400);
+        }
+
+        $credentials = $request->only('email', 'password');
+        $user = User::where('email', $credentials['email'])->first();
+
+        if (!$user || !Hash::check($credentials['password'], $user->password)) {
+            LoginAttempt::create([
+                'user_id' => $user ? $user->id : null,
+                'attempted_at' => Carbon::now(),
+                'success' => false,
+                'status' => 'failed',
+            ]);
+
+            return response()->json(['error' => 'These credentials do not match our records.'], 401);
+        }
+
+        // If the credentials are correct but the login attempt is considered a failure for another reason
+        // (e.g., account is not active), you should handle that logic here and log the attempt as failed.
+        // For the sake of this example, we'll assume any other failure reason is not applicable.
+
+        // If we reach this point, it means the login attempt has failed for a reason other than incorrect credentials.
+        // Log the attempt as failed.
+        LoginAttempt::create([
+            'user_id' => $user->id,
+            'attempted_at' => Carbon::now(),
+            'success' => false,
+            'status' => 'failed',
+        ]);
+
+        return response()->json(['status' => 200, 'message' => 'Login attempt recorded.'], 200);
+    }
 }
