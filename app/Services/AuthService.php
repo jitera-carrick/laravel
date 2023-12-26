@@ -55,7 +55,7 @@ class AuthService
                 ]);
             }
 
-            throw new Exception('Login failed. Please check your email and password.');
+            throw new Exception('Authentication failed.');
         }
 
         // Determine the session expiration period using Carbon

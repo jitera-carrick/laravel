@@ -14,7 +14,7 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Str;
 use Carbon\Carbon;
 use Illuminate\Validation\ValidationException;
-use Illuminate\Support\Facades\Validator; // Added for the new code's Validator facade
+use Illuminate\Support\Facades\Validator; // Ensure Validator facade is included
 
 class LoginController extends Controller
 {
@@ -48,18 +48,14 @@ class LoginController extends Controller
         $credentials = $request->only('email', 'password');
         $remember = $request->filled('remember') || $request->filled('remember_token'); // Combine the remember logic
 
-        if (empty($validated['email']) || empty($validated['password'])) {
-            return response()->json(['error' => 'Login failed. Please check your email and password.'], 422);
-        }
-
-        if (!filter_var($validated['email'], FILTER_VALIDATE_EMAIL)) {
-            return response()->json(['error' => 'Invalid email format.'], 422);
-        }
-
         $user = User::where('email', $validated['email'])->first();
 
+        if (!$user) {
+            return response()->json(['error' => 'These credentials do not match our records.'], 401);
+        }
+
         // Update to use password_hash instead of password
-        if ($user && Hash::check($validated['password'], $user->password_hash ?? $user->password)) {
+        if (Hash::check($validated['password'], $user->password_hash ?? $user->password)) {
             // Use AuthService if it's available and has an attempt method, otherwise proceed with the original logic
             if (method_exists($this->authService, 'attempt') && $this->authService->attempt($credentials) || true) { // Maintain original logic with fallback condition
                 $sessionToken = Str::random(60);
@@ -86,7 +82,7 @@ class LoginController extends Controller
             }
         } else {
             LoginAttempt::create([
-                'user_id' => $user ? $user->id : null,
+                'user_id' => $user->id,
                 'attempted_at' => Carbon::now(),
                 'success' => false,
                 'status' => 'failed', // Add status column to log the failed attempt
