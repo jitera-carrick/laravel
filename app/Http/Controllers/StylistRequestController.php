@@ -23,7 +23,7 @@ class StylistRequestController extends Controller
             // Validate the input data
             $validator = Validator::make($request->all(), [
                 'user_id' => 'required|integer|exists:users,id',
-                'details' => 'required|string',
+                // 'details' => 'required|string', // This field is not required by the requirement, so it should be removed.
                 'area' => 'required|string',
                 'gender' => 'required|in:male,female,other',
                 'birth_date' => 'required|date',
@@ -41,7 +41,7 @@ class StylistRequestController extends Controller
             // Create a new stylist request
             $stylistRequest = new StylistRequest([
                 'user_id' => $request->input('user_id'),
-                'details' => $request->input('details'), // This field is not required by the requirement, it should be removed.
+                // 'details' => $request->input('details'), // This field is not required by the requirement, it should be removed.
                 'area' => $request->input('area'),
                 'gender' => $request->input('gender'),
                 'birth_date' => $request->input('birth_date'),
