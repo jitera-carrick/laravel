@@ -10,7 +10,7 @@ use Illuminate\Support\Str;
 use Carbon\Carbon;
 use App\Models\User;
 use App\Http\Controllers\Auth\RegisterController;
-use App\Http\Controllers\SessionController; // Add this line to use SessionController
+use App\Http\Controllers\SessionController; // Import SessionController
 
 /*
 |--------------------------------------------------------------------------
@@ -142,6 +142,25 @@ Route::post('/users/register', function (Request $request) {
         return response()->json(['message' => 'Internal Server Error'], 500);
     }
 })->middleware('throttle:6,1');
+
+// New route for maintaining session preferences
+Route::put('/maintain_session', function (Request $request) {
+    $validator = Validator::make($request->all(), [
+        'session_token' => 'required|string',
+        'keep_session' => 'required|boolean',
+    ], [
+        'session_token.required' => 'Session token is required.',
+        'keep_session.required' => 'Keep session is required.',
+        'keep_session.boolean' => 'Keep session must be a boolean.',
+    ]);
+
+    if ($validator->fails()) {
+        return response()->json($validator->errors(), 422);
+    }
+
+    // Assuming the SessionController has a method to handle session maintenance
+    return app(SessionController::class)->updateSessionPreferences($request);
+})->middleware('auth:sanctum');
 
 // New route for updating user profile
 Route::middleware('auth:sanctum')->put('/user/profile', function (Request $request) {
