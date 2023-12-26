@@ -6,10 +6,12 @@ use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Str;
 use Carbon\Carbon;
 use App\Models\User;
 use App\Http\Controllers\Auth\RegisterController;
+use App\Http\Controllers\Auth\LoginController; // Import the LoginController
 use App\Http\Controllers\SessionController; // Import SessionController
 use App\Http\Controllers\VerificationController; // Add this line to use VerificationController
 
@@ -100,21 +102,87 @@ Route::post('/email/verify', function (Request $request) {
     }
 })->middleware('throttle:6,1');
 
-// New route for user email verification using VerificationController
-// This route is redundant with the '/email/verify' route and should be removed or refactored.
-// For now, we will comment it out to avoid conflicts.
-/*
-Route::post('/user/verify-email', function (Request $request) {
-    // ... existing user email verification code ...
-    // This code is redundant and has been commented out.
-});
-*/
-
 // Updated route for user registration to meet the requirements
 Route::post('/users/register', function (Request $request) {
     // ... existing user registration code ...
     // The new user registration logic will be merged here
-    // ... existing user registration code ...
+    $validator = Validator::make($request->all(), [
+        'name' => 'required|string|max:255',
+        'email' => 'required|email|max:255|unique:users,email',
+        'password' => 'required|string|min:8',
+    ], [
+        'name.required' => 'The name is required.',
+        'email.required' => 'The email is required.',
+        'email.email' => 'Invalid email format.',
+        'email.unique' => 'Email already registered.',
+        'password.required' => 'The password is required.',
+        'password.min' => 'Password must be at least 8 characters long.',
+    ]);
+
+    if ($validator->fails()) {
+        return response()->json($validator->errors(), 422);
+    }
+
+    try {
+        DB::beginTransaction();
+
+        $user = User::create([
+            'name' => $request->input('name'),
+            'email' => $request->input('email'),
+            'password' => Hash::make($request->input('password')),
+            'created_at' => Carbon::now(),
+            'updated_at' => Carbon::now(),
+        ]);
+
+        DB::commit();
+
+        return response()->json([
+            'status' => 201,
+            'message' => 'User registered successfully.',
+        ], 201);
+    } catch (\Exception $e) {
+        DB::rollBack();
+        return response()->json(['message' => 'Internal Server Error'], 500);
+    }
+})->middleware('throttle:6,1');
+
+// New route for user login
+Route::post('/users/login', function (Request $request) {
+    $validator = Validator::make($request->all(), [
+        'email' => 'required|email',
+        'password' => 'required|string|min:8',
+        'keep_session' => 'nullable|boolean',
+    ], [
+        'email.required' => 'The email is required.',
+        'email.email' => 'Invalid email format.',
+        'password.required' => 'The password is required.',
+        'password.min' => 'Password must be at least 8 characters long.',
+        'keep_session.boolean' => 'Keep session must be a boolean value.',
+    ]);
+
+    if ($validator->fails()) {
+        return response()->json($validator->errors(), 400);
+    }
+
+    $credentials = $request->only('email', 'password');
+    if (Auth::attempt($credentials)) {
+        $user = Auth::user();
+        $tokenResult = $user->createToken('Personal Access Token');
+        $token = $tokenResult->token;
+        if ($request->keep_session) {
+            $token->expires_at = Carbon::now()->addWeeks(1);
+        }
+        $token->save();
+
+        return response()->json([
+            'status' => 200,
+            'message' => 'Login successful.',
+            'session_token' => $tokenResult->accessToken,
+            'session_expires' => $token->expires_at ? $token->expires_at->toIso8601String() : null,
+        ], 200);
+    } else {
+        return response()->json(['message' => 'Unauthorized'], 401);
+    }
 });
 
 // New route for maintaining session preferences
@@ -137,3 +205,8 @@ Route::post('/login_failure', function (Request $request) {
     // The new login failure handling logic will be merged here
     // ... existing login failure handling code ...
 });
+
+// Remove the old registration route as it is now redundant
+// Route::post('/user/register', function (Request $request) {
+//     ...
+// });
