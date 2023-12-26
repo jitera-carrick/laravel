@@ -21,15 +21,11 @@ class SessionController extends Controller
     {
         $validated = $request->validated();
 
-        // Resolve the conflict by combining the validation logic from both versions of the code.
-        // We need to check for 'email' as per the existing code and 'session_token' as per the new code.
         if (empty($validated['email']) || empty($validated['session_token'])) {
             return response()->json(['error' => 'Email and session token are required.'], 422);
         }
 
         try {
-            // Modify the query to find the user by both email and session_token.
-            // This combines the logic from both versions of the code.
             $user = User::where('email', $validated['email'])
                         ->where('session_token', $validated['session_token'])
                         ->first();
@@ -43,9 +39,6 @@ class SessionController extends Controller
                 $user->session_expires = $newSessionExpires;
                 $user->save();
 
-                // Combine the response logic from both versions of the code.
-                // Exclude sensitive information from the response as per the new code,
-                // and include the 'message' from the existing code.
                 $response = $user->only(['id', 'name', 'email', 'session_expires']);
                 return response()->json([
                     'message' => 'Session updated successfully.',
@@ -78,6 +71,40 @@ class SessionController extends Controller
         } catch (Exception $e) {
             return response()->json(['error' => $e->getMessage()], 500);
         }
+    }
+
+    public function validateUserSession(Request $request)
+    {
+        // ... (existing code for validateUserSession)
+    }
+
+    public function verifyEmail($id, $verification_token)
+    {
+        // ... (existing code for verifyEmail)
+    }
+
+    public function updateUserProfile(Request $request)
+    {
+        $validator = Validator::make($request->all(), [
+            'name' => 'required|string|max:255',
+            'email' => 'required|email|unique:users,email,' . $request->user()->id,
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json(['errors' => $validator->errors()], 422);
+        }
+
+        $user = $request->user();
+
+        $user->name = $request->input('name');
+        $user->email = $request->input('email');
+        $user->save();
+
+        return response()->json([
+            'status' => 200,
+            'message' => 'Profile updated successfully.',
+            'user' => $user->only(['id', 'name', 'email', 'updated_at'])
+        ], 200);
     }
 
     // ... (other existing methods)
