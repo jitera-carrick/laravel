@@ -41,5 +41,34 @@ class UserSessionController extends Controller
         return response()->json(['session_maintained' => $sessionMaintained]);
     }
 
+    /**
+     * Handle password reset errors based on the provided error code.
+     *
+     * @param \Illuminate\Http\Request $request
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function handlePasswordResetError(Request $request)
+    {
+        $validated = $request->validate([
+            'error_code' => 'required|string'
+        ]);
+
+        $errorCode = $validated['error_code'];
+        $responseMessage = '';
+
+        switch ($errorCode) {
+            case 'expired_token':
+                $responseMessage = 'Your password reset token has expired.';
+                break;
+            case 'invalid_token':
+                $responseMessage = 'The password reset token is invalid.';
+                break;
+            default:
+                return response()->json(['message' => 'Unknown error code.'], 400);
+        }
+
+        return response()->json(['status' => 200, 'message' => $responseMessage]);
+    }
+
     // ... other methods ...
 }

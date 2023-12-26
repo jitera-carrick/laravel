@@ -34,7 +34,8 @@ class ForgotPasswordController extends Controller
         ]);
 
         if ($validator->fails()) {
-            return response()->json(['message' => 'Invalid email format.', 'reset_requested' => false], 400);
+            // Merged the error message to be more generic and include both cases
+            return response()->json(['message' => 'Invalid email format or email is required.', 'reset_requested' => false], 422);
         }
 
         try {
@@ -88,5 +89,33 @@ class ForgotPasswordController extends Controller
 
     // ... (other methods remain unchanged)
 
-    // The initiatePasswordReset method is not needed as its functionality is covered by sendResetLinkEmail
+    // New method to handle password reset errors
+    public function handlePasswordResetError(Request $request)
+    {
+        $validator = Validator::make($request->all(), [
+            'error_code' => 'required|string',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json(['message' => 'Error code is required.'], 422);
+        }
+
+        $errorCode = $request->input('error_code');
+        $message = 'Error has been handled.';
+        $status = 200;
+
+        switch ($errorCode) {
+            case 'code_not_found':
+                $message = 'Unknown error code.';
+                $status = 400;
+                break;
+            // Add more cases for different error codes as needed
+            default:
+                $message = 'Unknown error code.';
+                $status = 400;
+                break;
+        }
+
+        return response()->json(['status' => $status, 'message' => $message], $status);
+    }
 }
