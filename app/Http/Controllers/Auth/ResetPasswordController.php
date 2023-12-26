@@ -15,7 +15,16 @@ use Illuminate\Support\Facades\DB;
 
 class ResetPasswordController extends Controller
 {
-    // ... (other methods remain unchanged)
+    /**
+     * Validate the password reset token.
+     *
+     * @param Request $request
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function validateResetToken(Request $request)
+    {
+        // ... (existing code remains unchanged)
+    }
 
     /**
      * Set a new password for the user.
@@ -64,5 +73,43 @@ class ResetPasswordController extends Controller
         }
     }
 
-    // ... (other methods remain unchanged)
+    public function reset(Request $request)
+    {
+        // ... (existing code remains unchanged)
+    }
+
+    public function verifyEmailAndSetPassword(Request $request)
+    {
+        // ... (existing code remains unchanged)
+    }
+
+    /**
+     * Handle the error codes received from the password reset request.
+     *
+     * @param Request $request
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function handlePasswordResetError(Request $request)
+    {
+        $validator = Validator::make($request->all(), [
+            'error_code' => 'required|string',
+        ], [
+            'error_code.required' => 'Error code is required.',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json(['message' => $validator->errors()->first()], 400);
+        }
+
+        $errorCode = $request->error_code;
+        $message = 'Error has been handled.';
+
+        switch ($errorCode) {
+            // Define cases for recognized error codes
+            default:
+                return response()->json(['message' => 'Unknown error code.'], 400);
+        }
+
+        return response()->json(['status' => 200, 'message' => $message]);
+    }
 }

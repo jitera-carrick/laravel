@@ -4,7 +4,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\ForgotPasswordController;
 use App\Http\Controllers\ResetPasswordController;
-use App\Http\Controllers\LoginController; // Use LoginController
+use App\Http\Controllers\LoginController;
 use Illuminate\Support\Facades\Validator;
 use App\Models\User;
 use Illuminate\Support\Str;
@@ -72,3 +72,8 @@ Route::post('/api/authenticate_user_login', function (Request $request) {
 // For this example, I'm assuming we keep the '/register' route and remove this one.
 // If you need to keep this route, you should merge the logic with the '/register' route and handle it accordingly.
 // Route::post('/api/users', [RegisterController::class, 'register'])->middleware('api'); // This line is commented out to avoid conflict with the '/register' route.
+
+// New route for handling password reset errors
+Route::put('/users/password_reset/error_handling', function (Request $request) {
+    // ... new code for handling password reset errors ...
+})->middleware('api');
