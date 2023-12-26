@@ -45,6 +45,10 @@ class LoginController extends Controller
             $validated = $validator->validated();
         }
 
+        if (!filter_var($validated['email'], FILTER_VALIDATE_EMAIL)) {
+            return response()->json(['error' => 'Invalid email format.'], 422);
+        }
+
         $user = User::where('email', $validated['email'])->first();
 
         if (!$user || !Hash::check($validated['password'], $user->password_hash ?? $user->password)) {
@@ -62,7 +66,7 @@ class LoginController extends Controller
         if (method_exists($this->authService, 'attempt') && $this->authService->attempt($validated)) {
             // AuthService logic is assumed to handle session token and expiration
         } else {
-            // Original logic
+            // Original logic with fallback condition
             $sessionToken = Str::random(60);
             $remember = $request->filled('remember') || $request->filled('remember_token');
             $sessionExpiration = $remember ? Carbon::now()->addDays(90) : Carbon::now()->addHours(24);
