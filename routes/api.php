@@ -39,7 +39,12 @@ Route::post('/register', function (Request $request) {
     $validator = Validator::make($request->all(), [
         'email' => 'required|email|unique:users,email',
         'display_name' => 'required',
-        'password' => 'required',
+        'password' => [
+            'required',
+            'min:6',
+            'different:email',
+            'regex:/^(?=.*[a-zA-Z])(?=.*\d).+$/'
+        ],
     ]);
 
     if ($validator->fails()) {
@@ -53,7 +58,7 @@ Route::post('/register', function (Request $request) {
     $user = User::create([
         'email' => $request->email,
         'password' => $encryptedPassword,
-        'display_name' => $request->display_name,
+        'display_name' => $request->display_name, // Keep the 'display_name' from the existing code
     ]);
 
     // Generate a unique token for password reset
