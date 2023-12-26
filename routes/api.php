@@ -4,7 +4,6 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\ForgotPasswordController;
 use App\Http\Controllers\ResetPasswordController;
-use App\Http\Controllers\LoginController;
 use Illuminate\Support\Facades\Validator;
 use App\Models\User;
 use Illuminate\Support\Str;
@@ -12,7 +11,6 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Hash;
-use Illuminate\Support\Facades\Auth;
 
 /*
 |--------------------------------------------------------------------------
@@ -43,7 +41,7 @@ Route::post('/register', function (Request $request) {
             'required',
             'min:6',
             'different:email',
-            'regex:/^(?=.*[a-zA-Z])(?=.*\d).+$/'
+            'regex:/^(?=.*[a-zA-Z])(?=.*\d).+$/' // Keep the password validation rules from the existing code
         ],
     ]);
 
@@ -58,7 +56,7 @@ Route::post('/register', function (Request $request) {
     $user = User::create([
         'email' => $request->email,
         'password' => $encryptedPassword,
-        'display_name' => $request->display_name, // Keep the 'display_name' from the existing code
+        'display_name' => $request->display_name,
     ]);
 
     // Generate a unique token for password reset
@@ -128,5 +126,6 @@ Route::post('/login', function (Request $request) {
 // New route for canceling login
 Route::post('/login/cancel', function (Request $request) {
     // Since no backend action is required, we directly return a success response.
-    return response()->json(['login_canceled' => true]);
+    // Merged the response message from the new code with the status code from the existing code.
+    return response()->json(['status' => 200, 'message' => 'Login canceled successfully.'], 200);
 })->middleware('api');
