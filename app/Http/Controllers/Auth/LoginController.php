@@ -33,7 +33,7 @@ class LoginController extends Controller
         $validator = Validator::make($credentials, [
             'email' => 'required|email',
             'password' => 'required',
-            'keep_session' => 'sometimes|boolean', // Added validation rule for 'keep_session'
+            'keep_session' => 'sometimes|boolean',
         ]);
 
         if ($validator->fails()) {
@@ -49,7 +49,7 @@ class LoginController extends Controller
                 Log::warning('Failed login attempt for email: ' . $credentials['email']);
 
                 // Return a generic error response
-                return response()->json(['message' => 'Invalid credentials'], 401);
+                return response()->json(['message' => 'The provided credentials do not match our records.'], 401);
             }
 
             // Generate a new "session_token"
@@ -62,7 +62,7 @@ class LoginController extends Controller
             $user->update([
                 'session_token' => $sessionToken,
                 'session_expires' => $sessionExpires,
-                'keep_session' => $keepSession, // This line is new and assumes there is a 'keep_session' column in the 'users' table
+                'keep_session' => $keepSession,
             ]);
 
             // Prepare the response data, ensuring sensitive information is not included
