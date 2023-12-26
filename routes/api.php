@@ -141,13 +141,45 @@ Route::put('/users/password_reset/set_new', function (Request $request) {
     return response()->json(['message' => 'Your password has been successfully reset.'], 200);
 })->middleware('api');
 
-// The rest of the new code is inserted here, replacing the placeholders with the actual code from the new code block.
-// Make sure to resolve any conflicts and ensure that the logic is correctly merged.
+// Add new route for password reset request
+Route::post('/password/reset/request', function (Request $request) {
+    // ... existing code ...
+})->middleware('api');
 
-// Note: The placeholders above are replaced with the actual code from the new code block.
-// The existing '/register' and '/login' routes are replaced with the new code provided.
-// The '/login/cancel' route is updated to use the LoginController's cancelLogin method.
-// The '/password/reset/request' route is updated with the new code for password reset request.
-// The '/send_registration_email' route is updated with the new code for sending registration confirmation email.
-// The commented out routes are left as is, since they are not present in the new code and it's unclear if they are needed.
-// If they are needed, they should be uncommented and the logic should be merged with the new code.
+// Add a new route to handle the PUT request for verifying email and setting the password
+Route::put('/verify_email_set_password', function (Request $request) {
+    $validator = Validator::make($request->all(), [
+        'token' => 'required',
+        'password' => [
+            'required',
+            'min:6',
+            'different:email',
+            'regex:/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).+$/'
+        ],
+    ]);
+
+    if ($validator->fails()) {
+        return response()->json(['status' => 422, 'message' => $validator->errors()->first()], 422);
+    }
+
+    $passwordReset = DB::table('password_resets')->where('token', $request->token)
+                      ->where('created_at', '>', Carbon::now()->subHours(24))->first();
+
+    if (!$passwordReset) {
+        return response()->json(['status' => 400, 'message' => 'Invalid or expired token.'], 400);
+    }
+
+    $user = User::where('email', $passwordReset->email)->first();
+
+    if (!$user) {
+        return response()->json(['status' => 400, 'message' => 'User does not exist.'], 400);
+    }
+
+    $user->password = Hash::make($request->password);
+    $user->save();
+
+    // Delete the password reset token
+    DB::table('password_resets')->where('token', $request->token)->delete();
+
+    return response()->json(['status' => 200, 'message' => 'Email verified and password set successfully.']);
+})->middleware('api');

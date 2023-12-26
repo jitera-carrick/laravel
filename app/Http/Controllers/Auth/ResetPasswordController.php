@@ -48,7 +48,7 @@ class ResetPasswordController extends Controller
             return response()->json(['message' => $validator->errors()->all()], 422);
         }
 
-        try {
+        return DB::transaction(function () use ($request) {
             $passwordResetRequest = PasswordResetRequest::where('token', $request->token)
                 ->where('expires_at', '>', now())
                 ->first();
@@ -62,15 +62,17 @@ class ResetPasswordController extends Controller
                 return response()->json(['message' => 'User not found.'], 404);
             }
 
+            if (Hash::check($request->password, $user->password)) {
+                return response()->json(['message' => 'The new password cannot be the same as the current password.'], 400);
+            }
+
             $user->password = Hash::make($request->password);
             $user->save();
 
             $passwordResetRequest->delete();
 
             return response()->json(['status' => 200, 'message' => 'Your password has been successfully reset.'], 200);
-        } catch (Exception $e) {
-            return response()->json(['message' => 'An unexpected error occurred. Please try again later.'], 500);
-        }
+        });
     }
 
     public function reset(Request $request)
