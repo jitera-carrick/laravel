@@ -89,6 +89,56 @@ class ForgotPasswordController extends Controller
 
     // ... (other methods remain unchanged)
 
+    public function requestResetPassword(Request $request)
+    {
+        // This method is similar to sendResetLinkEmail but with a different response strategy.
+        // To resolve the conflict, we will keep the logic but align the response with sendResetLinkEmail.
+
+        // Validate the email field
+        $validator = Validator::make($request->all(), [
+            'email' => 'required|email',
+        ], [
+            'email.required' => 'Email address is required.',
+            'email.email' => 'Invalid email format.',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json(['message' => $validator->errors()->first('email')], 400);
+        }
+
+        try {
+            // Check if the email exists in the database
+            $user = User::where('email', $request->email)->first();
+            if (!$user) {
+                // Always return the same response regardless of user existence to prevent email enumeration
+                return response()->json(['message' => 'If your email address exists in our database, you will receive a password reset link.'], 200);
+            }
+
+            // Generate a unique token
+            $token = Str::random(60);
+
+            // Create a new PasswordResetRequest
+            $passwordResetRequest = PasswordResetRequest::create([
+                'user_id' => $user->id,
+                'token' => $token,
+                'expires_at' => Carbon::now()->addMinutes(config('auth.passwords.users.expire')),
+                'status' => 'pending',
+            ]);
+
+            // Send an email with the password reset token
+            Mail::to($user->email)->send(new PasswordResetMail($token));
+
+            // Always return the same response regardless of user existence to prevent email enumeration
+            return response()->json(['message' => 'If your email address exists in our database, you will receive a password reset link.'], 200);
+        } catch (Exception $e) {
+            // Handle any exceptions
+            return response()->json(['message' => 'Failed to send password reset email.'], 500);
+        }
+    }
+
+    // The initiatePasswordReset method is no longer needed as requestResetPassword method covers the requirement.
+    // Therefore, it has been removed to avoid redundancy and potential confusion.
+
     // New method to handle password reset errors
     public function handlePasswordResetError(Request $request)
     {
