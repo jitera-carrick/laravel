@@ -64,7 +64,7 @@ class ResetPasswordController extends Controller
         ]);
 
         if ($validator->fails()) {
-            return response()->json(['message' => $validator->errors()->all()], 422);
+            return response()->json(['message' => 'The provided information is invalid. Please review the requirements and try again.'], 422);
         }
 
         try {
@@ -75,7 +75,7 @@ class ResetPasswordController extends Controller
                 ->first();
 
             if (!$passwordResetRequest) {
-                return response()->json(['message' => 'This password reset token is invalid or has expired.'], 404);
+                return response()->json(['message' => 'We cannot process your request at this time. Please request a new password reset link.'], 404);
             }
 
             // Find the associated user and update their password
@@ -87,9 +87,8 @@ class ResetPasswordController extends Controller
             $user->password = Hash::make($request->password);
             $user->save();
 
-            // Set the status of the PasswordResetRequest to 'completed' and save the changes
-            $passwordResetRequest->status = 'completed';
-            $passwordResetRequest->save();
+            // Invalidate the token
+            $passwordResetRequest->delete();
 
             // Send a confirmation email to the user
             Mail::to($user->email)->send(new PasswordResetMail());
@@ -97,7 +96,7 @@ class ResetPasswordController extends Controller
             // Always display a message indicating that a password reset email has been sent
             return response()->json(['message' => 'Your password has been reset successfully. A confirmation email has been sent.'], 200);
         } catch (Exception $e) {
-            return response()->json(['message' => 'An error occurred while processing your request. Please try again later.'], 500);
+            return response()->json(['message' => 'An unexpected error occurred. Please try again later.'], 500);
         }
     }
 
