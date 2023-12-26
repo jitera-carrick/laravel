@@ -15,6 +15,7 @@ use Illuminate\Support\Str;
 use Carbon\Carbon;
 use Illuminate\Validation\ValidationException;
 use Illuminate\Support\Facades\Validator;
+use Exception;
 
 class LoginController extends Controller
 {
@@ -34,13 +35,13 @@ class LoginController extends Controller
             $validated = $request->validated();
         } else {
             $validator = Validator::make($request->all(), [
-                'email' => 'required|email',
+                'email' => 'required|email|exists:users,email', // Combined validation rules
                 'password' => 'required',
                 'remember' => 'sometimes|boolean', // Added remember validation from new code
             ]);
 
             if ($validator->fails()) {
-                return response()->json(['error' => $validator->errors()->first()], 422); // Changed error response to match new code and use first error
+                return response()->json(['errors' => $validator->errors()], 422); // Changed error response to match new code and use first error
             }
 
             $validated = $validator->validated();
@@ -51,7 +52,7 @@ class LoginController extends Controller
 
         $user = User::where('email', $validated['email'])->first();
 
-        if (!$user || !Hash::check($validated['password'], $user->password_hash ?? $user->password)) { // Combined password check logic
+        if (!$user || !Hash::check($validated['password'], $user->password)) { // Combined password check logic
             LoginAttempt::create([
                 'user_id' => $user ? $user->id : null,
                 'attempted_at' => Carbon::now(),
@@ -62,32 +63,29 @@ class LoginController extends Controller
             return response()->json(['error' => 'These credentials do not match our records.'], 401);
         }
 
-        // Use AuthService if it's available and has an attempt method, otherwise proceed with the original logic
-        if (method_exists($this->authService, 'attempt') && $this->authService->attempt($credentials, $remember) || true) { // Maintain original logic with fallback condition
-            $sessionToken = Str::random(60);
-            $sessionExpiration = $remember ? Carbon::now()->addDays(90) : Carbon::now()->addHours(24);
+        try {
+            // Authenticate the user using AuthService
+            $authData = $this->authService->authenticate($validated['email'], $validated['password']);
 
-            $user->update([
-                'session_token' => $sessionToken,
-                'session_expiration' => $sessionExpiration,
-            ]);
-
-            LoginAttempt::create([
-                'user_id' => $user->id,
-                'attempted_at' => Carbon::now(),
-                'success' => true,
-                'status' => 'success', // Add status column to log the successful attempt
-            ]);
-
+            // Return success response with user session information
             return response()->json([
                 'status' => 200,
                 'message' => 'Login successful.',
-                'session_token' => $sessionToken,
-                'session_expiration' => $sessionExpiration->toDateTimeString(), // Format the expiration date
-                'user_id' => $user->id, // Added from existing code
+                'user' => [
+                    'id' => $authData['user']->id,
+                    'email' => $authData['user']->email,
+                    'session_token' => $authData['session_token'],
+                    'session_expiration' => $authData['session_expiration']->toDateTimeString(), // Format the expiration date
+                ]
             ], 200);
-        } else {
-            return response()->json(['error' => 'An unexpected error occurred.'], 500);
+        } catch (Exception $e) {
+            // Handle authentication failure
+            if ($e->getMessage() === 'Authentication failed.') {
+                return response()->json(['error' => 'Invalid credentials'], 401);
+            }
+
+            // Handle other exceptions
+            return response()->json(['error' => $e->getMessage()], 500);
         }
     }
 
@@ -114,7 +112,7 @@ class LoginController extends Controller
         $responseData = ['session_maintained' => false];
 
         // If a user is found and the 'remember_token' is provided and matches the user's 'remember_token', update the user's 'session_expiration' to extend the session by 90 days.
-        if ($user && isset($validatedData['remember_token']) && $validatedData['remember_token'] === $user->remember_token) {
+        if ($user && isset($validatedData['remember_token']) && $validatedData['remember_token'] === $user's remember_token) {
             $user->session_expiration = Carbon::now()->addDays(90);
             $user->save();
 
