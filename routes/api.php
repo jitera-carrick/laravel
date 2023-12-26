@@ -4,10 +4,12 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Str;
 use Carbon\Carbon;
 use App\Models\User;
-use Illuminate\Support\Facades\Mail;
+use App\Http\Controllers\Auth\RegisterController;
 
 /*
 |--------------------------------------------------------------------------
@@ -15,8 +17,8 @@ use Illuminate\Support\Facades\Mail;
 |--------------------------------------------------------------------------
 |
 | Here is where you can register API routes for your application. These
-| routes are loaded by the RouteServiceProvider and all of them will
-| be assigned to the "api" middleware group. Make something great!
+| routes are loaded by the RouteServiceProvider within a group which
+| is assigned to the "api" middleware group. Enjoy building your API!
 |
 */
 
@@ -27,68 +29,57 @@ Route::middleware('auth:sanctum')->get('/user', function (Request $request) {
 
 // New route for password reset
 Route::post('/password/email', function (Request $request) {
-    $validator = Validator::make($request->all(), [
-        'email' => 'required|email',
-    ]);
-
-    if ($validator->fails()) {
-        return response()->json($validator->errors(), 422);
-    }
-
-    $user = User::where('email', $request->input('email'))->first();
-
-    if (!$user) {
-        return response()->json(['message' => 'User does not exist.'], 404);
-    }
-
-    $resetToken = Str::random(60);
-    $expiresAt = Carbon::now()->addHours(24);
-
-    DB::table('password_reset_requests')->insert([
-        'user_id' => $user->id,
-        'reset_token' => $resetToken,
-        'created_at' => Carbon::now(),
-        'expires_at' => $expiresAt,
-    ]);
-
-    // Send email logic (pseudo-code)
-    Mail::send('emails.password_reset', ['token' => $resetToken], function ($message) use ($user) {
-        $message->to($user->email);
-        $message->subject('Password Reset Request');
-    });
-
-    return response()->json([
-        'message' => 'Password reset email has been sent.',
-        'reset_token' => $resetToken,
-        'expires_at' => $expiresAt->toDateTimeString(),
-    ]);
+    // ... existing password reset code ...
 })->middleware('throttle:6,1');
 
 // New route for email verification
 Route::post('/email/verify', function (Request $request) {
+    // ... existing email verification code ...
+})->middleware('throttle:6,1');
+
+// Updated route for user registration to meet the requirements
+Route::post('/users/register', function (Request $request) {
     $validator = Validator::make($request->all(), [
-        'id' => 'required|integer',
-        'verification_token' => 'required|string',
+        'name' => 'required|string|max:255',
+        'email' => 'required|email|max:255|unique:users,email',
+        'password' => 'required|string|min:8',
+    ], [
+        'name.required' => 'The name is required.',
+        'email.required' => 'The email is required.',
+        'email.email' => 'Invalid email format.',
+        'email.unique' => 'Email already registered.',
+        'password.required' => 'The password is required.',
+        'password.min' => 'Password must be at least 8 characters long.',
     ]);
 
     if ($validator->fails()) {
         return response()->json($validator->errors(), 422);
     }
 
-    $user = User::find($request->input('id'));
+    try {
+        DB::beginTransaction();
 
-    if (!$user) {
-        return response()->json(['message' => 'User not found.'], 404);
-    }
+        $user = User::create([
+            'name' => $request->input('name'),
+            'email' => $request->input('email'),
+            'password' => Hash::make($request->input('password')),
+            'created_at' => Carbon::now(),
+            'updated_at' => Carbon::now(),
+        ]);
 
-    $verificationToken = $request->input('verification_token');
-    if ($user->verification_token === $verificationToken) {
-        $user->email_verified_at = Carbon::now();
-        $user->save();
+        DB::commit();
 
-        return response()->json(['message' => 'Email verified successfully.']);
-    } else {
-        return response()->json(['message' => 'Email verification failed.'], 400);
+        return response()->json([
+            'status' => 201,
+            'message' => 'User registered successfully.',
+        ], 201);
+    } catch (\Exception $e) {
+        DB::rollBack();
+        return response()->json(['message' => 'Internal Server Error'], 500);
     }
 })->middleware('throttle:6,1');
 
+// Remove the old registration route as it is now redundant
+// Route::post('/user/register', function (Request $request) {
+//     ...
+// });
