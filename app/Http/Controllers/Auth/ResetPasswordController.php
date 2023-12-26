@@ -54,15 +54,17 @@ class ResetPasswordController extends Controller
         // Merge the validation rules and custom error messages from both versions
         $validator = Validator::make($request->all(), [
             'email' => 'required|email|exists:users,email',
-            'password' => 'required|confirmed|min:8|regex:/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*#?&]).+$/',
+            // Use the most restrictive password policy from the new code
+            'password' => 'required|confirmed|min:8|regex:/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*#?&]).+$/|not_in:'.$request->email,
             'token' => 'required|string',
         ], [
             'password.min' => 'The password must be at least 8 characters.',
             'password.regex' => 'The password must include at least one uppercase letter, one lowercase letter, one number, and one special character (@$!%*#?&).',
+            'password.not_in' => 'The password cannot be the same as your email address.', // Custom error message for not_in rule
         ]);
 
         if ($validator->fails()) {
-            return response()->json(['message' => 'There was an error with your request. Please ensure all fields are filled out correctly.'], 422);
+            return response()->json(['message' => $validator->errors()->all()], 422);
         }
 
         try {
@@ -73,7 +75,7 @@ class ResetPasswordController extends Controller
                 ->first();
 
             if (!$passwordResetRequest) {
-                return response()->json(['message' => 'A password reset link has been sent to the provided email if it exists in our system.'], 200);
+                return response()->json(['message' => 'This password reset token is invalid or has expired.'], 404);
             }
 
             // Find the associated user and update their password

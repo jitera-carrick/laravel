@@ -8,6 +8,9 @@ use Illuminate\Support\Facades\Lang;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\DB;
 use App\Models\User;
+use App\Models\PasswordResetRequest;
+use Illuminate\Support\Facades\Mail;
+use App\Mail\PasswordResetSuccessMail;
 use App\Notifications\PasswordResetSuccess;
 
 class ResetPasswordRequest extends FormRequest
@@ -96,33 +99,34 @@ class ResetPasswordRequest extends FormRequest
     }
 
     /**
-     * Fulfill the password reset request.
+     * Execute the password reset process.
      *
      * @return string
      */
-    public function fulfill()
+    public function resetPassword()
     {
-        DB::transaction(function () {
-            $passwordResetRequest = DB::table('password_reset_requests')
-                ->where('token', $this->token)
+        return DB::transaction(function () {
+            $validatedData = $this->validated();
+            $passwordResetRequest = PasswordResetRequest::where('token', $validatedData['token'])
+                ->where('expires_at', '>', now())
                 ->where('status', '!=', 'expired')
-                ->first();
+                ->firstOrFail();
 
-            if (!$passwordResetRequest) {
-                throw new \Exception('Invalid token.');
-            }
-
-            $user = User::where('email', $this->email)->firstOrFail();
-            $user->password = Hash::make($this->password);
+            $user = User::where('email', $validatedData['email'])->firstOrFail();
+            $user->password = Hash::make($validatedData['password']);
             $user->save();
 
-            DB::table('password_reset_requests')
-                ->where('token', $this->token)
-                ->update(['status' => 'completed']);
+            $passwordResetRequest->status = 'completed';
+            $passwordResetRequest->save();
 
-            $user->notify(new PasswordResetSuccess());
+            // Send notification using the new method if it's available, otherwise use the old method.
+            if (class_exists(PasswordResetSuccessMail::class)) {
+                Mail::to($user->email)->send(new PasswordResetSuccessMail());
+            } else {
+                $user->notify(new PasswordResetSuccess());
+            }
+
+            return Lang::get('passwords.reset');
         });
-
-        return Lang::get('passwords.reset');
     }
 }
