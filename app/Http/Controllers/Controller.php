@@ -20,13 +20,13 @@ class Controller extends BaseController
     public function handlePasswordResetRequest(Request $request)
     {
         // Validate the email input
-        $this->validate($request, [
+        $validatedData = $request->validate([
             'email' => 'required|email',
         ]);
 
         try {
             // Find the user by email
-            $user = User::where('email', $request->input('email'))->first();
+            $user = User::where('email', $validatedData['email'])->first();
 
             if (!$user) {
                 return response()->json(['message' => 'User not found.'], 404);
@@ -39,19 +39,19 @@ class Controller extends BaseController
             $passwordResetRequest = new PasswordResetRequest([
                 'user_id' => $user->id,
                 'token' => $token,
-                'created_at' => Carbon::now(), // Use created_at instead of expires_at for storing the creation timestamp
-                'expires_at' => Carbon::now()->addMinutes(60), // Set the expires_at field to 60 minutes from now
+                'created_at' => Carbon::now(),
+                'expires_at' => Carbon::now()->addMinutes(60),
             ]);
             $passwordResetRequest->save();
 
             // Send the password reset email
-            Mail::to($user->email)->send(new PasswordResetMail($token));
+            Mail::to($user->email)->send(new PasswordResetMail($token, $user)); // Assuming the PasswordResetMail accepts a user object
 
-            // Return a response with a confirmation message
-            return response()->json(['message' => 'Password reset email has been sent.'], 200);
+            // Return a JSON response with a `reset_requested` boolean key
+            return response()->json(['reset_requested' => true], 200);
         } catch (\Exception $e) {
             // Handle any exceptions that occur during the process
-            return response()->json(['message' => 'An error occurred while processing your request.'], 500);
+            return response()->json(['message' => 'An error occurred while processing your request.', 'error' => $e->getMessage()], 500);
         }
     }
 }
