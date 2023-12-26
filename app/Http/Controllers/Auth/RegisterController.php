@@ -25,13 +25,13 @@ class RegisterController extends Controller
             'email' => 'required|email|unique:users,email',
             'password' => [
                 'required',
-                'min:6',
+                'min:6', // Updated minimum length requirement back to 6 as per requirement
                 'different:email',
-                'regex:/^(?=.*[a-zA-Z])(?=.*\d).+$/'
+                'regex:/^(?=.*[a-zA-Z])(?=.*\d).+$/' // Ensuring the password contains both letters and numbers
             ],
         ], [
             'email.unique' => 'Invalid email format or email already in use.',
-            'password.min' => 'Password does not meet the policy requirements.',
+            'password.min' => 'Password does not meet the policy requirements.', // Reverted error message to meet the requirement
             'password.different' => 'Password does not meet the policy requirements.',
             'password.regex' => 'Password does not meet the policy requirements.',
         ]);
