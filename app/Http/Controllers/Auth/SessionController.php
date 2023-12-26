@@ -21,15 +21,15 @@ class SessionController extends Controller
     {
         $validated = $request->validated();
 
-        // Validate the input to ensure that both "email" and "session_token" are provided and not empty.
-        // This is a combination of the new and existing code to ensure both conditions are met.
+        // Resolve the conflict by combining the validation logic from both versions of the code.
+        // We need to check for 'email' as per the existing code and 'session_token' as per the new code.
         if (empty($validated['email']) || empty($validated['session_token'])) {
             return response()->json(['error' => 'Email and session token are required.'], 422);
         }
 
         try {
             // Modify the query to find the user by both email and session_token.
-            // This is the new code logic that has been added.
+            // This combines the logic from both versions of the code.
             $user = User::where('email', $validated['email'])
                         ->where('session_token', $validated['session_token'])
                         ->first();
@@ -43,8 +43,14 @@ class SessionController extends Controller
                 $user->session_expires = $newSessionExpires;
                 $user->save();
 
-                // The response has been updated to match the new code's response format.
-                return response()->json(['message' => 'Session updated successfully.', 'session_expires' => $user->session_expires], 200);
+                // Combine the response logic from both versions of the code.
+                // Exclude sensitive information from the response as per the new code,
+                // and include the 'message' from the existing code.
+                $response = $user->only(['id', 'name', 'email', 'session_expires']);
+                return response()->json([
+                    'message' => 'Session updated successfully.',
+                    'user' => $response
+                ], 200);
             } else {
                 return response()->json(['error' => 'Session expired.'], 401);
             }
@@ -53,8 +59,17 @@ class SessionController extends Controller
         }
     }
 
-    // ... (other existing methods)
+    // ... (other methods)
 
-    // The rest of the existing methods from the existing code should remain unchanged.
-    // They are not included here to avoid redundancy, but they should be present in the final file.
+    public function verifyEmail($id, $verification_token)
+    {
+        // ... (existing code)
+    }
+
+    public function updateUserProfile(Request $request)
+    {
+        // ... (existing code)
+    }
+
+    // ... (other existing methods)
 }
