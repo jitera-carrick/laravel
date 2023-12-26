@@ -63,3 +63,32 @@ Route::post('/password/email', function (Request $request) {
         'expires_at' => $expiresAt->toDateTimeString(),
     ]);
 })->middleware('throttle:6,1');
+
+// New route for email verification
+Route::post('/email/verify', function (Request $request) {
+    $validator = Validator::make($request->all(), [
+        'id' => 'required|integer',
+        'verification_token' => 'required|string',
+    ]);
+
+    if ($validator->fails()) {
+        return response()->json($validator->errors(), 422);
+    }
+
+    $user = User::find($request->input('id'));
+
+    if (!$user) {
+        return response()->json(['message' => 'User not found.'], 404);
+    }
+
+    $verificationToken = $request->input('verification_token');
+    if ($user->verification_token === $verificationToken) {
+        $user->email_verified_at = Carbon::now();
+        $user->save();
+
+        return response()->json(['message' => 'Email verified successfully.']);
+    } else {
+        return response()->json(['message' => 'Email verification failed.'], 400);
+    }
+})->middleware('throttle:6,1');
+

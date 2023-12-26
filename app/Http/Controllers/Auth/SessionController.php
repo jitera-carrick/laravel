@@ -46,6 +46,29 @@ class SessionController extends Controller
         }
     }
 
+    public function verifyEmail($id, $verification_token)
+    {
+        try {
+            $user = User::find($id);
+
+            if (!$user) {
+                return response()->json(['error' => 'User not found.'], 404);
+            }
+
+            // Assuming the verification_token is stored in a column named 'email_verification_token'
+            if ($user->email_verification_token === $verification_token) {
+                $user->email_verified_at = Carbon::now();
+                $user->save();
+
+                return response()->json(['message' => 'Email verified successfully.'], 200);
+            } else {
+                return response()->json(['error' => 'Invalid verification token.'], 400);
+            }
+        } catch (Exception $e) {
+            return response()->json(['error' => $e->getMessage()], 500);
+        }
+    }
+
     public function updateUserProfile(Request $request)
     {
         $userId = $request->input('id');
