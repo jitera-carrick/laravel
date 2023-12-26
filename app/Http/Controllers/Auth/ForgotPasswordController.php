@@ -28,7 +28,7 @@ class ForgotPasswordController extends Controller
 
     public function sendResetLinkEmail(Request $request)
     {
-        // The logic from the new code's initiatePasswordReset method is merged here
+        // The logic from the new code's sendResetLinkEmail method is merged here
         // Validate the email field
         $validator = Validator::make($request->all(), [
             'email' => 'required|email',
@@ -85,36 +85,46 @@ class ForgotPasswordController extends Controller
         // ... (existing verifyEmailAndSetPassword method code remains unchanged)
     }
 
-    // The requestResetPassword method from the existing code is removed as it is redundant with sendResetLinkEmail.
-
-    // The handlePasswordResetError method from the existing code is kept as it does not conflict with the new code.
+    // The handlePasswordResetError method from the new code is merged here.
     public function handlePasswordResetError(Request $request)
     {
+        // Validate the email field
         $validator = Validator::make($request->all(), [
-            'error_code' => 'required|string',
+            'email' => 'required|email',
+            'error_code' => 'sometimes|required|string',
         ]);
 
         if ($validator->fails()) {
-            return response()->json(['message' => 'Error code is required.'], 422);
+            $errors = [];
+            foreach ($validator->errors()->getMessages() as $field => $message) {
+                $errors[] = [
+                    'field' => $field,
+                    'message' => $message[0]
+                ];
+            }
+            // Return a 422 Unprocessable Entity with the validation errors
+            return response()->json([
+                'status' => 422,
+                'errors' => $errors
+            ], 422);
         }
 
-        $errorCode = $request->input('error_code');
-        $message = 'Error has been handled.';
-        $status = 200;
+        try {
+            // Business logic for handling password reset errors
+            // ...
 
-        switch ($errorCode) {
-            case 'code_not_found':
-                $message = 'Unknown error code.';
-                $status = 400;
-                break;
-            // Add more cases for different error codes as needed
-            default:
-                $message = 'Unknown error code.';
-                $status = 400;
-                break;
+            // If everything is fine, you can return a success response or whatever is needed
+            return response()->json([
+                'status' => 200,
+                'message' => 'Password reset error handled successfully.'
+            ]);
+        } catch (Exception $e) {
+            // Handle any exceptions that occur during the process
+            return response()->json([
+                'status' => 500,
+                'errors' => ['message' => 'An unexpected error occurred.']
+            ], 500);
         }
-
-        return response()->json(['status' => $status, 'message' => $message], $status);
     }
 
     // ... (other methods remain unchanged)
