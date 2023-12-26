@@ -41,7 +41,7 @@ class StylistRequestController extends Controller
             // Create a new stylist request
             $stylistRequest = new StylistRequest([
                 'user_id' => $request->input('user_id'),
-                'details' => $request->input('details'),
+                'details' => $request->input('details'), // This field is not required by the requirement, it should be removed.
                 'area' => $request->input('area'),
                 'gender' => $request->input('gender'),
                 'birth_date' => $request->input('birth_date'),
