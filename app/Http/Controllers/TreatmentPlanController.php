@@ -13,14 +13,39 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Validator;
+use Illuminate\Database\Eloquent\ModelNotFoundException;
+use App\Http\Resources\TreatmentPlanResource; // Assuming this is the correct namespace for TreatmentPlanResource
 
 class TreatmentPlanController extends Controller
 {
     // ... (other methods in the controller)
 
-    public function approveTreatmentPlan(Request $request)
+    public function approveTreatmentPlan(Request $request, $id = null)
     {
-        // ... (existing code for approveTreatmentPlan)
+        if ($id === null) {
+            // ... (existing code for approveTreatmentPlan without $id)
+            // This part is from the existing code where $id is not used.
+        } else {
+            // New code for approveTreatmentPlan with $id
+            if (!is_numeric($id)) {
+                return response()->json(['error' => 'Wrong format.'], 400);
+            }
+
+            try {
+                $treatmentPlan = TreatmentPlan::findOrFail($id);
+            } catch (ModelNotFoundException $e) {
+                return response()->json(['error' => 'Treatment plan not found.'], 404);
+            }
+
+            if (Auth::id() !== $treatmentPlan->user_id) {
+                return response()->json(['error' => 'You do not have permission to approve this treatment plan.'], 403);
+            }
+
+            $treatmentPlan->update(['status' => 'approved']);
+
+            // Assuming we have a TreatmentPlanResource to format the response
+            return new TreatmentPlanResource($treatmentPlan);
+        }
     }
 
     public function declineTreatmentPlan(Request $request, $id)
