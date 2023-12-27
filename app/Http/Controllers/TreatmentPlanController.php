@@ -20,6 +20,7 @@ use Illuminate\Database\Eloquent\ModelNotFoundException;
 use App\Http\Resources\TreatmentPlanResource; // Correct namespace for TreatmentPlanResource
 use Illuminate\Validation\Rule;
 use Illuminate\Support\Facades\DB; // Added for DB transactions
+use Illuminate\Support\Facades\Log;
 
 class TreatmentPlanController extends Controller
 {
@@ -34,48 +35,64 @@ class TreatmentPlanController extends Controller
     {
         // If $id is null, it means the new code is being used
         if (is_null($id)) {
+            // New code for approveTreatmentPlan without $id
             $validator = Validator::make($request->all(), [
                 'treatment_plan_id' => [
                     'required',
                     'exists:treatment_plans,id',
                     Rule::exists('treatment_plans', 'id')->where(function ($query) {
-                        $query->where('status', 'waiting_for_approval');
+                        $query->where('status', 'awaiting_approval');
                     }),
                 ],
-                'customer_id' => 'required|exists:users,id' // Added from new code
+                'user_id' => 'required|exists:users,id' // Changed from 'customer_id' to 'user_id' to match new code
             ]);
 
             if ($validator->fails()) {
                 return response()->json($validator->errors(), 422);
             }
 
-            $treatmentPlan = TreatmentPlan::where('id', $request->treatment_plan_id)
-                                           ->where('user_id', $request->customer_id) // Added from new code
-                                           ->first();
+            try {
+                $treatmentPlan = TreatmentPlan::where('id', $request->treatment_plan_id)
+                    ->where('status', 'awaiting_approval')
+                    ->firstOrFail();
 
-            if (!$treatmentPlan) {
-                return response()->json(['error' => 'Treatment plan does not match customer ID'], 404); // Added from new code
-            }
-
-            DB::transaction(function () use ($treatmentPlan) {
-                $treatmentPlan->update(['status' => 'approved']);
-
-                $reservation = $treatmentPlan->reservation;
-                if ($reservation && $reservation->status === 'provisional') {
-                    $reservation->update(['status' => 'confirmed']);
+                if (Auth::id() !== $request->user_id) {
+                    return response()->json(['error' => 'You do not have permission to approve this treatment plan.'], 403);
                 }
-            });
 
-            // Send email notifications
-            $customer = $treatmentPlan->user;
-            $stylist = $treatmentPlan->stylist;
-            $ownerEmail = config('mail.owner_email');
+                DB::transaction(function () use ($treatmentPlan) {
+                    $treatmentPlan->update([
+                        'status' => 'approved',
+                        'updated_at' => now()
+                    ]);
 
-            Mail::to($customer->email)->send(new TreatmentPlanFixedCustomer($treatmentPlan));
-            Mail::to($stylist->user->email)->send(new TreatmentPlanFixedStylist($treatmentPlan));
-            Mail::to($ownerEmail)->send(new TreatmentPlanFixedOwner($treatmentPlan));
+                    $reservation = Reservation::where('treatment_plan_id', $treatmentPlan->id)
+                        ->where('status', 'provisional')
+                        ->firstOrFail();
 
-            return new TreatmentPlanResource($treatmentPlan); // Changed to use TreatmentPlanResource from new code
+                    $reservation->update([
+                        'status' => 'confirmed',
+                        'updated_at' => now()
+                    ]);
+                });
+
+                // Send email notifications
+                $customer = $treatmentPlan->user;
+                $stylist = $treatmentPlan->stylist;
+                $ownerEmail = config('mail.owner_email'); // Changed to use config instead of hardcoded email
+
+                Mail::to($customer->email)->send(new TreatmentPlanFixedCustomer($treatmentPlan));
+                Mail::to($stylist->user->email)->send(new TreatmentPlanFixedStylist($treatmentPlan));
+                Mail::to($ownerEmail)->send(new TreatmentPlanFixedOwner($treatmentPlan));
+
+                return new TreatmentPlanResource($treatmentPlan);
+            } catch (ModelNotFoundException $e) {
+                Log::error('Treatment plan approval failed: ' . $e->getMessage());
+                return response()->json(['error' => 'Treatment plan not found or already approved.'], 404);
+            } catch (\Exception $e) {
+                Log::error('Unexpected error during treatment plan approval: ' . $e->getMessage());
+                return response()->json(['error' => 'An unexpected error occurred.'], 500);
+            }
         } else {
             // ... (existing code for approveTreatmentPlan with $id)
         }
