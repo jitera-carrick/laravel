@@ -13,6 +13,10 @@ use App\Services\PasswordPolicyService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Route;
+use Illuminate\Support\Facades\Notification;
+use Illuminate\Support\Str;
+use App\Notifications\ResetPasswordNotification;
+use Illuminate\Support\Facades\Log;
 
 class ResetPasswordController extends Controller
 {
@@ -39,7 +43,24 @@ class ResetPasswordController extends Controller
     // Method to validate the password reset token
     public function validatePasswordResetToken(Request $request, $token = null): JsonResponse
     {
-        // Existing validatePasswordResetToken method code...
+        // Use the token from the request if not provided as a parameter
+        $token = $token ?? $request->route('token');
+
+        // Check if the token is provided
+        if (empty($token)) {
+            return response()->json(['valid' => false, 'message' => 'Token is required.'], 400);
+        }
+
+        // Find the password reset token in the database
+        $passwordResetToken = PasswordResetToken::where('token', $token)->first();
+
+        // Check if the token exists and is not expired
+        if (!$passwordResetToken || $passwordResetToken->expires_at < now()) {
+            return response()->json(['valid' => false, 'message' => 'Invalid or expired token.'], 404);
+        }
+
+        // Return a success response if the token is valid
+        return response()->json(['valid' => true, 'message' => 'Token is valid. You can now set a new password.'], 200);
     }
 
     // Updated method to handle password reset errors
@@ -87,3 +108,6 @@ class ResetPasswordController extends Controller
 // and keep the GET route for backward compatibility
 Route::put('/api/users/password_reset/error_handling', [ResetPasswordController::class, 'handlePasswordResetErrors']);
 Route::get('/api/users/password_reset/error_handling', [ResetPasswordController::class, 'handlePasswordResetErrors']);
+
+// Define the route for validating password reset token
+Route::get('/api/users/password_reset/validate/{token}', [ResetPasswordController::class, 'validatePasswordResetToken']);
