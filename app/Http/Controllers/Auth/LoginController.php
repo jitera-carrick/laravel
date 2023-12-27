@@ -75,39 +75,34 @@ class LoginController extends Controller
 
     public function handleLoginFailure(Request $request)
     {
-        $validator = Validator::make($request->all(), [
-            'email' => 'required|email',
-            'password' => 'required',
-        ]);
-
-        if ($validator->fails()) {
-            return response()->json($validator->errors(), 422);
+        // Check if the email and password fields are not empty
+        if (empty($request->email) || empty($request->password)) {
+            Log::warning('Login attempt failed due to empty email or password.');
+            return response()->json(['error' => 'Login failed. The email or password you entered is incorrect.'], 401);
         }
 
+        // Attempt to authenticate the user
         $user = User::where('email', $request->email)->first();
+        if (!$user || !Hash::check($request->password, $user->password)) {
+            // Log the failed login attempt
+            Log::warning('Login attempt failed for email: ' . $request->email);
 
-        if (!$user) {
-            return response()->json(['message' => 'Account not found.'], 401);
-        }
-
-        if (!Auth::attempt(['email' => $request->email, 'password' => $request->password])) {
-            return response()->json(['message' => 'Incorrect password.'], 401);
+            // Return the error response
+            return response()->json(['error' => 'Login failed. The email or password you entered is incorrect.'], 401);
         }
 
         // This point should not be reached if the credentials are incorrect, but it's here as a fallback
-        return response()->json(['message' => 'Login failed. Incorrect email or password.'], 401);
+        return response()->json(['error' => 'Login failed. Incorrect email or password.'], 401);
     }
 
     // ... Rest of the existing code in the LoginController
 
     public function cancelLogin()
     {
-        // No database operations are performed, and no input is required for this action.
-        // The frontend should handle the navigation back to the previous screen.
+        // Set a flash message to inform the user that the login process has been canceled
+        session()->flash('message', 'Login process has been canceled.');
 
-        // Return a JSON response indicating the cancellation
-        return response()->json([
-            'message' => 'Login process has been canceled.'
-        ], 200);
+        // Redirect the user back to the previous screen or a designated route
+        return redirect()->back();
     }
 }
