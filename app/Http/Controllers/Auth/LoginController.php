@@ -57,7 +57,32 @@ class LoginController extends Controller
         $user->save();
     }
 
-    // ... Rest of the existing code in the LoginController
+    /**
+     * Handle the login request with updated validation and response.
+     *
+     * @param \App\Http\Requests\LoginRequest $request
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function login(LoginRequest $request)
+    {
+        $credentials = $request->validated();
+        $remember = $request->input('remember', false); // Updated to use 'remember' instead of 'remember_token'
+
+        if ($this->attemptLogin($credentials, $remember)) {
+            $user = Auth::user();
+            $sessionToken = $user->session_token;
+            $session = Session::where('user_id', $user->id)->first();
+
+            return response()->json([
+                'status' => 200,
+                'message' => 'Login successful.',
+                'session_token' => $sessionToken,
+                'session_expiration' => $session->expires_at->toIso8601String(),
+            ]);
+        }
+
+        return $this->handleLoginFailure($request);
+    }
 
     // New handleLoginFailure method as per the guideline
     /**

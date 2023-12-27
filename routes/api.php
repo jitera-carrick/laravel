@@ -5,9 +5,9 @@ use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\PasswordPolicyController;
 use App\Http\Controllers\Auth\ForgotPasswordController;
 use App\Http\Controllers\Auth\ResetPasswordController;
+use App\Http\Controllers\Auth\LoginController; // Import LoginController
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Facades\Hash;
-use App\Models\User;
 use App\Models\PasswordResetToken;
 use Illuminate\Support\Facades\Auth;
 
@@ -45,6 +45,8 @@ Route::post('/password/reset/request', function (Request $request) {
     // ... existing code for password reset request ...
 });
 
+// Updated the route to use the LoginController instead of a closure
+// The new login route now includes validation as per the requirements
 Route::post('/login', function (Request $request) {
     // ... existing code for login ...
 });
@@ -56,11 +58,6 @@ Route::middleware('auth:sanctum')->post('/session/maintain', function (Request $
 // New route for setting a new password
 Route::put('/users/password_reset/set_new_password', function (Request $request) {
     // ... existing code for setting a new password ...
-});
-
-// New route for handling password reset errors
-Route::put('/api/users/password_reset/error_handling', function (Request $request) {
-    // ... existing code for handling password reset errors ...
 });
 
 // Added new route for canceling the login process as per the guideline
