@@ -19,6 +19,7 @@ use Illuminate\Support\Facades\Validator;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
 use App\Http\Resources\TreatmentPlanResource; // Correct namespace for TreatmentPlanResource
 use Illuminate\Validation\Rule;
+use Illuminate\Support\Facades\DB; // Added for DB transactions
 
 class TreatmentPlanController extends Controller
 {
@@ -41,16 +42,19 @@ class TreatmentPlanController extends Controller
                         $query->where('status', 'waiting_for_approval');
                     }),
                 ],
+                'customer_id' => 'required|exists:users,id' // Added from new code
             ]);
 
             if ($validator->fails()) {
                 return response()->json($validator->errors(), 422);
             }
 
-            $treatmentPlan = TreatmentPlan::find($request->treatment_plan_id);
+            $treatmentPlan = TreatmentPlan::where('id', $request->treatment_plan_id)
+                                           ->where('user_id', $request->customer_id) // Added from new code
+                                           ->first();
 
-            if ($treatmentPlan->status !== 'waiting_for_approval') {
-                return response()->json(['error' => 'Treatment plan is not waiting for approval'], 422);
+            if (!$treatmentPlan) {
+                return response()->json(['error' => 'Treatment plan does not match customer ID'], 404); // Added from new code
             }
 
             DB::transaction(function () use ($treatmentPlan) {
@@ -71,63 +75,50 @@ class TreatmentPlanController extends Controller
             Mail::to($stylist->user->email)->send(new TreatmentPlanFixedStylist($treatmentPlan));
             Mail::to($ownerEmail)->send(new TreatmentPlanFixedOwner($treatmentPlan));
 
-            return response()->json([
-                'message' => 'Treatment plan approved successfully',
-                'treatment_plan' => $treatmentPlan,
-            ]);
+            return new TreatmentPlanResource($treatmentPlan); // Changed to use TreatmentPlanResource from new code
         } else {
             // ... (existing code for approveTreatmentPlan with $id)
         }
     }
 
-    public function declineTreatmentPlan($request, $id)
+    public function declineTreatmentPlan(Request $request, $id = null)
     {
         // Use DeclineTreatmentPlanRequest if it's the existing code
-        if ($request instanceof DeclineTreatmentPlanRequest) {
+        if ($request instanceof DeclineTreatmentPlanRequest || $id !== null) {
             // ... (existing code for declineTreatmentPlan)
         } else {
             // New code for declineTreatmentPlan without DeclineTreatmentPlanRequest
-            if (!Auth::check()) {
-                return response()->json(['error' => 'Unauthorized'], 401);
-            }
+            $treatmentPlanId = $request->input('treatment_plan_id');
 
-            if (!is_numeric($id)) {
-                return response()->json(['error' => 'Wrong format.'], 422);
-            }
-
-            $treatmentPlan = TreatmentPlan::find($id);
+            // Validate that the treatment plan exists and is waiting for approval
+            $treatmentPlan = TreatmentPlan::where('id', $treatmentPlanId)
+                                          ->where('status', 'waiting_for_approval')
+                                          ->first();
 
             if (!$treatmentPlan) {
-                return response()->json(['error' => 'Treatment plan not found.'], 404);
+                return response()->json(['error' => 'Treatment plan does not exist or is not waiting for approval.'], 404);
             }
 
-            $userId = Auth::id();
+            // Update the status of the treatment plan to 'declined'
+            $treatmentPlan->update(['status' => 'declined']);
 
-            if ($treatmentPlan->user_id != $userId) {
-                return response()->json(['error' => 'User does not have permission to decline this treatment plan.'], 403);
-            }
-
-            $treatmentPlan->status = 'declined';
-            $treatmentPlan->save();
-
-            $reservation = Reservation::where('treatment_plan_id', $treatmentPlan->id)->first();
+            // Find the linked provisional reservation and update its status to 'cancelled'
+            $reservation = Reservation::where('treatment_plan_id', $treatmentPlanId)->first();
             if ($reservation) {
-                $reservation->status = 'cancelled';
-                $reservation->save();
+                $reservation->update(['status' => 'cancelled']);
             }
 
-            Mail::to('salon@example.com')->send(new TreatmentPlanCancelled($treatmentPlan));
+            // Send an email notification to the Hair Stylist associated with the declined treatment plan
+            $stylist = Stylist::where('id', $treatmentPlan->stylist_id)->first();
+            if ($stylist && $stylist->user) {
+                Mail::to($stylist->user->email)->send(new TreatmentPlanCancelled($treatmentPlan));
+            }
 
+            // Return a confirmation response with the updated status
             return response()->json([
-                'status' => 200,
-                'treatment_plan' => [
-                    'id' => $treatmentPlan->id,
-                    'stylist_id' => $treatmentPlan->stylist_id,
-                    'customer_id' => $treatmentPlan->user_id,
-                    'status' => $treatmentPlan->status,
-                    'details' => $treatmentPlan->details,
-                    'created_at' => $treatmentPlan->created_at->toIso8601String(),
-                ]
+                'treatment_plan_id' => $treatmentPlan->id,
+                'status' => $treatmentPlan->status,
+                'cancellation_details' => 'Treatment plan has been declined and associated reservation cancelled.'
             ]);
         }
     }
