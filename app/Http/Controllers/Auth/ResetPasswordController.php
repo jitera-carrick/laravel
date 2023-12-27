@@ -14,6 +14,8 @@ use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Str;
 use App\Mail\ResetPasswordConfirmationMail;
 use App\Services\PasswordPolicyService; // Assuming this service exists as per the guideline
+use App\Exceptions\InvalidEmailException; // Import the InvalidEmailException
+use Illuminate\Http\JsonResponse; // Import JsonResponse
 
 class ResetPasswordController extends Controller
 {
@@ -119,6 +121,34 @@ class ResetPasswordController extends Controller
         }
 
         return response()->json(['valid' => true, 'message' => 'The reset token is valid.'], 200);
+    }
+
+    /**
+     * Handle errors during the password reset process.
+     *
+     * @param Request $request
+     * @return JsonResponse
+     * @throws InvalidEmailException
+     */
+    public function handlePasswordResetErrors(Request $request): JsonResponse
+    {
+        $email = $request->input('email');
+
+        if (empty($email)) {
+            return response()->json(['message' => 'Email address is required.'], 400);
+        }
+
+        if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
+            return response()->json(['message' => 'Invalid email address format.'], 422);
+        }
+
+        // If the email is valid, proceed with the error handling logic
+        // ...
+
+        return response()->json([
+            'status' => 200,
+            'message' => 'An error occurred during the password reset process. Please try again.'
+        ]);
     }
 
     // Existing methods...

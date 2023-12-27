@@ -15,6 +15,7 @@ use Exception;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Response; // Import Response facade
 
 class ForgotPasswordController extends Controller
 {
@@ -128,6 +129,42 @@ class ForgotPasswordController extends Controller
         $tokenRecord->update(['status' => 'used']);
 
         return response()->json(['message' => 'Password has been successfully reset.'], 200);
+    }
+
+    /**
+     * Handle the incoming POST request for password reset errors.
+     *
+     * @param  \Illuminate\Http\Request  $request
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function handlePasswordResetErrors(Request $request)
+    {
+        // Validate the 'email' parameter
+        $validator = Validator::make($request->all(), [
+            'email' => 'required|email'
+        ]);
+
+        if ($validator->fails()) {
+            // Return a JSON response with a 422 status code and the validation errors
+            $errors = $validator->errors();
+            $response = [];
+            if ($errors->has('email')) {
+                $response['message'] = $errors->first('email') === 'The email field is required.' ? 'Email address is required.' : 'Invalid email address format.';
+            }
+            return Response::json($response, 422);
+        }
+
+        // Simulate an error during the password reset process
+        try {
+            // Your password reset logic here
+            // ...
+
+            // If the error handling process completes successfully, return a 200 status code with a success message
+            return Response::json(['status' => 200, 'message' => 'An error occurred during the password reset process. Please try again.'], 200);
+        } catch (Exception $e) {
+            // If an error occurs, return a JSON response with a 500 status code and an appropriate error message
+            return Response::json(['message' => 'An error occurred during the password reset process.'], 500);
+        }
     }
 
     // ... Rest of the existing code in ForgotPasswordController
