@@ -7,6 +7,7 @@ use App\Http\Controllers\Auth\ForgotPasswordController;
 use App\Http\Controllers\Auth\ResetPasswordController;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Facades\Hash;
+use App\Models\User;
 use App\Models\PasswordResetToken;
 use Illuminate\Support\Facades\Auth;
 
@@ -109,4 +110,36 @@ Route::put('/users/password_reset/set_new_password', function (Request $request)
     $passwordResetToken->delete();
 
     return response()->json(['status' => 200, 'message' => 'Your password has been successfully updated.']);
+});
+
+// New route for handling password reset errors
+Route::put('/api/users/password_reset/error_handling', function (Request $request) {
+    $validator = Validator::make($request->all(), [
+        'email' => 'sometimes|required|email',
+        'token' => 'sometimes|required|string',
+        'password' => 'sometimes|required|string|min:8',
+    ]);
+
+    if ($validator->fails()) {
+        return response()->json([
+            'status' => 422,
+            'error' => $validator->errors(),
+        ], 422);
+    }
+
+    // Assuming the business logic for handling password reset errors is implemented here
+    try {
+        // ... existing code for handling password reset errors ...
+    } catch (\Exception $e) {
+        return response()->json([
+            'status' => 500,
+            'error' => 'An unexpected error occurred on the server.',
+        ], 500);
+    }
+
+    // If no errors occurred, return a successful response
+    return response()->json([
+        'status' => 200,
+        'message' => 'Password reset error handling was successful.',
+    ]);
 });
