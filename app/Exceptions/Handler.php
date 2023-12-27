@@ -33,20 +33,43 @@ class Handler extends ExceptionHandler
         });
 
         $this->renderable(function (Throwable $e, $request) {
-            // Check if the exception is related to password policy update process
-            if ($e instanceof PasswordPolicyException) {
-                // Provide a user-friendly error message in case of a failure
+            // Handle custom exceptions related to password reset errors
+            if ($e instanceof InvalidEmailException) {
                 return new JsonResponse([
-                    'message' => 'There was an error updating the password policy. Please try again later.',
+                    'message' => 'The provided email is invalid.',
                     'error' => $e->getMessage(),
                 ], JsonResponse::HTTP_BAD_REQUEST);
+            }
+
+            if ($e instanceof PasswordPolicyException) {
+                return new JsonResponse([
+                    'message' => 'The password does not meet the required policy.',
+                    'error' => $e->getMessage(),
+                ], JsonResponse::HTTP_BAD_REQUEST);
+            }
+
+            if ($e instanceof ExpiredTokenException) {
+                return new JsonResponse([
+                    'message' => 'The password reset token has expired.',
+                    'error' => $e->getMessage(),
+                ], JsonResponse::HTTP_NOT_FOUND);
             }
         });
     }
 }
 
-// Assuming PasswordPolicyException is a custom exception that would be thrown during the password policy update process
+// Custom exceptions for password reset errors
+class InvalidEmailException extends \Exception
+{
+    // Custom exception for invalid email errors
+}
+
 class PasswordPolicyException extends \Exception
 {
-    // Custom exception for password policy update failures
+    // Custom exception for password policy errors
+}
+
+class ExpiredTokenException extends \Exception
+{
+    // Custom exception for expired token errors
 }

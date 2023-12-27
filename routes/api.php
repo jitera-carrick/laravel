@@ -9,6 +9,7 @@ use App\Http\Controllers\Auth\LoginController;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Facades\Hash;
 use App\Models\User;
+use App\Models\PasswordResetToken; // Added for token expiration check
 use Illuminate\Support\Facades\Auth;
 
 /*
@@ -40,36 +41,49 @@ Route::get('/users/password-reset/validate/{token}', [ResetPasswordController::c
 
 // Reset Password route
 Route::put('/users/password-reset/{token}', function (Request $request, $token) {
+    // Check if the token is valid and not expired
+    $passwordResetToken = PasswordResetToken::where('token', $token)->first();
+    if (!$passwordResetToken || $passwordResetToken->isExpired()) {
+        return response()->json(['message' => 'The token is invalid or has expired.'], 404);
+    }
+
+    // Retrieve the user associated with the password reset token
+    $user = $passwordResetToken->user;
+
+    // Validate the new password against the password policy
+    $passwordPolicy = $user->passwordPolicy; // Assuming the User model has a relationship with PasswordPolicy
     $validator = Validator::make($request->all(), [
         'password' => [
             'required',
-            'min:6',
-            'regex:/^(?=.*[a-zA-Z])(?=.*\d).+$/',
-            function ($attribute, $value, $fail) use ($request) {
-                if ($value === $request->user()->email) {
+            'confirmed',
+            'min:' . $passwordPolicy->minimum_length,
+            $passwordPolicy->require_digits ? 'regex:/\d/' : '',
+            $passwordPolicy->require_letters ? 'regex:/[a-zA-Z]/' : '',
+            $passwordPolicy->require_special_characters ? 'regex:/[\W_]/' : '',
+            function ($attribute, $value, $fail) use ($user) {
+                if ($value === $user->email) {
                     return $fail('Password cannot be the same as the email address.');
                 }
             },
         ],
     ], [
         'password.required' => 'Password is required.',
-        'password.min' => 'Password must be 6 digits or more.',
-        'password.regex' => 'Password must contain a mix of letters and numbers.',
+        'password.confirmed' => 'Password confirmation does not match.',
+        'password.min' => 'Password must be at least ' . $passwordPolicy->minimum_length . ' characters.',
+        'password.regex' => 'Password does not meet the required criteria.',
     ]);
 
     if ($validator->fails()) {
         return response()->json(['errors' => $validator->errors()], 422);
     }
 
-    $user = User::where('password_reset_token', $token)->first();
-
-    if (!$user) {
-        return response()->json(['message' => 'The token does not exist or has expired.'], 404);
-    }
-
+    // Update the user's password and clear the reset token
     $user->password = Hash::make($request->password);
     $user->password_reset_token = null; // Clear the reset token
     $user->save();
+
+    // Delete the password reset token record
+    $passwordResetToken->delete();
 
     return response()->json(['status' => 200, 'message' => 'Your password has been successfully reset.']);
 });

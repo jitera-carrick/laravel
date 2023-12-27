@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Carbon\Carbon;
 
 class PasswordResetToken extends Model
 {
@@ -65,5 +66,15 @@ class PasswordResetToken extends Model
     public function user()
     {
         return $this->belongsTo(User::class, 'user_id');
+    }
+
+    /**
+     * Determine if the token has expired.
+     *
+     * @return bool
+     */
+    public function isExpired()
+    {
+        return $this->expires_at->isPast();
     }
 }

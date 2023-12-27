@@ -11,9 +11,9 @@ use App\Models\PasswordReset;
 use App\Notifications\ResetPasswordNotification;
 use Illuminate\Support\Facades\Notification;
 use Illuminate\Support\Facades\Mail;
-use Illuminate\Support\Carbon;
 use Illuminate\Support\Str;
 use App\Mail\ResetPasswordConfirmationMail;
+use App\Services\PasswordPolicyService; // Assuming this service exists as per the guideline
 
 class ResetPasswordController extends Controller
 {
@@ -34,24 +34,32 @@ class ResetPasswordController extends Controller
         }
 
         // Retrieve password policy
-        // Assuming PasswordPolicy is a model that exists and contains the password policy
-        // If it doesn't exist, this line should be removed
-        $passwordPolicy = PasswordPolicy::firstOrFail();
+        $passwordPolicyService = new PasswordPolicyService();
+        $passwordPolicy = $passwordPolicyService->getPasswordPolicy();
 
         // Validation rules
         $rules = [
-            'password' => [
+            'new_password' => [
                 'required',
                 'string',
-                'min:6', // Updated minimum length to 6 as per requirement
+                'min:' . $passwordPolicy->minimum_length, // Use dynamic minimum length from password policy
+                'confirmed',
+                function ($attribute, $value, $fail) use ($passwordPolicyService, $passwordPolicy) {
+                    $errors = $passwordPolicyService->validatePassword($value, $passwordPolicy);
+                    if (!empty($errors)) {
+                        foreach ($errors as $error) {
+                            $fail($error);
+                        }
+                    }
+                },
                 'regex:/^(?=.*[a-zA-Z])(?=.*\d).+$/', // Updated regex to ensure a mix of letters and numbers
             ],
         ];
 
         // Custom error messages
         $messages = [
-            'password.min' => 'Password must be 6 digits or more.', // Custom message for minimum length
-            'password.regex' => 'Password must contain a mix of letters and numbers.', // Custom message for regex
+            'new_password.min' => 'Password must be ' . $passwordPolicy->minimum_length . ' characters or more.', // Custom message for minimum length
+            'new_password.regex' => 'Password must contain a mix of letters and numbers.', // Custom message for regex
         ];
 
         // Validate request
@@ -62,7 +70,7 @@ class ResetPasswordController extends Controller
         }
 
         // Additional password validations
-        $password = $request->input('password');
+        $password = $request->input('new_password');
         $user = User::where('email', $passwordReset->email)->first();
 
         if (Str::contains($password, $user->email)) {
