@@ -87,7 +87,7 @@ class TreatmentPlanController extends Controller
             return response()->json(['error' => 'Unauthorized'], 401);
         }
 
-        if ($request instanceof DeclineTreatmentPlanRequest && $treatment_plan_id !== null) {
+        if ($request instanceof DeclineTreatmentPlanRequest || $treatment_plan_id !== null) {
             // ... (existing code for declineTreatmentPlan)
         } else {
             // New code for declineTreatmentPlan without DeclineTreatmentPlanRequest
@@ -134,6 +134,28 @@ class TreatmentPlanController extends Controller
     public function autoCancelBeforeAppointment(Request $request, $id)
     {
         // ... (existing code for autoCancelBeforeAppointment)
+    }
+
+    // New method for auto-canceling treatment plans
+    public function autoCancelTreatmentPlan(Request $request, $id)
+    {
+        // Validate that $id is an integer
+        if (!is_numeric($id) || intval($id) != $id) {
+            return response()->json(['error' => 'Wrong format.'], 422);
+        }
+
+        try {
+            $treatmentPlan = TreatmentPlan::findOrFail($id);
+            $treatmentPlan->status = 'auto_cancelled';
+            $treatmentPlan->save();
+
+            return response()->json(new TreatmentPlanResource($treatmentPlan), 200);
+        } catch (ModelNotFoundException $e) {
+            return response()->json(['error' => 'Treatment plan not found.'], 400);
+        } catch (\Exception $e) {
+            Log::error($e->getMessage());
+            return response()->json(['error' => 'An error occurred while auto-canceling the treatment plan.'], 500);
+        }
     }
 
     // ... (other methods in the controller)
