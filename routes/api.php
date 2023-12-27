@@ -71,3 +71,27 @@ Route::put('/users/password-reset/{token}', function (Request $request, $token) 
 
     return response()->json(['status' => 200, 'message' => 'Your password has been successfully reset.']);
 });
+
+// Add a new route to handle the password reset request API endpoint
+Route::post('/api/password/reset/request', function (Request $request) {
+    $validator = Validator::make($request->all(), [
+        'email' => 'required|email|exists:users,email',
+    ], [
+        'email.required' => 'Email is required.',
+        'email.email' => 'Invalid email format.',
+        'email.exists' => 'Email not registered.',
+    ]);
+
+    if ($validator->fails()) {
+        return response()->json(['errors' => $validator->errors()], 400);
+    }
+
+    // Assuming sendPasswordResetRequest method exists and handles the business logic
+    $response = ForgotPasswordController::sendPasswordResetRequest($request->email);
+
+    if ($response['status'] === 'success') {
+        return response()->json(['status' => 200, 'message' => 'Password reset email sent successfully.']);
+    } else {
+        return response()->json(['status' => 500, 'message' => 'An unexpected error occurred.'], 500);
+    }
+});
