@@ -7,6 +7,8 @@ use App\Models\TreatmentPlan;
 use App\Models\Reservation;
 use Illuminate\Support\Facades\Mail;
 use Carbon\Carbon;
+use Exception;
+use Illuminate\Support\Facades\Log;
 
 class AutoCancelTreatmentPlans extends Command
 {
@@ -37,14 +39,35 @@ class AutoCancelTreatmentPlans extends Command
 
         try {
             // Cancel unapproved treatment plans that are older than 48 hours
-            $canceled_plans = TreatmentPlan::where('status', '!=', 'approved')
-                ->where('created_at', '<', $cutoff_time)
-                ->update(['status' => 'canceled']);
+            $canceled_plans = TreatmentPlan::where('status', 'awaiting_approval')
+                ->whereHas('reservations', function ($query) use ($current_time) {
+                    $query->where('scheduled_at', '<=', $current_time->copy()->subHours(2));
+                })
+                ->orWhere(function ($query) use ($cutoff_time) {
+                    $query->where('status', 'awaiting_approval')
+                          ->where('created_at', '<', $cutoff_time);
+                })
+                ->get();
 
-            $this->info("Successfully canceled {$canceled_plans} unapproved treatment plans.");
+            foreach ($canceled_plans as $plan) {
+                $plan->status = 'auto_cancelled';
+                $plan->save();
+
+                $reservation = $plan->reservation; // Assuming reservation relationship is correctly set up in TreatmentPlan model
+                if ($reservation) {
+                    $reservation->status = 'cancelled';
+                    $reservation->save();
+
+                    // Assuming Mailable classes exist as per the guideline
+                    $customer = $plan->user;
+                    $stylist = $plan->stylist;
+                    Mail::to($customer->email)->send(new \App\Mail\TreatmentPlanAutoCancelledCustomer($plan));
+                    Mail::to($stylist->user->email)->send(new \App\Mail\TreatmentPlanAutoCancelledStylist($plan));
+                    $this->info("Treatment Plan ID {$plan->id} with Reservation ID {$reservation->id} was auto-cancelled at {$current_time->toDateTimeString()}.");
+                }
+            }
 
             // New functionality to cancel provisional reservations
-            $cancelledPlans = [];
             $reservations = Reservation::whereHas('treatmentPlan', function ($query) use ($cutoff_time) {
                 $query->where('status', 'waiting_for_approval')
                       ->where('created_at', '<', $cutoff_time);
@@ -61,11 +84,6 @@ class AutoCancelTreatmentPlans extends Command
                 Mail::to($customer->email)->send(new \App\Mail\TreatmentPlanCancelledCustomer($treatmentPlan, $reservation));
                 Mail::to($stylist->user->email)->send(new \App\Mail\TreatmentPlanCancelledStylist($treatmentPlan, $reservation));
 
-                $cancelledPlans[] = [
-                    'treatment_plan_id' => $treatmentPlan->id,
-                    'reservation_id' => $reservation->id,
-                    'cancelled_at' => $current_time->toDateTimeString(),
-                ];
                 $this->info("Treatment Plan ID {$treatmentPlan->id} with Reservation ID {$reservation->id} was cancelled at {$current_time->toDateTimeString()}.");
             }
 
@@ -86,52 +104,15 @@ class AutoCancelTreatmentPlans extends Command
                     $stylist = $plan->stylist;
                     Mail::to($customer->email)->send(new \App\Mail\TreatmentPlanCancelledCustomer($plan, $reservation));
                     Mail::to($stylist->user->email)->send(new \App\Mail\TreatmentPlanCancelledStylist($plan, $reservation));
-                    $cancelledPlans[] = [
-                        'treatment_plan_id' => $plan->id,
-                        'reservation_id' => $reservation->id,
-                        'cancelled_at' => $current_time->toDateTimeString(),
-                    ];
                     $this->info("Treatment Plan ID {$plan->id} with Reservation ID {$reservation->id} was cancelled at {$current_time->toDateTimeString()}.");
                 }
             }
 
-            // The following code is for the previous functionality of the command
-            // It should remain intact as per the instructions
-            $twoHoursBefore = $current_time->copy()->subHours(2);
-
-            $treatmentPlans = TreatmentPlan::where('status', 'approved')->get();
-
-            foreach ($treatmentPlans as $plan) {
-                $reservation = Reservation::where('treatment_plan_id', $plan->id)->first();
-
-                if ($reservation && $current_time->gte($reservation->scheduled_at->subHours(2)) && $current_time->lt($reservation->scheduled_at)) {
-                    $plan->status = 'cancelled';
-                    $plan->save();
-
-                    $reservation->status = 'cancelled';
-                    $reservation->save();
-
-                    // Send email notifications to the Customer, Hair Stylist, and Beauty Salon
-                    // Assuming that the email templates and user retrieval logic are already defined
-                    $customer = $plan->user;
-                    $stylist = $plan->stylist;
-                    $salon = 'salon@example.com'; // Placeholder for salon email
-
-                    Mail::to($customer->email)->send(new \App\Mail\TreatmentPlanCancelledCustomer($plan, $reservation));
-                    Mail::to($stylist->email)->send(new \App\Mail\TreatmentPlanCancelledStylist($plan, $reservation));
-                    Mail::to($salon)->send(new \App\Mail\TreatmentPlanCancelledOwner($plan, $reservation));
-
-                    $cancelledPlans[] = [
-                        'treatment_plan_id' => $plan->id,
-                        'reservation_id' => $reservation->id,
-                        'cancelled_at' => $current_time->toDateTimeString(),
-                    ];
-                    $this->info("Treatment Plan ID {$plan->id} with Reservation ID {$reservation->id} was cancelled at {$current_time->toDateTimeString()}.");
-                }
-            }
+            $this->info("Successfully auto-cancelled treatment plans that were awaiting approval.");
 
             return 0; // Success
-        } catch (\Exception $e) {
+        } catch (Exception $e) {
+            Log::error("An error occurred while auto-cancelling treatment plans: {$e->getMessage()}");
             $this->error("An error occurred: {$e->getMessage()}");
             return 1; // Error
         }
