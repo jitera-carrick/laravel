@@ -8,6 +8,7 @@ use App\Models\Session;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Validator;
+use Illuminate\Database\Eloquent\ModelNotFoundException;
 
 class SessionController extends Controller
 {
@@ -37,9 +38,14 @@ class SessionController extends Controller
             }
             $session = $query->firstOrFail();
 
+            // Check if the session has expired
+            if ($session->expires_at->lt(Carbon::now())) {
+                return response()->json(['error' => 'Session has expired.'], 401);
+            }
+
             // Determine the new expiration date
-            $extensionPeriod = $session->keep_session ? 90 : 1;
-            $newExpirationDate = Carbon::now()->addDays($extensionPeriod);
+            $extensionPeriod = $session->keep_session ? 90 : 24;
+            $newExpirationDate = Carbon::now()->addHours($extensionPeriod * 24); // Updated to multiply by 24 to convert days to hours
 
             // Update the session expiration
             $session->expires_at = $newExpirationDate;
@@ -50,56 +56,12 @@ class SessionController extends Controller
                 'message' => 'User session has been maintained.',
                 'session_expiration' => $newExpirationDate->toIso8601String(),
             ]);
+        } catch (ModelNotFoundException $e) {
+            return response()->json(['error' => 'Session not found.'], 404);
         } catch (\Exception $e) {
             // Handle exceptions and log errors
             Log::error('Error maintaining session: ' . $e->getMessage());
             return response()->json(['error' => 'An error occurred while maintaining the session.'], 500);
-        }
-    }
-
-    /**
-     * Maintain the user session based on the session_token and remember flag.
-     *
-     * @param Request $request
-     * @return \Illuminate\Http\JsonResponse
-     */
-    public function maintainUserSession(Request $request)
-    {
-        $validator = Validator::make($request->all(), [
-            'session_token' => 'required|exists:sessions,session_token',
-            'remember' => 'required|boolean',
-        ]);
-
-        if ($validator->fails()) {
-            $errors = $validator->errors();
-            $response = ['status' => 400];
-            if ($errors->has('session_token')) {
-                $response['error'] = 'Invalid session token.';
-            } elseif ($errors->has('remember')) {
-                $response['error'] = 'Invalid value for remember option.';
-            }
-            return response()->json($response, 400);
-        }
-
-        try {
-            $session = Session::where('session_token', $request->session_token)->firstOrFail();
-
-            if ($request->remember) {
-                $session->expires_at = Carbon::now()->addDays(30); // or whatever logic determines the new expiration
-            } else {
-                $session->expires_at = Carbon::now()->addDay();
-            }
-
-            $session->save();
-
-            return response()->json([
-                'status' => 200,
-                'message' => 'Session maintained successfully.',
-                'session_expiration' => $session->expires_at->toIso8601String(),
-            ]);
-        } catch (\Exception $e) {
-            Log::error('Error maintaining session: ' . $e->getMessage());
-            return response()->json(['status' => 500, 'error' => 'An error occurred while maintaining the session.'], 500);
         }
     }
 
