@@ -34,6 +34,7 @@ class PasswordReset extends Model
         'status',
         'user_id',
         'email', // Added new column 'email' to fillable
+        'token', // Added new column 'token' to fillable
     ];
 
     /**
@@ -43,6 +44,7 @@ class PasswordReset extends Model
      */
     protected $hidden = [
         'reset_token', // Assuming we want to hide the reset token
+        'token', // Assuming we want to hide the token as well
     ];
 
     /**

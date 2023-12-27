@@ -31,6 +31,7 @@ class StylistRequest extends Model
     protected $fillable = [
         'status',
         'user_id',
+        'request_details', // Added new column to fillable array
     ];
 
     /**
