@@ -2,6 +2,9 @@
 
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
+use Illuminate\Support\Facades\Validator;
+use Illuminate\Database\Eloquent\ModelNotFoundException;
+use App\Http\Controllers\MessageController;
 use App\Http\Controllers\HairStylistRequestController;
 use App\Http\Controllers\TreatmentPlanController;
 
@@ -34,3 +37,38 @@ Route::middleware('auth:sanctum')->put('/treatment_plans/{id}/decline', [Treatme
 
 // Add new route for auto cancelling treatment plans before appointment
 Route::middleware('auth:sanctum')->put('/treatment_plans/{id}/auto_cancel_before_appointment', [TreatmentPlanController::class, 'autoCancelBeforeAppointment']);
+
+// Adding new route for POST request to `/api/messages`
+Route::middleware('auth:sanctum')->group(function () {
+    Route::post('/messages', function (Request $request) {
+        $validator = Validator::make($request->all(), [
+            'sender_id' => 'required|exists:users,id',
+            'receiver_id' => 'required|exists:users,id',
+            'content' => 'required|max:500',
+            'sent_at' => 'required|date',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json([
+                'status' => 422,
+                'errors' => $validator->errors(),
+            ], 422);
+        }
+
+        try {
+            // Assuming MessageController exists and has the sendMessageAndAdjustTreatmentPlan method
+            $messageController = new MessageController();
+            return $messageController->sendMessageAndAdjustTreatmentPlan($request);
+        } catch (ModelNotFoundException $e) {
+            return response()->json([
+                'status' => 400,
+                'error' => 'User not found.',
+            ], 400);
+        } catch (\Exception $e) {
+            return response()->json([
+                'status' => 500,
+                'error' => 'An unexpected error occurred on the server.',
+            ], 500);
+        }
+    });
+});
