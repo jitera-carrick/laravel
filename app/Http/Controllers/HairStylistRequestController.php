@@ -7,7 +7,6 @@ use App\Models\Request;
 use App\Models\RequestArea;
 use App\Models\RequestMenu;
 use App\Models\Image;
-use App\Models\User;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Validator;
@@ -19,16 +18,24 @@ class HairStylistRequestController extends Controller
 
     public function storeHairStylistRequest(StoreHairStylistRequest $request): JsonResponse
     {
+        // ... existing storeHairStylistRequest method ...
+    }
+
+    public function updateHairStylistRequest(StoreHairStylistRequest $request, $id): JsonResponse
+    {
+        $hairStylistRequest = Request::find($id);
+        if (!$hairStylistRequest) {
+            return response()->json(['message' => 'Request not found.'], 404);
+        }
+
         $validated = $request->validated();
 
-        // Additional validation
         $validator = Validator::make($validated, [
-            'user_id' => 'required|exists:users,id,is_logged_in,1',
-            'area_id' => 'required|array|min:1',
-            'menu_id' => 'required|array|min:1',
+            'area_ids' => 'required|array|min:1',
+            'menu_ids' => 'required|array|min:1',
             'hair_concerns' => 'required|string|max:3000',
-            'image_files' => 'nullable|array|max:3',
-            'image_files.*' => 'mimes:png,jpg,jpeg|max:5120', // 5MB
+            'images' => 'nullable|array|max:3',
+            'images.*' => 'mimes:png,jpg,jpeg|max:5120', // 5MB
         ]);
 
         if ($validator->fails()) {
@@ -41,14 +48,13 @@ class HairStylistRequestController extends Controller
         try {
             DB::beginTransaction();
 
-            $hairStylistRequest = new Request([
-                'user_id' => $validated['user_id'],
+            $hairStylistRequest->fill([
                 'hair_concerns' => $validated['hair_concerns'],
-                'status' => 'pending',
             ]);
             $hairStylistRequest->save();
 
-            foreach ($validated['area_id'] as $areaId) {
+            RequestArea::where('request_id', $hairStylistRequest->id)->delete();
+            foreach ($validated['area_ids'] as $areaId) {
                 $requestArea = new RequestArea([
                     'request_id' => $hairStylistRequest->id,
                     'area_id' => $areaId,
@@ -56,7 +62,8 @@ class HairStylistRequestController extends Controller
                 $requestArea->save();
             }
 
-            foreach ($validated['menu_id'] as $menuId) {
+            RequestMenu::where('request_id', $hairStylistRequest->id)->delete();
+            foreach ($validated['menu_ids'] as $menuId) {
                 $requestMenu = new RequestMenu([
                     'request_id' => $hairStylistRequest->id,
                     'menu_id' => $menuId,
@@ -64,8 +71,9 @@ class HairStylistRequestController extends Controller
                 $requestMenu->save();
             }
 
-            if (isset($validated['image_files'])) {
-                foreach ($validated['image_files'] as $file) {
+            if (isset($validated['images'])) {
+                Image::where('request_id', $hairStylistRequest->id)->delete();
+                foreach ($validated['images'] as $file) {
                     $filePath = $file->store('images', 'public');
                     $image = new Image([
                         'request_id' => $hairStylistRequest->id,
@@ -79,14 +87,13 @@ class HairStylistRequestController extends Controller
             DB::commit();
 
             return response()->json([
-                'message' => 'Hair stylist request created successfully.',
-                'data' => $hairStylistRequest,
-            ], 201);
-
+                'status' => 200,
+                'request' => $hairStylistRequest,
+            ]);
         } catch (\Exception $e) {
             DB::rollBack();
             return response()->json([
-                'message' => 'Failed to create hair stylist request.',
+                'message' => 'Failed to update hair stylist request.',
                 'error' => $e->getMessage(),
             ], 500);
         }
