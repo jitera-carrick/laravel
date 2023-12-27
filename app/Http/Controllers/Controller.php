@@ -30,7 +30,7 @@ class Controller extends BaseController
     {
         // Return a JSON response with a cancellation message
         return response()->json([
-            'message' => "Login cancelled. No changes were made."
+            'message' => 'Login cancelled. No changes were made.'
         ]);
     }
 }
