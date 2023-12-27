@@ -53,13 +53,31 @@ class LoginController extends Controller
         $user->save();
     }
 
-    // ... Rest of the existing code in the LoginController
+    /**
+     * Handle the login request.
+     *
+     * @param \App\Http\Requests\LoginRequest $request
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function login(LoginRequest $request)
+    {
+        $credentials = $request->only('email', 'password');
+        $keepSession = $request->input('remember_token', false);
 
-    // The apiLogin method from the new code can remain unchanged
+        if ($this->attemptLogin($credentials, $keepSession)) {
+            $user = Auth::user();
+            $sessionToken = $user->session_token;
+            $expiration = $keepSession ? Carbon::now()->addDays(90) : Carbon::now()->addHours(24);
 
-    // The login method from the new code can remain unchanged
+            return response()->json([
+                'session_token' => $sessionToken,
+                'session_expiration' => $expiration->toIso8601String(),
+            ]);
+        }
 
-    // The handleLoginFailure method from the new code can remain unchanged
+        // Handle failed authentication
+        return response()->json(['message' => 'Unauthorized'], 401);
+    }
 
     /**
      * Maintain the user session based on the user_id and session_token.
@@ -114,8 +132,6 @@ class LoginController extends Controller
             return response()->json(['error' => 'An error occurred while maintaining the session.'], 500);
         }
     }
-
-    // The cancelLoginProcess method from the existing code can remain unchanged
 
     // ... Rest of the existing code in the LoginController
 }
