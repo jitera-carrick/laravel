@@ -25,17 +25,17 @@ class HairStylistRequestController extends Controller
         // Additional validation
         $validator = Validator::make($validated, [
             'user_id' => 'required|exists:users,id,is_logged_in,1',
-            'area_ids' => 'required|array|min:1', // Changed from 'area_id' to 'area_ids' to match the requirement
-            'menu_ids' => 'required|array|min:1', // Changed from 'menu_id' to 'menu_ids' to match the requirement
+            'area_ids' => 'required|array|min:1',
+            'menu_ids' => 'required|array|min:1',
             'hair_concerns' => 'required|string|max:3000',
-            'images' => 'nullable|array|max:3', // Changed from 'image_files' to 'images' to match the requirement
-            'images.*' => 'mimes:png,jpg,jpeg|max:5120', // Changed from 'image_files.*' to 'images.*' and added 'mimes' validation
+            'images' => 'nullable|array|max:3',
+            'images.*' => 'mimes:png,jpg,jpeg|max:5120',
         ], [
-            'area_ids.required' => 'At least one area must be selected.', // Custom error message for 'area_ids'
-            'menu_ids.required' => 'At least one menu must be selected.', // Custom error message for 'menu_ids'
-            'hair_concerns.max' => 'Hair concerns and requests must be less than 3000 characters.', // Custom error message for 'hair_concerns'
-            'images.*.mimes' => 'Invalid image format or size.', // Custom error message for 'images'
-            'images.*.max' => 'Invalid image format or size.', // Custom error message for 'images'
+            'area_ids.required' => 'At least one area must be selected.',
+            'menu_ids.required' => 'At least one menu must be selected.',
+            'hair_concerns.max' => 'Hair concerns and requests must be less than 3000 characters.',
+            'images.*.mimes' => 'Invalid image format or size.',
+            'images.*.max' => 'Invalid image format or size.',
         ]);
 
         if ($validator->fails()) {
@@ -55,7 +55,7 @@ class HairStylistRequestController extends Controller
             ]);
             $hairStylistRequest->save();
 
-            foreach ($validated['area_ids'] as $areaId) { // Changed from 'area_id' to 'area_ids' to match the requirement
+            foreach ($validated['area_ids'] as $areaId) {
                 $requestArea = new RequestArea([
                     'request_id' => $hairStylistRequest->id,
                     'area_id' => $areaId,
@@ -63,7 +63,7 @@ class HairStylistRequestController extends Controller
                 $requestArea->save();
             }
 
-            foreach ($validated['menu_ids'] as $menuId) { // Changed from 'menu_id' to 'menu_ids' to match the requirement
+            foreach ($validated['menu_ids'] as $menuId) {
                 $requestMenu = new RequestMenu([
                     'request_id' => $hairStylistRequest->id,
                     'menu_id' => $menuId,
@@ -71,7 +71,7 @@ class HairStylistRequestController extends Controller
                 $requestMenu->save();
             }
 
-            if (isset($validated['images'])) { // Changed from 'image_files' to 'images' to match the requirement
+            if (isset($validated['images'])) {
                 foreach ($validated['images'] as $file) {
                     $filePath = $file->store('images', 'public');
                     $image = new Image([
@@ -103,14 +103,56 @@ class HairStylistRequestController extends Controller
 
     public function cancelHairStylistRequest($id): JsonResponse
     {
-        // ... existing cancelHairStylistRequest method ...
+        if (!Auth::check()) {
+            return response()->json([
+                'message' => 'Unauthorized. User is not authenticated.'
+            ], 401);
+        }
+
+        try {
+            DB::beginTransaction();
+
+            $hairStylistRequest = Request::findOrFail($id);
+
+            if (Auth::id() !== $hairStylistRequest->user_id) {
+                return response()->json([
+                    'message' => 'Unauthorized to cancel this request.'
+                ], 401);
+            }
+
+            // Manually delete related entries in the "request_areas", "request_menus", and "images" tables
+            RequestArea::where('request_id', $hairStylistRequest->id)->delete();
+            RequestMenu::where('request_id', $hairStylistRequest->id)->delete();
+            Image::where('request_id', $hairStylistRequest->id)->delete();
+
+            // Utilize Eloquent's `delete` method to remove the request from the "requests" table
+            $hairStylistRequest->delete();
+
+            DB::commit();
+
+            return response()->json([
+                'message' => 'Request cancelled successfully.'
+            ], 200);
+
+        } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $e) {
+            DB::rollBack();
+            return response()->json([
+                'message' => 'Request not found.'
+            ], 404);
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return response()->json([
+                'message' => 'Failed to cancel hair stylist request.',
+                'error' => $e->getMessage(),
+            ], 500);
+        }
     }
 
     // ... other methods ...
 
     public function validateHairStylistRequest(HttpRequest $request): JsonResponse
     {
-        // ... existing validateHairStylistRequest method ...
+        // ... existing code for validateHairStylistRequest method ...
     }
 
     // ... other methods ...

@@ -19,10 +19,18 @@ class RequestController extends Controller
      */
     public function cancelStylistRequest($requestId)
     {
+        $user = auth()->user(); // Retrieve the currently authenticated user
+
         DB::beginTransaction();
         try {
             $request = Request::with(['requestAreas', 'requestMenus', 'images'])->findOrFail($requestId);
             
+            // Check if the request belongs to the logged-in user
+            if ($request->user_id !== $user->id) {
+                DB::rollBack(); // Ensure to rollback if not authorized
+                return response()->json(['error' => 'You are not authorized to cancel this request.'], 403);
+            }
+
             // Cascade delete related entries
             $request->requestAreas()->delete();
             $request->requestMenus()->delete();
@@ -31,7 +39,7 @@ class RequestController extends Controller
             $request->delete();
             DB::commit();
 
-            return response()->json(['message' => 'Request registration has been canceled.'], 200);
+            return response()->json(['message' => 'Your request registration has been successfully canceled.'], 200);
         } catch (ModelNotFoundException $e) {
             DB::rollBack();
             return response()->json(['error' => 'Request not found.'], 404);
