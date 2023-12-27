@@ -18,7 +18,6 @@ class LoginController extends Controller
 {
     // ... Other methods in the LoginController
 
-    // Combined attemptLogin method with logging from existing code
     protected function attemptLogin(array $credentials, $remember)
     {
         if (empty($credentials['email']) || empty($credentials['password'])) {
@@ -26,109 +25,63 @@ class LoginController extends Controller
             return false;
         }
 
-        if (Auth::attempt(['email' => $credentials['email'], 'password' => $credentials['password']], $remember)) {
-            $this->handleUserSession(Auth::user(), $remember);
-            return true;
+        $user = User::where('email', $credentials['email'])->first();
+        if (!$user || !Hash::check($credentials['password'], $user->password_hash)) {
+            Log::warning('Login attempt failed for email: ' . $credentials['email']);
+            return false;
         }
 
-        // Log the failed login attempt
-        Log::warning('Login attempt failed for email: ' . $credentials['email']);
-        return false;
+        $this->handleUserSession($user, $remember);
+        Auth::login($user, $remember);
+        return true;
     }
 
-    // Combined handleUserSession method with logic from both new and existing code
     protected function handleUserSession(User $user, $remember)
     {
-        // Determine the session_expiration time based on the 'remember' parameter
         $expirationTime = $remember ? Carbon::now()->addDays(90) : Carbon::now()->addHours(24);
-        $sessionToken = bin2hex(openssl_random_pseudo_bytes(30)); // Use the new code's method for generating a session token
+        $sessionToken = Str::random(60);
 
-        // Create or update the session in the "sessions" table
         $session = Session::updateOrCreate(
             ['user_id' => $user->id],
             [
                 'session_token' => $sessionToken,
-                'expires_at' => $expirationTime // Use expires_at from new code
+                'expires_at' => $expirationTime
             ]
         );
 
-        // Update the user's session_token attribute
         $user->session_token = $sessionToken;
+        $user->session_expiration = $expirationTime;
         $user->save();
     }
 
-    /**
-     * Handle the login request with updated validation and response.
-     *
-     * @param \App\Http\Requests\LoginRequest $request
-     * @return \Illuminate\Http\JsonResponse
-     */
     public function login(LoginRequest $request)
     {
         $credentials = $request->validated();
-        $remember = $request->input('remember', false); // Updated to use 'remember' instead of 'remember_token'
+        $remember = $request->filled('remember_token');
 
         if ($this->attemptLogin($credentials, $remember)) {
             $user = Auth::user();
-            $sessionToken = $user->session_token;
-            $session = Session::where('user_id', $user->id)->first();
-
             return response()->json([
                 'status' => 200,
                 'message' => 'Login successful.',
-                'session_token' => $sessionToken,
-                'session_expiration' => $session->expires_at->toIso8601String(),
+                'session_token' => $user->session_token,
+                'session_expiration' => $user->session_expiration->toIso8601String(),
             ]);
         }
 
         return $this->handleLoginFailure($request);
     }
 
-    // New handleLoginFailure method as per the guideline
-    /**
-     * Handle the login failure response.
-     *
-     * @param \Illuminate\Http\Request $request
-     * @return \Illuminate\Http\JsonResponse
-     */
     public function handleLoginFailure(Request $request)
     {
-        $validator = Validator::make($request->all(), [
-            'email' => 'required|email',
-            'password' => 'required',
-        ]);
-
-        if ($validator->fails()) {
-            return response()->json($validator->errors(), 422);
-        }
-
-        $user = User::where('email', $request->email)->first();
-
-        if (!$user) {
-            return response()->json(['message' => 'Account not found.'], 401);
-        }
-
-        if (!Auth::attempt(['email' => $request->email, 'password' => $request->password])) {
-            return response()->json(['message' => 'Incorrect password.'], 401);
-        }
-
-        // This point should not be reached if the credentials are incorrect, but it's here as a fallback
         return response()->json(['message' => 'Login failed. Incorrect email or password.'], 401);
     }
 
     // ... Rest of the existing code in the LoginController
 
-    /**
-     * Cancel the login process and redirect back to the previous screen.
-     *
-     * @return \Illuminate\Http\RedirectResponse
-     */
     public function cancelLogin()
     {
-        // Set a flash message to inform the user that the login process has been canceled
         session()->flash('message', 'Login process has been canceled.');
-
-        // Redirect the user back to the previous screen or a designated route
         return redirect()->back();
     }
 }
