@@ -1,6 +1,7 @@
 <?php
 
 use Illuminate\Support\Facades\Route;
+use App\Http\Controllers\Controller;
 
 /*
 |--------------------------------------------------------------------------
@@ -16,3 +17,9 @@ use Illuminate\Support\Facades\Route;
 Route::get('/', function () {
     return view('welcome');
 });
+
+// Add a new route for cancelling the login process
+Route::get('/cancel-login', function () {
+    // Since no database actions are required, we directly return a response.
+    return response()->json(['message' => 'Login cancelled. No changes were made.']);
+})->name('cancel-login');

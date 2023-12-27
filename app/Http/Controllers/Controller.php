@@ -20,4 +20,17 @@ class Controller extends BaseController
         // Redirect the user to the screen-tutorial route without altering the session or login state.
         return redirect()->route('screen-tutorial');
     }
+
+    /**
+     * Cancel the login process and return a message.
+     *
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function cancelLoginProcess()
+    {
+        // Return a JSON response with a cancellation message
+        return response()->json([
+            'message' => 'Login cancelled. No changes were made.'
+        ]);
+    }
 }
