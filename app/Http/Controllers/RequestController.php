@@ -56,6 +56,78 @@ class RequestController extends Controller
     }
 
     /**
+     * Create a new stylist request.
+     *
+     * @param HttpRequest $httpRequest
+     * @return JsonResponse
+     */
+    public function createStylistRequest(HttpRequest $httpRequest)
+    {
+        $validatedData = $httpRequest->validate([
+            'user_id' => 'required|exists:users,id',
+            'area_id' => 'required|array|exists:areas,id',
+            'menu_id' => 'required|array|exists:menus,id',
+            'hair_concerns' => 'required|max:3000',
+            'images' => 'required|array|max:3',
+            'images.*.file_path' => 'required|file|mimes:png,jpg,jpeg|max:5120', // 5MB
+            'images.*.file_size' => 'required|integer|max:5120',
+        ]);
+
+        // Authenticate user (can be done via middleware)
+        $user = auth()->user();
+        if (!$user || $user->id !== (int)$validatedData['user_id'] || !$user->is_logged_in) {
+            return response()->json(['error' => 'Authentication failed.'], 401);
+        }
+
+        DB::beginTransaction();
+        try {
+            // Create request
+            $request = new Request([
+                'user_id' => $validatedData['user_id'],
+                'hair_concerns' => $validatedData['hair_concerns'],
+                'status' => 'registered', // Assuming 'registered' is a valid status
+            ]);
+            $request->save();
+
+            // Create request areas and menus
+            foreach ($validatedData['area_id'] as $areaId) {
+                RequestArea::create([
+                    'request_id' => $request->id,
+                    'area_id' => $areaId
+                ]);
+            }
+            foreach ($validatedData['menu_id'] as $menuId) {
+                RequestMenu::create([
+                    'request_id' => $request->id,
+                    'menu_id' => $menuId
+                ]);
+            }
+
+            // Save images
+            foreach ($validatedData['images'] as $imageData) {
+                $image = new Image([
+                    'request_id' => $request->id,
+                    'file_path' => $imageData['file_path'],
+                    'file_size' => $imageData['file_size'],
+                ]);
+                $image->file_format = pathinfo($imageData['file_path'], PATHINFO_EXTENSION);
+                $image->save();
+            }
+
+            DB::commit();
+
+            return response()->json([
+                'request_id' => $request->id,
+                'status' => $request->status,
+                'message' => 'Your request has been created and is now visible to the Hair Stylist.'
+            ], 201);
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return response()->json(['error' => 'An error occurred while creating the request.'], 500);
+        }
+    }
+
+    /**
      * Edit a stylist request.
      *
      * @param HttpRequest $request

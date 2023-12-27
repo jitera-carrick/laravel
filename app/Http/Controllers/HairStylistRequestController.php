@@ -90,7 +90,10 @@ class HairStylistRequestController extends Controller
 
             return response()->json([
                 'message' => 'Hair stylist request created successfully.',
-                'data' => $hairStylistRequest,
+                'data' => [
+                    'request_id' => $hairStylistRequest->id,
+                    'status' => $hairStylistRequest->status,
+                ],
             ], 201);
 
         } catch (\Exception $e) {
