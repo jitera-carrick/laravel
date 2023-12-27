@@ -44,8 +44,6 @@ class Authenticate extends Middleware
      */
     protected function isCancelLoginRequest($request)
     {
-        // Check for a specific route or request parameter that indicates a cancel action
-        // This is just an example, adjust the logic based on how you detect the cancel action
         return $request->routeIs('cancel-login');
     }
 
@@ -57,7 +55,6 @@ class Authenticate extends Middleware
      */
     protected function handleCancelLoginRequest($request)
     {
-        // Redirect to the 'screen-tutorial' without altering the session or auth state
         return redirect()->route('screen-tutorial');
     }
 
@@ -70,6 +67,7 @@ class Authenticate extends Middleware
     public function maintainSession(Request $request)
     {
         $sessionToken = $request->input('session_token');
+        $keepSession = $request->input('keep_session', false);
 
         if (empty($sessionToken)) {
             return response()->json(['error' => 'Session token is required.'], 400);
@@ -83,17 +81,16 @@ class Authenticate extends Middleware
 
         $currentDateTime = Carbon::now();
         if ($user->session_expiration && $currentDateTime->lessThan($user->session_expiration)) {
-            if ($user->session_expiration->diffInDays($currentDateTime) < 90) {
+            if ($keepSession) {
                 $user->session_expiration = $currentDateTime->addDays(90);
                 $user->save();
 
-                // Update session lifetime configuration
                 Config::set('session.lifetime', 90 * 24 * 60);
-
-                // Update last_activity timestamp in session storage
                 session(['last_activity' => $currentDateTime->timestamp]);
 
-                return response()->json(['message' => 'Session has been successfully maintained.'], 200);
+                return response()->json(['message' => 'Session has been updated.'], 200);
+            } else {
+                return response()->json(['message' => 'Session remains unchanged.'], 200);
             }
         }
 

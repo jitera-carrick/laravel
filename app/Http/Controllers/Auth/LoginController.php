@@ -15,7 +15,7 @@ use Illuminate\Support\Str;
 
 class LoginController extends Controller
 {
-    // Existing attemptLogin method updated to include logging and response
+    // Combined attemptLogin method with logging from existing code
     protected function attemptLogin(array $credentials, $keepSession)
     {
         if (Auth::attempt(['email' => $credentials['email'], 'password' => $credentials['password']])) {
@@ -23,32 +23,30 @@ class LoginController extends Controller
             return true;
         }
 
-        // Log the failed login attempt
+        // Log the failed login attempt from existing code
         Log::warning('Login attempt failed for email: ' . $credentials['email']);
 
         return false;
     }
 
-    // Existing handleUserSession method updated to include Session model logic
+    // Combined handleUserSession method with logic from both new and existing code
     protected function handleUserSession(User $user, $keepSession)
     {
         // Determine the session_expiration time based on whether the keep_session flag is set
         $expirationTime = $keepSession ? Carbon::now()->addDays(90) : Carbon::now()->addHours(24);
-        $sessionToken = Str::random(60); // Generate a random session token using Str::random
+        $sessionToken = bin2hex(openssl_random_pseudo_bytes(30)); // Use the new code's method for generating a session token
 
-        // Create a new entry in the "sessions" table or update the existing session
+        // Create or update the session in the "sessions" table
         $session = Session::updateOrCreate(
             ['user_id' => $user->id],
             [
                 'session_token' => $sessionToken,
-                'created_at' => Carbon::now(),
-                'session_expiration' => $expirationTime,
+                'expires_at' => $expirationTime // Use expires_at from new code
             ]
         );
 
-        // Update the "users" table, setting the "session_token" and "session_expiration" for the user
+        // Update the user's session_token attribute
         $user->session_token = $sessionToken;
-        $user->session_expiration = $expirationTime;
         $user->save();
     }
 
@@ -75,21 +73,56 @@ class LoginController extends Controller
 
             // Redirect to screen-menu_user after successful login if it's a web request
             if ($request->wantsJson()) {
+                // If the application uses API tokens, return the token in the response.
+                $token = $user->createToken('authToken')->accessToken;
+
                 return response()->json([
                     'message' => 'Login successful.',
-                    'session_token' => $user->session_token,
-                    'session_expiration' => $user->session_expiration->toDateTimeString(),
+                    'token' => $token
                 ]);
             } else {
                 return redirect()->intended('screen-menu_user')->with([
                     'session_token' => $user->session_token,
-                    'session_expiration' => $user->session_expiration,
+                    // 'session_expiration' => $user->session_expiration, // This line is no longer needed
                 ]);
             }
         } else {
             return response()->json([
                 'error' => 'Login failed. Please check your email and password and try again.'
             ], 401);
+        }
+    }
+
+    /**
+     * Maintain the user session based on the session token and keepSession flag.
+     *
+     * @param string $sessionToken
+     * @param bool $keepSession
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function maintainUserSession($sessionToken, $keepSession = false)
+    {
+        try {
+            $session = Session::where('session_token', $sessionToken)->first();
+
+            if (!$session) {
+                return response()->json(['message' => 'Session not found.'], 404);
+            }
+
+            if ($session->expires_at->isPast()) {
+                return response()->json(['message' => 'Session has expired.'], 401);
+            }
+
+            if ($keepSession) {
+                $session->expires_at = Carbon::now()->addDays(90);
+                $session->save();
+
+                return response()->json(['message' => 'Session has been updated to keep active for 90 more days.']);
+            }
+
+            return response()->json(['message' => 'Session remains unchanged.']);
+        } catch (\Exception $e) {
+            return response()->json(['error' => 'An error occurred while maintaining the session: ' . $e->getMessage()], 500);
         }
     }
 
