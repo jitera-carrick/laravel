@@ -2,8 +2,10 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Requests\DeclineTreatmentPlanRequest;
 use App\Models\TreatmentPlan;
 use App\Models\Reservation;
+use App\Mail\TreatmentPlanCancelled;
 use App\Mail\TreatmentPlanFixedCustomer;
 use App\Mail\TreatmentPlanFixedStylist;
 use App\Mail\TreatmentPlanFixedOwner;
@@ -52,6 +54,40 @@ class TreatmentPlanController extends Controller
 
         // Assuming we have a TreatmentPlanResource to format the response
         return new TreatmentPlanResource($treatmentPlan);
+    }
+
+    public function declineTreatmentPlan(DeclineTreatmentPlanRequest $request)
+    {
+        $treatmentPlanId = $request->input('treatment_plan_id');
+        $customerId = $request->input('customer_id');
+
+        $treatmentPlan = TreatmentPlan::find($treatmentPlanId);
+
+        if (!$treatmentPlan) {
+            return response()->json(['error' => 'Treatment plan does not exist.'], 404);
+        }
+
+        if ($treatmentPlan->user_id != $customerId) {
+            return response()->json(['error' => 'Customer does not have permission to decline this treatment plan.'], 403);
+        }
+
+        $treatmentPlan->status = 'declined';
+        $treatmentPlan->save();
+
+        $reservation = Reservation::where('treatment_plan_id', $treatmentPlanId)->first();
+        if ($reservation) {
+            $reservation->status = 'cancelled';
+            $reservation->save();
+        }
+
+        Mail::to('salon@example.com')->send(new TreatmentPlanCancelled($treatmentPlan));
+
+        return response()->json([
+            'treatment_plan_id' => $treatmentPlan->id,
+            'customer_id' => $customerId,
+            'status' => $treatmentPlan->status,
+            'cancellation_details' => 'Treatment plan has been declined and associated reservation cancelled.'
+        ]);
     }
 
     // ... (other methods in the controller)
