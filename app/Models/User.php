@@ -60,4 +60,10 @@ class User extends Authenticatable
     {
         return $this->hasMany(StylistRequest::class, 'user_id');
     }
+
+    // Define the relationship with Comment
+    public function comments()
+    {
+        return $this->hasMany(Comment::class, 'user_id');
+    }
 }
