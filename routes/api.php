@@ -147,7 +147,8 @@ Route::post('/login', function (Request $request) {
             'session_expiration' => $token->expires_at
         ]);
     } else {
-        return response()->json(['message' => 'Unauthorized'], 401);
+        // Handle login failure
+        return response()->json(['error' => 'Login failed. The email or password you entered is incorrect.'], 401);
     }
 });
 
