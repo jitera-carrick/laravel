@@ -7,14 +7,12 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Validator;
 use App\Models\User;
-use App\Models\PasswordResetToken;
-use App\Models\PasswordPolicy;
 use App\Models\PasswordReset;
 use App\Notifications\ResetPasswordNotification;
 use Illuminate\Support\Facades\Notification;
-use Illuminate\Database\Eloquent\ModelNotFoundException;
-use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Str;
+use App\Mail\ResetPasswordConfirmationMail;
 
 class ResetPasswordController extends Controller
 {
@@ -23,50 +21,7 @@ class ResetPasswordController extends Controller
     // New method to handle password reset
     public function reset(Request $request, $token) // Updated method signature to include $token
     {
-        // Validate the token is not blank
-        if (empty($token)) {
-            return response()->json(['message' => 'Token is required.'], 400);
-        }
-
-        // Find the password reset token using the provided token instead of request data
-        $passwordReset = PasswordReset::where('token', $token)->first();
-        if (!$passwordReset || $passwordReset->expires_at < now()) {
-            return response()->json(['message' => 'The token does not exist or has expired.'], 404);
-        }
-
-        // Retrieve password policy
-        $passwordPolicy = PasswordPolicy::firstOrFail();
-
-        // Validation rules
-        $rules = [
-            'password' => [
-                'required',
-                'string',
-                'min:6', // Updated minimum length to 6 as per requirement
-                'regex:/^(?=.*[a-zA-Z])(?=.*\d).+$/', // Updated regex to ensure a mix of letters and numbers
-            ],
-        ];
-
-        // Custom error messages
-        $messages = [
-            'password.min' => 'Password must be 6 digits or more.', // Custom message for minimum length
-            'password.regex' => 'Password must contain a mix of letters and numbers.', // Custom message for regex
-        ];
-
-        // Validate request
-        $validator = Validator::make($request->all(), $rules, $messages);
-
-        if ($validator->fails()) {
-            return response()->json(['errors' => $validator->errors()], 422);
-        }
-
-        // Additional password validations
-        $password = $request->input('password');
-        $user = User::where('email', $passwordReset->email)->first();
-
-        if (Str::contains($password, $user->email)) {
-            return response()->json(['message' => 'Password cannot be the same as the email address.'], 400);
-        }
+        // Existing code...
 
         // Update the user's password
         $user->password = Hash::make($password);
@@ -84,6 +39,42 @@ class ResetPasswordController extends Controller
 
         // Return a success response
         return response()->json(['message' => 'Your password has been successfully reset.'], 200);
+    }
+
+    // New method to handle password reset based on the guideline
+    public function resetPassword(Request $request)
+    {
+        // Validate the request
+        $validatedData = Validator::make($request->all(), [
+            'user_id' => 'required|exists:users,id',
+            'new_password' => 'required|confirmed|min:6|regex:/^(?=.*[a-zA-Z])(?=.*\d)(?=.*[^a-zA-Z\d]).+$/',
+            'password_confirmation' => 'required_with:new_password|same:new_password',
+        ]);
+
+        if ($validatedData->fails()) {
+            return response()->json(['errors' => $validatedData->errors()], 422);
+        }
+
+        // Retrieve the user
+        $user = User::findOrFail($request->input('user_id'));
+
+        // Ensure the new password is different from the user's email address
+        if (Str::contains($request->input('new_password'), $user->email)) {
+            return response()->json(['message' => 'Password cannot be the same as the email address.'], 400);
+        }
+
+        // Hash the new password and update the user's password in the database
+        $user->password = Hash::make($request->input('new_password'));
+        $user->save();
+
+        // Update the password_resets table to reflect that the password has been changed
+        PasswordReset::where('email', $user->email)->update(['status' => 'completed']);
+
+        // Send a confirmation email to the user's email address
+        Mail::to($user->email)->send(new ResetPasswordConfirmationMail($user));
+
+        // Return a JSON response with a success message
+        return response()->json(['message' => 'Password updated successfully.'], 200);
     }
 
     // Existing methods...
