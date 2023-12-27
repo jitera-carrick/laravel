@@ -6,10 +6,10 @@ use App\Models\Request;
 use App\Models\RequestArea;
 use App\Models\RequestMenu;
 use App\Models\Image;
+use App\Models\User;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Http\Request as HttpRequest;
 
@@ -74,12 +74,81 @@ class RequestController extends Controller
      * @param HttpRequest $httpRequest
      * @return JsonResponse
      */
-    // ... The createStylistRequest method remains unchanged ...
+    public function createStylistRequest(HttpRequest $httpRequest)
+    {
+        $validator = Validator::make($httpRequest->all(), [
+            'user_id' => 'required|exists:users,id',
+            'area_id' => 'required|exists:request_areas,area_id',
+            'menu_id' => 'required|exists:request_menus,menu_id',
+            'hair_concerns' => 'required|string|max:3000',
+            'images' => 'required|array|max:3',
+            'images.*.file_path' => 'required|string',
+            'images.*.file_format' => 'required|in:png,jpg,jpeg',
+            'images.*.file_size' => 'required|integer|max:5120', // 5MB in kilobytes
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json(['error' => $validator->errors()], 422);
+        }
+
+        DB::beginTransaction();
+        try {
+            $user = User::where('id', $httpRequest->user_id)->where('is_logged_in', true)->firstOrFail();
+
+            $newRequest = new Request([
+                'user_id' => $user->id,
+                'status' => 'available',
+                'hair_concerns' => $httpRequest->hair_concerns,
+            ]);
+            $newRequest->save();
+
+            foreach ($httpRequest->area_id as $areaId) {
+                $newRequestArea = new RequestArea([
+                    'request_id' => $newRequest->id,
+                    'area_id' => $areaId,
+                ]);
+                $newRequestArea->save();
+            }
+
+            foreach ($httpRequest->menu_id as $menuId) {
+                $newRequestMenu = new RequestMenu([
+                    'request_id' => $newRequest->id,
+                    'menu_id' => $menuId,
+                ]);
+                $newRequestMenu->save();
+            }
+
+            foreach ($httpRequest->images as $imageData) {
+                $newImage = new Image([
+                    'request_id' => $newRequest->id,
+                    'file_path' => $imageData['file_path'],
+                    'file_size' => $imageData['file_size'],
+                    'file_format' => $imageData['file_format'],
+                ]);
+                $newImage->save();
+            }
+
+            DB::commit();
+
+            return response()->json([
+                'message' => 'New stylist request created successfully.',
+                'request' => $newRequest,
+            ], 201);
+        } catch (ModelNotFoundException $e) {
+            DB::rollBack();
+            return response()->json(['error' => 'User not found or not logged in.'], 404);
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return response()->json(['error' => 'An error occurred while creating the request.'], 500);
+        }
+    }
+
+    // ... other methods ...
 
     /**
      * Edit a stylist request.
      *
-     * @param HttpRequest $request
+     * @param HttpRequest $httpRequest
      * @param int $requestId
      * @return JsonResponse
      */
