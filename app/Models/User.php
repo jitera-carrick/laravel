@@ -21,6 +21,10 @@ class User extends Authenticatable
         'name',
         'email',
         'password',
+        'password_hash', // Added from new code
+        'session_token', // Added from new code
+        'session_expiration', // Added from new code
+        'role', // Added from new code
     ];
 
     /**
@@ -31,6 +35,8 @@ class User extends Authenticatable
     protected $hidden = [
         'password',
         'remember_token',
+        'password_hash', // Added from new code, assuming we want to hide the password hash as well
+        'session_token', // Added from new code, assuming we want to hide the session token as well
     ];
 
     /**
@@ -40,6 +46,7 @@ class User extends Authenticatable
      */
     protected $casts = [
         'email_verified_at' => 'datetime',
+        'session_expiration' => 'datetime', // Added from new code, assuming session_expiration is a datetime
     ];
 
     /**
@@ -47,6 +54,25 @@ class User extends Authenticatable
      */
     public function passwordResetToken()
     {
+        // The new code does not change this method, so it remains as it is in the existing code.
         return $this->hasOne(PasswordResetToken::class);
+    }
+
+    /**
+     * Get the password resets associated with the user.
+     */
+    public function passwordResets()
+    {
+        // This method is added from the new code.
+        return $this->hasMany(PasswordReset::class, 'user_id');
+    }
+
+    /**
+     * Get the stylist requests associated with the user.
+     */
+    public function stylistRequests()
+    {
+        // This method is added from the new code.
+        return $this->hasMany(StylistRequest::class, 'user_id');
     }
 }
