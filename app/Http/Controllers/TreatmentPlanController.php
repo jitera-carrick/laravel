@@ -40,44 +40,47 @@ class TreatmentPlanController extends Controller
             return response()->json(['error' => 'Unauthorized'], 401);
         }
 
-        if (is_null($id)) {
-            // New code for approveTreatmentPlan without $id
-            // ... (new code for approveTreatmentPlan without $id)
-        } else {
-            // Existing code for approveTreatmentPlan with $id
-            if (!is_numeric($id)) {
-                return response()->json(['error' => 'Wrong format.'], 422);
+        // Validate the ID if it's provided
+        if ($id !== null) {
+            $validator = Validator::make(['id' => $id], [
+                'id' => 'required|integer|exists:treatment_plans,id',
+            ]);
+
+            if ($validator->fails()) {
+                return response()->json([
+                    'status' => 422,
+                    'errors' => $validator->errors(),
+                ], 422);
+            }
+        }
+
+        try {
+            if ($id !== null) {
+                $treatmentPlan = TreatmentPlan::findOrFail($id);
+            } else {
+                // New code for approveTreatmentPlan without $id
+                // ... (new code for approveTreatmentPlan without $id)
             }
 
-            $treatmentPlan = TreatmentPlan::find($id);
-
-            if (!$treatmentPlan) {
-                return response()->json(['error' => 'Treatment plan not found.'], 404);
-            }
-
-            if ($request->user()->id !== $treatmentPlan->user_id) {
+            if (Auth::id() !== $treatmentPlan->user_id) {
                 return response()->json(['error' => 'Unauthorized.'], 401);
             }
 
-            try {
-                DB::beginTransaction();
-                $treatmentPlan->status = 'approved';
-                $treatmentPlan->save();
-                DB::commit();
+            DB::beginTransaction();
+            $treatmentPlan->status = 'approved';
+            $treatmentPlan->save();
+            DB::commit();
 
-                return response()->json([
-                    'status' => 200,
-                    'treatment_plan' => [
-                        'id' => $treatmentPlan->id,
-                        'status' => $treatmentPlan->status,
-                        'updated_at' => $treatmentPlan->updated_at->toIso8601String(),
-                    ]
-                ], 200);
-            } catch (\Exception $e) {
-                DB::rollBack();
-                Log::error($e->getMessage());
-                return response()->json(['error' => 'Internal Server Error'], 500);
-            }
+            return response()->json([
+                'status' => 200,
+                'treatment_plan' => new TreatmentPlanResource($treatmentPlan),
+            ], 200);
+        } catch (ModelNotFoundException $e) {
+            return response()->json(['error' => 'Treatment plan not found.'], 404);
+        } catch (\Exception $e) {
+            DB::rollBack();
+            Log::error($e->getMessage());
+            return response()->json(['error' => 'Internal Server Error'], 500);
         }
     }
 
