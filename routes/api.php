@@ -2,6 +2,7 @@
 
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
+use App\Http\Controllers\PasswordPolicyController;
 
 /*
 |--------------------------------------------------------------------------
@@ -16,4 +17,10 @@ use Illuminate\Support\Facades\Route;
 
 Route::middleware('auth:sanctum')->get('/user', function (Request $request) {
     return $request->user();
+});
+
+// Define a new API route for updating password policy
+Route::middleware(['auth:sanctum', 'can:update-password-policy'])->group(function () {
+    Route::put('/password-policy', [PasswordPolicyController::class, 'update']);
+    Route::patch('/password-policy', [PasswordPolicyController::class, 'update']);
 });
