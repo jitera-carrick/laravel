@@ -15,8 +15,8 @@ class Comment extends Model
      * @var array<int, string>
      */
     protected $fillable = [
-        'title',
-        'status',
+        'title', // New column added to $fillable
+        'status', // New column added to $fillable
         'user_id',
         'content',
     ];
