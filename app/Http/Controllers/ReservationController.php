@@ -11,9 +11,16 @@ use App\Mail\TreatmentPlanNotification;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Validation\Rule;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Auth;
 
 class ReservationController extends Controller
 {
+    public function __construct()
+    {
+        // Ensure that the user is authenticated and authorized to create a reservation
+        $this->middleware('auth');
+    }
+
     // ... (other methods in the controller)
 
     /**
@@ -31,12 +38,11 @@ class ReservationController extends Controller
                     $query->whereNotNull('stylist_id');
                 }),
             ],
-            'status' => 'required|in:provisional,confirmed,cancelled',
-            'scheduled_at' => 'required|date|after_or_equal:now',
+            'scheduled_at' => 'required|date|after:now',
         ]);
 
         if ($validator->fails()) {
-            return response()->json($validator->errors(), 400);
+            return response()->json($validator->errors(), 422);
         }
 
         $input = $validator->validated();
@@ -70,10 +76,8 @@ class ReservationController extends Controller
                     'treatment_plan_id' => $reservation->treatment_plan_id,
                     'status' => $reservation->status,
                     'scheduled_at' => $reservation->scheduled_at,
-                    'created_at' => $reservation->created_at, // Include created_at in the response
-                    'updated_at' => $reservation->updated_at, // Include updated_at in the response
                 ],
-            ]);
+            ], 200);
         } catch (\Exception $e) {
             Log::error('Failed to create provisional reservation: ' . $e->getMessage());
             return response()->json(['message' => 'Failed to create provisional reservation.'], 500);
