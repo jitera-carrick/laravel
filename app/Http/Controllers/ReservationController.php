@@ -9,6 +9,8 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Mail;
 use App\Mail\TreatmentPlanNotification;
 use Illuminate\Support\Facades\Validator;
+use Illuminate\Validation\Rule;
+use Illuminate\Support\Facades\Log;
 
 class ReservationController extends Controller
 {
@@ -23,43 +25,59 @@ class ReservationController extends Controller
     public function createProvisionalReservation(Request $request)
     {
         $validator = Validator::make($request->all(), [
-            'treatment_plan_id' => 'required|exists:treatment_plans,id',
-            'scheduled_at' => 'required|date',
+            'treatment_plan_id' => [
+                'required',
+                Rule::exists('treatment_plans', 'id')->where(function ($query) {
+                    $query->whereNotNull('stylist_id');
+                }),
+            ],
+            'status' => 'required|in:provisional,confirmed,cancelled',
+            'scheduled_at' => 'required|date|after_or_equal:now',
         ]);
 
         if ($validator->fails()) {
-            return response()->json($validator->errors(), 422);
+            return response()->json($validator->errors(), 400);
         }
 
         $input = $validator->validated();
 
         // Check if a reservation already exists for the treatment plan
-        $existingReservation = Reservation::where('treatment_plan_id', $input['treatment_plan_id'])->first();
+        $existingReservation = Reservation::where('treatment_plan_id', $input['treatment_plan_id'])
+                                          ->where('status', 'provisional')
+                                          ->first();
         if ($existingReservation) {
-            return response()->json(['message' => 'A reservation already exists for this treatment plan.'], 409);
+            return response()->json(['message' => 'A provisional reservation already exists for this treatment plan.'], 409);
         }
 
-        // Create a new provisional reservation
-        $reservation = Reservation::create([
-            'treatment_plan_id' => $input['treatment_plan_id'],
-            'scheduled_at' => $input['scheduled_at'],
-            'status' => 'provisional',
-        ]);
+        try {
+            // Create a new provisional reservation
+            $reservation = Reservation::create([
+                'treatment_plan_id' => $input['treatment_plan_id'],
+                'status' => 'provisional', // Set status to provisional
+                'scheduled_at' => $input['scheduled_at'],
+            ]);
 
-        // Send an email notification
-        $treatmentPlan = TreatmentPlan::find($input['treatment_plan_id']);
-        // Ensure that the email is sent to the Beauty Salon's email address
-        // Assuming that the Beauty Salon's email address is stored in a configuration or environment variable
-        $beautySalonEmail = config('mail.beauty_salon_email'); // Replace with the actual configuration key
-        Mail::to($beautySalonEmail)->send(new TreatmentPlanNotification($treatmentPlan, $reservation)); // Include reservation details in the notification
+            // Send an email notification
+            $treatmentPlan = TreatmentPlan::find($input['treatment_plan_id']);
+            $beautySalonEmail = config('mail.beauty_salon_email');
+            Mail::to($beautySalonEmail)->send(new TreatmentPlanNotification($treatmentPlan, $reservation));
 
-        // Return the reservation details
-        return response()->json([
-            'id' => $reservation->id,
-            'treatment_plan_id' => $reservation->treatment_plan_id,
-            'status' => $reservation->status,
-            'scheduled_at' => $reservation->scheduled_at,
-        ], 201);
+            // Return the reservation details
+            return response()->json([
+                'status' => 200,
+                'reservation' => [
+                    'id' => $reservation->id,
+                    'treatment_plan_id' => $reservation->treatment_plan_id,
+                    'status' => $reservation->status,
+                    'scheduled_at' => $reservation->scheduled_at,
+                    'created_at' => $reservation->created_at, // Include created_at in the response
+                    'updated_at' => $reservation->updated_at, // Include updated_at in the response
+                ],
+            ]);
+        } catch (\Exception $e) {
+            Log::error('Failed to create provisional reservation: ' . $e->getMessage());
+            return response()->json(['message' => 'Failed to create provisional reservation.'], 500);
+        }
     }
 
     // ... (other methods in the controller)
