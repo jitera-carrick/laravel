@@ -5,11 +5,11 @@ use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\PasswordPolicyController;
 use App\Http\Controllers\Auth\ForgotPasswordController;
 use App\Http\Controllers\Auth\ResetPasswordController;
-use App\Http\Controllers\Auth\LoginController; // Import LoginController
+use App\Http\Controllers\Auth\LoginController;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Facades\Hash;
 use App\Models\PasswordResetToken;
-use App\Models\User; // Import User model
+use App\Models\User;
 use Illuminate\Support\Facades\Auth;
 
 /*
@@ -34,8 +34,6 @@ Route::middleware(['auth:sanctum', 'can:update-password-policy'])->group(functio
 
 Route::post('/users/password-reset', [ForgotPasswordController::class, 'sendPasswordResetLink']);
 
-// Merged the two routes for validating the password reset token
-// and kept the name for the route as per the existing code
 Route::get('/users/password-reset/validate/{token}', [ResetPasswordController::class, 'validateResetToken'])->name('password.reset.validate.token');
 
 Route::put('/users/password-reset/{token}', function (Request $request, $token) {
@@ -57,22 +55,17 @@ Route::post('/password/reset/request', function (Request $request) {
         return response()->json(['message' => 'Account not found.'], 404);
     }
 
-    // Assuming sendPasswordResetNotification() is a method defined on the User model
-    // that sends out the password reset email/notification.
     $user->sendPasswordResetNotification();
 
     return response()->json(['status' => 200, 'message' => 'Password reset request sent successfully.']);
 });
 
-// Updated the route to use the LoginController instead of a closure
-// The new login route now includes validation as per the requirements
 Route::post('/login', [LoginController::class, 'login']);
 
 Route::middleware('auth:sanctum')->post('/session/maintain', function (Request $request) {
     // ... existing code for maintaining a user session ...
 });
 
-// New route for setting a new password
 Route::put('/users/password_reset/set_new_password', function (Request $request) {
     $validator = Validator::make($request->all(), [
         'password' => [
@@ -110,27 +103,28 @@ Route::put('/users/password_reset/set_new_password', function (Request $request)
     return response()->json(['status' => 200, 'message' => 'Your password has been successfully updated.']);
 });
 
-// Added new route for canceling the login process as per the guideline
 Route::post('/login/cancel', function () {
-    // No validation or business logic required as per the requirement
     return response()->json([
         'status' => 200,
         'message' => 'Login process canceled successfully.'
     ]);
 });
 
-// New route for initiating the password reset process
+// Updated the initiate password reset route to include proper validation and response as per the requirement
 Route::post('/users/password_reset/initiate', function (Request $request) {
     $validator = Validator::make($request->all(), [
         'email' => 'required|email',
     ]);
 
     if ($validator->fails()) {
-        return response()->json([
-            'message' => $validator->errors()->first()
-        ], 422);
+        $errorMessages = $validator->errors()->getMessages();
+        $responseMessage = 'Invalid request parameters.';
+        if (isset($errorMessages['email'])) {
+            $responseMessage = $errorMessages['email'][0] === 'The email field is required.' ? 'Email address is required.' : 'Invalid email address format.';
+        }
+        return response()->json(['message' => $responseMessage], 422);
     }
 
     // Assuming ForgotPasswordController has a method initiatePasswordReset that handles the business logic
     return app(ForgotPasswordController::class)->initiatePasswordReset($request);
-});
+})->name('password.reset.initiate');
