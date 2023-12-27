@@ -118,34 +118,52 @@ class ForgotPasswordController extends Controller
     }
 
     /**
-     * Handle the incoming POST request for password reset errors.
+     * Handle a password reset request.
      *
      * @param  \Illuminate\Http\Request  $request
      * @return \Illuminate\Http\JsonResponse
      */
-    public function handlePasswordResetErrors(Request $request)
+    public function requestPasswordReset(Request $request)
     {
-        // Validate the 'email' parameter
+        // Validate the email field
         $validator = Validator::make($request->all(), [
             'email' => 'required|email'
         ]);
 
         if ($validator->fails()) {
-            $errors = $validator->errors();
-            $response = [];
-            if ($errors->has('email')) {
-                $response['message'] = $errors->first('email') === 'The email field is required.' ? 'Email address is required.' : 'Invalid email address format.';
-            }
-            return Response::json($response, 422);
+            return response()->json(['message' => 'Invalid parameters.'], 400);
         }
 
-        try {
-            // Your password reset logic here
-            // ...
+        // Find the user by email
+        $user = User::where('email', $request->email)->first();
 
-            return Response::json(['status' => 200, 'message' => 'An error occurred during the password reset process. Please try again.'], 200);
+        if (!$user) {
+            return response()->json(['message' => 'Account not found.'], 404);
+        }
+
+        // Generate a unique reset token and send the email
+        try {
+            $token = Str::random(60);
+            $expiration = Carbon::now()->addMinutes(60);
+
+            // Create a new entry in the password_reset_tokens table
+            $passwordResetToken = PasswordResetToken::create([
+                'email' => $user->email,
+                'token' => $token,
+                'created_at' => now(),
+                'expires_at' => $expiration,
+                'user_id' => $user->id,
+            ]);
+
+            Mail::send('emails.password_reset', ['token' => $token], function ($message) use ($user) {
+                $message->to($user->email);
+                $message->subject('Password Reset Link');
+            });
+
+            return response()->json(['message' => 'Password reset request sent successfully.'], 200);
         } catch (Exception $e) {
-            return Response::json(['message' => 'An error occurred during the password reset process.'], 500);
+            Log::error($e->getMessage());
+            return response()->json(['message' => 'An unexpected error occurred on the server.'], 500);
         }
     }
 
