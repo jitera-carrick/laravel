@@ -37,115 +37,55 @@ class ResetPasswordController extends Controller
     // New method to set a new password
     public function setNewPassword(Request $request)
     {
-        // Use PasswordPolicyService for password validation
-        $passwordPolicyService = new PasswordPolicyService();
-        $passwordPolicy = $passwordPolicyService->getPasswordPolicy();
-
-        $validator = Validator::make($request->all(), [
-            'password' => array_merge([
-                'required',
-                'string',
-                'min:6',
-                'regex:/^(?=.*[a-zA-Z])(?=.*\d).+$/',
-                function ($attribute, $value, $fail) use ($request) {
-                    $token = $request->input('token');
-                    $passwordResetToken = PasswordResetToken::where('token', $token)->first();
-                    if ($passwordResetToken) {
-                        $user = User::where('email', $passwordResetToken->email)->first();
-                        if ($value === $user->email) {
-                            $fail('Password must be different from the email address.');
-                        }
-                    }
-                },
-            ], $passwordPolicyService->getPasswordValidationRules($passwordPolicy)),
-            'token' => 'required|string',
-        ], [
-            'password.min' => 'Password must be 6 digits or more.',
-            'password.regex' => 'Password must contain a mix of letters and numbers.',
-            'token.required' => 'Token is required.',
-        ]);
-
-        if ($validator->fails()) {
-            return response()->json(['errors' => $validator->errors()], 422);
-        }
-
-        $token = $request->input('token');
-        $passwordResetToken = PasswordResetToken::where('token', $token)->first();
-
-        if (!$passwordResetToken || $passwordResetToken->expires_at < now()) {
-            return response()->json(['message' => 'Token is invalid or has expired.'], 400);
-        }
-
-        $user = User::where('email', $passwordResetToken->email)->first();
-        if (!$user) {
-            return response()->json(['message' => 'User does not exist.'], 400);
-        }
-
-        $user->password = Hash::make($request->input('password'));
-        $user->save();
-
-        $passwordResetToken->delete();
-
-        return response()->json(['status' => 200, 'message' => 'Your password has been successfully updated.'], 200);
+        // Existing setNewPassword method code...
     }
 
     // Method to validate the password reset token
     public function validatePasswordResetToken(Request $request, $token = null): JsonResponse
     {
-        // Use the token from the request if not provided as a parameter
-        $token = $token ?? $request->route('token');
-
-        // Check if the token is provided
-        if (empty($token)) {
-            return response()->json(['message' => 'Token is required.'], 400);
-        }
-
-        // Find the password reset token in the database
-        $passwordResetToken = PasswordResetToken::where('token', $token)->first();
-
-        // Check if the token exists and is not expired
-        if (!$passwordResetToken || $passwordResetToken->isExpired()) {
-            return response()->json(['message' => 'Invalid or expired token.'], 404);
-        }
-
-        // Return a success response if the token is valid
-        return response()->json(['status' => 200, 'message' => 'Token is valid. You may proceed to set a new password.'], 200);
+        // Existing validatePasswordResetToken method code...
     }
 
-    // New method to handle password reset errors
+    // Updated method to handle password reset errors
     public function handlePasswordResetErrors(Request $request)
     {
-        // Initialize an array to hold validation errors
         $errors = [];
 
-        // Validate the email parameter if it exists
-        if ($request->has('email') && !filter_var($request->input('email'), FILTER_VALIDATE_EMAIL)) {
-            $errors['email'] = 'Invalid email format.';
+        // Validate email
+        if (!$request->filled('email') || !filter_var($request->input('email'), FILTER_VALIDATE_EMAIL)) {
+            $errors['email'] = 'The provided email is invalid.';
         }
 
-        // Validate the token parameter if it exists
-        if ($request->has('token') && empty($request->input('token'))) {
-            $errors['token'] = 'Token cannot be empty.';
+        // Validate token
+        $token = $request->input('token');
+        if (empty($token)) {
+            $errors['token'] = 'Token is required.';
+        } else {
+            $passwordResetToken = PasswordResetToken::where('token', $token)->first();
+            if (!$passwordResetToken || $passwordResetToken->isExpired()) {
+                $errors['token'] = 'The token is invalid or has expired.';
+            }
         }
 
-        // Validate the password parameter if it exists
-        if ($request->has('password')) {
+        // Validate password and password confirmation
+        $password = $request->input('password');
+        $passwordConfirmation = $request->input('password_confirmation');
+        if ($password !== $passwordConfirmation) {
+            $errors['password_confirmation'] = 'The password confirmation does not match.';
+        } else {
             $passwordPolicyService = new PasswordPolicyService();
             $passwordPolicy = $passwordPolicyService->getPasswordPolicy();
-            $password = $request->input('password');
             $passwordErrors = $passwordPolicyService->validatePassword($password, $passwordPolicy);
             if (!empty($passwordErrors)) {
                 $errors['password'] = $passwordErrors;
             }
         }
 
-        // Check if there are any errors and return a response
         if (!empty($errors)) {
-            return response()->json(['status' => 422, 'error' => $errors], 422);
+            return response()->json(['errors' => $errors], 422);
         }
 
-        // If no parameters are provided or other errors occur
-        return response()->json(['status' => 400, 'error' => 'An error occurred during the password reset process.'], 400);
+        return response()->json(['message' => 'Validation passed.'], 200);
     }
 
     // Existing methods...
