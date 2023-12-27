@@ -20,10 +20,11 @@ class User extends Authenticatable
         'name',
         'email',
         'password',
-        'email_verified_at',
-        'remember_token',
-        'created_at',
-        'updated_at',
+        'email_verified_at', // Kept from existing code
+        'remember_token',    // Kept from existing code
+        'created_at',        // Kept from existing code
+        'updated_at',        // Kept from existing code
+        'is_logged_in',      // Added new fillable attribute from new code
     ];
 
     /**
@@ -43,7 +44,11 @@ class User extends Authenticatable
      */
     protected $casts = [
         'email_verified_at' => 'datetime',
+        // 'password' => 'hashed', // Removed because Laravel does not support 'hashed' cast and password is hashed by default
+        'is_logged_in' => 'boolean', // Added cast for new attribute from new code
     ];
+
+    // Relationships
 
     /**
      * Get the stylist associated with the user.
@@ -67,5 +72,14 @@ class User extends Authenticatable
     public function treatmentPlans()
     {
         return $this->hasMany(TreatmentPlan::class, 'user_id');
+    }
+
+    /**
+     * Get the requests for the user.
+     */
+    public function requests()
+    {
+        // This relationship was missing in the existing code and has been added from the new code
+        return $this->hasMany(Request::class, 'user_id');
     }
 }
