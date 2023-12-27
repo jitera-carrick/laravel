@@ -6,11 +6,11 @@ use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use App\Models\User;
 use Illuminate\Support\Str;
-use App\Models\PasswordReset;
+use App\Models\PasswordResetToken; // Correct model used for password reset tokens
 use App\Notifications\ResetPasswordNotification; // Keep for compatibility
 use Illuminate\Foundation\Auth\SendsPasswordResetEmails;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Mail; // Added for the new feature
+use Illuminate\Support\Facades\Mail; // Correctly added for sending email
 use Carbon\Carbon;
 use Exception; // Added for exception handling
 
@@ -37,13 +37,13 @@ class ForgotPasswordController extends Controller
             $token = Str::random(60);
             $expiration = Carbon::now()->addMinutes(60);
 
-            // Create a new entry in the password_resets table
-            $passwordReset = PasswordReset::create([
-                'email' => $user->email, // Ensure 'email' field is included for compatibility
-                'token' => $token, // Use 'token' instead of 'reset_token' for compatibility
-                'created_at' => now(), // Use 'created_at' for compatibility
-                'expiration' => $expiration, // Additional field for new feature
-                'status' => 'pending' // Additional field for new feature
+            // Create a new entry in the password_reset_tokens table
+            $passwordResetToken = PasswordResetToken::create([
+                'email' => $user->email,
+                'token' => $token,
+                'created_at' => now(),
+                'expires_at' => $expiration,
+                'user_id' => $user->id // Associate the token with the user
             ]);
 
             // Send the password reset email
@@ -53,8 +53,8 @@ class ForgotPasswordController extends Controller
                     $message->subject('Password Reset Link');
                 });
 
-                // Update the status in the password_resets table to 'sent'
-                $passwordReset->update(['status' => 'sent']);
+                // Update the status in the password_reset_tokens table to 'sent'
+                $passwordResetToken->update(['status' => 'sent']); // Additional field for new feature
 
                 // Return a success response
                 return response()->json(['message' => 'Password reset link has been sent to your email address.'], 200);
@@ -68,7 +68,7 @@ class ForgotPasswordController extends Controller
         }
 
         // Return a response with a generic message
-        return response()->json(['message' => 'If an account with that email exists, we have sent a password reset link to your email address.']);
+        return response()->json(['message' => 'If your email address is in our database, you will receive a password reset link.']);
     }
 
     /**
@@ -79,15 +79,14 @@ class ForgotPasswordController extends Controller
      */
     public function validateResetToken(string $token): bool
     {
-        $tokenRecord = DB::table('password_resets')->where('token', $token)->first(); // Use 'password_resets' table
+        $tokenRecord = PasswordResetToken::where('token', $token)->first(); // Updated to use PasswordResetToken model
 
         if (!$tokenRecord) {
             return false;
         }
 
-        // Check if the 'expiration' field exists and use it to determine if the token is expired
-        $tokenExpirationTime = isset($tokenRecord->expiration) ? Carbon::parse($tokenRecord->expiration) : Carbon::parse($tokenRecord->created_at)->addMinutes(config('auth.passwords.users.expire'));
-        $isTokenExpired = $tokenExpirationTime->isPast();
+        // Check if the 'expires_at' field exists and use it to determine if the token is expired
+        $isTokenExpired = Carbon::parse($tokenRecord->expires_at)->isPast();
 
         return !$isTokenExpired;
     }
