@@ -11,6 +11,7 @@ use Illuminate\Support\Facades\Mail;
 use App\Mail\TalkRoomNewMessage;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Log; // Import the Log facade
 
 class MessageController extends Controller
 {
@@ -23,12 +24,26 @@ class MessageController extends Controller
         $receiver = User::find($request->receiver_id);
 
         if (!$sender || !$receiver) {
-            return response()->json(['error' => 'Invalid sender or receiver ID.'], 404);
+            // Log the error details
+            Log::error('Message sending failed: Invalid sender or receiver ID.', [
+                'sender_id' => $request->sender_id,
+                'receiver_id' => $request->receiver_id
+            ]);
+
+            // Return a clear error message
+            return response()->json(['error' => 'Message sending failed: Invalid sender or receiver ID.'], 404);
         }
 
         // Ensure that the content does not exceed 500 characters
         if (strlen($request->content) > 500) {
-            return response()->json(['error' => 'Content exceeds 500 characters.'], 400);
+            // Log the error details
+            Log::error('Message sending failed: Content exceeds 500 characters.', [
+                'sender_id' => $request->sender_id,
+                'content_length' => strlen($request->content)
+            ]);
+
+            // Return a clear error message
+            return response()->json(['error' => 'Message sending failed: Content exceeds 500 characters.'], 400);
         }
 
         // Create a new message
@@ -40,7 +55,19 @@ class MessageController extends Controller
         $message->save();
 
         // Send email to the receiver
-        Mail::to($receiver->email)->send(new TalkRoomNewMessage($message->content, url('/talkroom')));
+        try {
+            Mail::to($receiver->email)->send(new TalkRoomNewMessage($message->content, url('/talkroom')));
+        } catch (\Exception $e) {
+            // Log the exception details
+            Log::error('Message sending failed: ' . $e->getMessage(), [
+                'sender_id' => $request->sender_id,
+                'receiver_id' => $request->receiver_id,
+                'exception' => $e
+            ]);
+
+            // Return a clear error message
+            return response()->json(['error' => 'Message sending failed due to an unexpected error.'], 500);
+        }
 
         // Return response
         return response()->json([
