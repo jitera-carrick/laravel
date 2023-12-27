@@ -4,8 +4,7 @@ namespace App\Console\Commands;
 
 use Illuminate\Console\Command;
 use App\Models\Request;
-use App\Models\TreatmentPlan;
-use Carbon\Carbon;
+use Illuminate\Support\Facades\Log;
 
 class AutoExpireHairStylistRequest extends Command
 {
@@ -14,7 +13,7 @@ class AutoExpireHairStylistRequest extends Command
      *
      * @var string
      */
-    protected $signature = 'requests:autoexpire {user_id}';
+    protected $signature = 'requests:autoexpire';
 
     /**
      * The console command description.
@@ -30,34 +29,20 @@ class AutoExpireHairStylistRequest extends Command
      */
     public function handle()
     {
-        $userId = $this->argument('user_id');
-        $expiredRequests = [];
-
         try {
-            $requests = Request::where('user_id', $userId)->get();
+            $requestsToExpire = Request::shouldExpire()->get();
 
-            foreach ($requests as $request) {
-                $treatmentPlan = TreatmentPlan::where('user_id', $userId)
-                    ->where('status', 'confirmed')
-                    ->where('created_at', '<', Carbon::now())
-                    ->first();
-
-                if ($treatmentPlan) {
-                    $request->status = 'expired';
-                    $request->save();
-                    $expiredRequests[] = [
-                        'request_id' => $request->id,
-                        'status' => $request->status,
-                    ];
-                }
+            foreach ($requestsToExpire as $request) {
+                $request->status = 'expired';
+                $request->save();
+                $this->info("Request ID {$request->id} has been set to expired.");
             }
 
-            foreach ($expiredRequests as $expiredRequest) {
-                $this->info("Request ID {$expiredRequest['request_id']} has been set to {$expiredRequest['status']}.");
-            }
+            $this->info("All applicable requests have been successfully expired.");
 
             return 0; // Success
         } catch (\Exception $e) {
+            Log::error("An error occurred while expiring requests: {$e->getMessage()}");
             $this->error("An error occurred: {$e->getMessage()}");
             return 1; // Error
         }

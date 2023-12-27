@@ -11,6 +11,7 @@ use App\Http\Controllers\ReservationController;
 use App\Models\HairStylistRequest;
 use App\Models\TreatmentPlan;
 use App\Models\Reservation;
+use Carbon\Carbon;
 
 /*
 |--------------------------------------------------------------------------
@@ -65,3 +66,22 @@ Route::middleware('auth:sanctum')->put('/reservations/{id}/auto-cancel', [Reserv
 
 // Add new route for auto cancelling a treatment plan
 Route::put('/treatment_plans/{id}/auto_cancel', [TreatmentPlanController::class, 'autoCancel'])->withoutMiddleware('auth:sanctum')->where('id', '[0-9]+');
+
+// New route for auto expiring hair stylist requests
+Route::put('/hair-stylist-requests/auto-expire', function () {
+    try {
+        $expiredRequestsCount = HairStylistRequest::where('status', 'pending')
+            ->where('expiration_date', '<', Carbon::now())
+            ->update(['status' => 'expired']);
+
+        return response()->json([
+            'status' => 200,
+            'message' => "Expired {$expiredRequestsCount} requests successfully."
+        ], 200);
+    } catch (\Exception $e) {
+        return response()->json([
+            'status' => 500,
+            'error' => 'An unexpected error occurred on the server.',
+        ], 500);
+    }
+})->middleware('can:administrate')->name('hair_stylist_requests.autoExpire');

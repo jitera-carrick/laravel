@@ -15,10 +15,36 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Str;
+use Carbon\Carbon; // Import Carbon for date handling
 
 class HairStylistRequestController extends Controller
 {
     // ... other methods ...
+
+    // Add the new autoExpireRequests method
+    public function autoExpireRequests(): JsonResponse
+    {
+        try {
+            $requests = Request::where('status', '!=', 'expired')
+                               ->where('created_at', '<', Carbon::now()->subDays(30)) // Assuming requests expire after 30 days
+                               ->get();
+
+            foreach ($requests as $request) {
+                $request->status = 'expired';
+                $request->save();
+            }
+
+            return response()->json([
+                'status' => 200,
+                'message' => 'Expired requests successfully.'
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'status' => 500,
+                'message' => 'An unexpected error occurred on the server.'
+            ], 500);
+        }
+    }
 
     public function storeHairStylistRequest(StoreHairStylistRequest $request): JsonResponse
     {
