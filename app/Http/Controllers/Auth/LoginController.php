@@ -21,13 +21,12 @@ class LoginController extends Controller
     // Combined attemptLogin method with logging from existing code
     protected function attemptLogin(array $credentials, $remember)
     {
-        // Check for non-empty email and password fields
         if (empty($credentials['email']) || empty($credentials['password'])) {
             Log::warning('Login attempt failed due to empty email or password.');
             return false;
         }
 
-        if (Auth::attempt(['email' => $credentials['email'], 'password' => $credentials['password']])) {
+        if (Auth::attempt(['email' => $credentials['email'], 'password' => $credentials['password']], $remember)) {
             $this->handleUserSession(Auth::user(), $remember);
             return true;
         }
@@ -66,19 +65,19 @@ class LoginController extends Controller
      */
     public function login(LoginRequest $request)
     {
-        $credentials = $request->only('email', 'password');
+        $credentials = $request->validated();
         $remember = $request->input('remember_token', false);
 
         if ($this->attemptLogin($credentials, $remember)) {
             $user = Auth::user();
             $sessionToken = $user->session_token;
-            $expiration = $remember ? Carbon::now()->addDays(90) : Carbon::now()->addHours(24);
+            $session = Session::where('user_id', $user->id)->first();
 
             return response()->json([
                 'status' => 200,
                 'message' => 'Login successful.',
                 'session_token' => $sessionToken,
-                'session_expiration' => $expiration->toIso8601String(),
+                'session_expiration' => $session->expires_at->toIso8601String(),
             ]);
         }
 
