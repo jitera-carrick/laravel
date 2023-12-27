@@ -2,7 +2,6 @@
 
 namespace App\Models;
 
-// use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
@@ -21,6 +20,10 @@ class User extends Authenticatable
         'name',
         'email',
         'password',
+        'email_verified_at',
+        'remember_token',
+        'created_at',
+        'updated_at',
     ];
 
     /**
@@ -40,6 +43,29 @@ class User extends Authenticatable
      */
     protected $casts = [
         'email_verified_at' => 'datetime',
-        'password' => 'hashed',
     ];
+
+    /**
+     * Get the stylist associated with the user.
+     */
+    public function stylist()
+    {
+        return $this->hasOne(Stylist::class, 'user_id');
+    }
+
+    /**
+     * Get the messages for the user.
+     */
+    public function messages()
+    {
+        return $this->hasMany(Message::class, 'user_id');
+    }
+
+    /**
+     * Get the treatment plans for the user.
+     */
+    public function treatmentPlans()
+    {
+        return $this->hasMany(TreatmentPlan::class, 'user_id');
+    }
 }
