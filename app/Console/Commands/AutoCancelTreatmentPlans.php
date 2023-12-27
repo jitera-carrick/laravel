@@ -43,6 +43,27 @@ class AutoCancelTreatmentPlans extends Command
 
             $this->info("Successfully canceled {$canceled_plans} unapproved treatment plans.");
 
+            // New code for cancelling treatment plans waiting for approval within 2 hours of the appointment
+            $twoHoursBefore = $current_time->copy()->subHours(2);
+            $waitingForApprovalPlans = TreatmentPlan::where('status', 'waiting_for_approval')
+                ->whereHas('reservations', function ($query) use ($twoHoursBefore) {
+                    $query->where('scheduled_at', '<=', $twoHoursBefore);
+                })->get();
+
+            foreach ($waitingForApprovalPlans as $plan) {
+                $plan->update(['status' => 'cancelled']);
+                $reservation = Reservation::where('treatment_plan_id', $plan->id)->first();
+                if ($reservation) {
+                    $reservation->update(['status' => 'cancelled']);
+                    // Assuming Mailable classes exist as per the guideline
+                    $customer = $plan->user;
+                    $stylist = $plan->stylist;
+                    Mail::to($customer->email)->send(new \App\Mail\TreatmentPlanCancelledCustomer($plan, $reservation));
+                    Mail::to($stylist->user->email)->send(new \App\Mail\TreatmentPlanCancelledStylist($plan, $reservation));
+                    $this->info("Treatment Plan ID {$plan->id} with Reservation ID {$reservation->id} was cancelled at {$current_time->toDateTimeString()}.");
+                }
+            }
+
             // The following code is for the previous functionality of the command
             // It should remain intact as per the instructions
             $cancelledPlans = [];
