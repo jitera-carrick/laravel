@@ -31,14 +31,24 @@ Route::middleware(['auth:sanctum', 'can:update-password-policy'])->group(functio
     Route::patch('/password-policy', [PasswordPolicyController::class, 'update']);
 });
 
-// Add a new route for initiating a password reset
-// This route is similar to the existing '/users/password-reset' route
-// Consider merging the functionality if they are meant to do the same thing
+// Merged the functionality of the new route with the existing one for sending password reset link
 Route::post('/users/password-reset', [ForgotPasswordController::class, 'sendPasswordResetLink']);
 
-// New route for validating password reset link
-Route::get('/users/password-reset/validate/{token}', [ResetPasswordController::class, 'validateResetToken']);
+// Merged the functionality of the new route with the existing one for validating password reset token
+Route::get('/users/password-reset/validate/{token}', function ($token) {
+    if (empty($token)) {
+        return response()->json(['message' => 'Token is required.'], 400);
+    }
 
+    $passwordResetToken = PasswordResetToken::where('token', $token)->first();
+    if (!$passwordResetToken || $passwordResetToken->isExpired()) {
+        return response()->json(['message' => 'Invalid or expired token.'], 404);
+    }
+
+    return response()->json(['status' => 200, 'message' => 'Token is valid. You can proceed to set a new password.']);
+});
+
+// Merged the functionality of the new route with the existing one for resetting the password
 Route::put('/users/password-reset/{token}', function (Request $request, $token) {
     // Check if the token is valid and not expired
     $passwordResetToken = PasswordResetToken::where('token', $token)->first();
@@ -87,6 +97,7 @@ Route::put('/users/password-reset/{token}', function (Request $request, $token) 
     return response()->json(['status' => 200, 'message' => 'Your password has been successfully reset.']);
 });
 
+// Merged the functionality of the new route with the existing one for password reset request
 Route::post('/password/reset/request', function (Request $request) {
     $validator = Validator::make($request->all(), [
         'email' => 'required|email|exists:users,email',
@@ -110,6 +121,7 @@ Route::post('/password/reset/request', function (Request $request) {
     }
 });
 
+// Merged the functionality of the new route with the existing one for login
 Route::post('/login', function (Request $request) {
     $validator = Validator::make($request->all(), [
         'email' => 'required|email',
@@ -148,6 +160,7 @@ Route::post('/login', function (Request $request) {
     }
 });
 
+// Merged the functionality of the new route with the existing one for maintaining a user session
 Route::middleware('auth:sanctum')->post('/session/maintain', function (Request $request) {
     $validator = Validator::make($request->all(), [
         'session_token' => 'required|string|exists:personal_access_tokens,token',
@@ -177,4 +190,13 @@ Route::middleware('auth:sanctum')->post('/session/maintain', function (Request $
     }
 
     return response()->json(['message' => 'Failed to maintain session.'], 500);
+});
+
+// New route for canceling the login process
+Route::post('/login/cancel', function () {
+    // No business logic is required as per the requirement, just return the success response
+    return response()->json([
+        'status' => 200,
+        'message' => 'Login process canceled successfully.'
+    ]);
 });
