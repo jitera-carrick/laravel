@@ -86,10 +86,44 @@ class LoginController extends Controller
                 ]);
             }
         } else {
+            // Call the handleLoginFailure method to handle the login failure
+            return $this->handleLoginFailure($request);
+        }
+    }
+
+    /**
+     * Handle login failures by providing an appropriate error message.
+     *
+     * @param Request $request
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function handleLoginFailure(Request $request)
+    {
+        $credentials = $request->only('email', 'password');
+
+        // Check if the user with the given email exists
+        $user = User::where('email', $credentials['email'])->first();
+
+        if (!$user) {
             return response()->json([
-                'error' => 'Login failed. Please check your email and password and try again.'
+                'status' => 401,
+                'message' => 'Account not found.'
             ], 401);
         }
+
+        // Check if the password is correct
+        if (!Hash::check($credentials['password'], $user->password)) {
+            return response()->json([
+                'status' => 401,
+                'message' => 'Incorrect password.'
+            ], 401);
+        }
+
+        // If the code reaches this point, it means there was an unexpected error
+        return response()->json([
+            'status' => 500,
+            'message' => 'An unexpected error occurred on the server.'
+        ], 500);
     }
 
     /**
