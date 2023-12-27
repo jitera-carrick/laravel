@@ -8,13 +8,12 @@ use App\Models\User;
 use Illuminate\Support\Str;
 use App\Models\PasswordResetToken;
 use Illuminate\Foundation\Auth\SendsPasswordResetEmails;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Mail;
 use Carbon\Carbon;
 use Exception;
 use Illuminate\Support\Facades\Validator;
-use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Response; // Import Response facade
 
 class ForgotPasswordController extends Controller
@@ -45,7 +44,7 @@ class ForgotPasswordController extends Controller
         if ($user) {
             // Generate a unique reset token and expiration time
             $token = Str::random(60);
-            // Use addMinutes(60) as per new code guideline
+            // Use addMinutes(60) as per existing code guideline
             $expiration = Carbon::now()->addMinutes(60);
 
             // Create a new entry in the password_reset_tokens table
