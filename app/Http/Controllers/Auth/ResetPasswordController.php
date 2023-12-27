@@ -14,22 +14,24 @@ use App\Notifications\ResetPasswordNotification;
 use Illuminate\Support\Facades\Notification;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Str;
 
 class ResetPasswordController extends Controller
 {
     // Add your existing methods here
 
     // New method to handle password reset
-    public function reset(Request $request)
+    public function reset(Request $request, $token) // Updated method signature to include $token
     {
-        // Validate the token
-        $tokenData = PasswordResetToken::where('token', $request->token)
-                    ->where('email', $request->email)
-                    ->where('expires_at', '>', now())
-                    ->first();
+        // Validate the token is not blank
+        if (empty($token)) {
+            return response()->json(['message' => 'Token is required.'], 400);
+        }
 
-        if (!$tokenData) {
-            return response()->json(['message' => 'Invalid or expired password reset token.'], 422);
+        // Find the password reset token using the provided token instead of request data
+        $passwordReset = PasswordReset::where('token', $token)->first();
+        if (!$passwordReset || $passwordReset->expires_at < now()) {
+            return response()->json(['message' => 'The token does not exist or has expired.'], 404);
         }
 
         // Retrieve password policy
@@ -37,21 +39,18 @@ class ResetPasswordController extends Controller
 
         // Validation rules
         $rules = [
-            'email' => 'required|email|exists:users,email', // Use 'exists:users,email' to ensure the user exists
-            'token' => 'required|exists:password_reset_tokens,token', // Keep the token validation rule from the new code
             'password' => [
                 'required',
-                'confirmed',
-                'min:' . $passwordPolicy->minimum_length,
-                $passwordPolicy->require_digits ? 'regex:/[0-9]/' : '',
-                $passwordPolicy->require_letters ? 'regex:/[a-zA-Z]/' : '',
-                $passwordPolicy->require_special_characters ? 'regex:/[\W]/' : '',
+                'string',
+                'min:6', // Updated minimum length to 6 as per requirement
+                'regex:/^(?=.*[a-zA-Z])(?=.*\d).+$/', // Updated regex to ensure a mix of letters and numbers
             ],
         ];
 
         // Custom error messages
         $messages = [
-            'password.regex' => 'The password must include the required types of characters.',
+            'password.min' => 'Password must be 6 digits or more.', // Custom message for minimum length
+            'password.regex' => 'Password must contain a mix of letters and numbers.', // Custom message for regex
         ];
 
         // Validate request
@@ -61,47 +60,31 @@ class ResetPasswordController extends Controller
             return response()->json(['errors' => $validator->errors()], 422);
         }
 
-        // Retrieve the user by their email address
-        $user = User::where('email', $request->email)->firstOrFail();
+        // Additional password validations
+        $password = $request->input('password');
+        $user = User::where('email', $passwordReset->email)->first();
 
-        // Encrypt the new password and update the user record
-        $user->password = Hash::make($request->password);
+        if (Str::contains($password, $user->email)) {
+            return response()->json(['message' => 'Password cannot be the same as the email address.'], 400);
+        }
+
+        // Update the user's password
+        $user->password = Hash::make($password);
         $user->save();
 
         // Update the status in the "password_resets" table to indicate the password has been reset
-        $passwordReset = PasswordReset::where('email', $request->email)
-                          ->where('token', $request->token)
-                          ->first();
-        if ($passwordReset) {
-            $passwordReset->status = 'completed';
-            $passwordReset->save();
-        }
+        $passwordReset->status = 'completed';
+        $passwordReset->save();
 
         // Delete the password reset token
-        $tokenData->delete();
+        $passwordReset->delete();
 
         // Trigger a ResetPasswordNotification
         Notification::send($user, new ResetPasswordNotification()); // Use Notification facade as in the existing code
 
         // Return a success response
-        return response()->json(['message' => 'Password has been successfully reset.']);
+        return response()->json(['message' => 'Your password has been successfully reset.'], 200);
     }
 
-    // New method to validate reset token
-    public function validateResetToken($token)
-    {
-        try {
-            $passwordResetToken = PasswordResetToken::where('token', $token)->firstOrFail();
-
-            if ($passwordResetToken->expires_at < Carbon::now()) {
-                return response()->json(['message' => 'Token has expired'], 404);
-            }
-
-            return response()->json(['message' => 'Token is valid'], 200);
-        } catch (ModelNotFoundException $e) {
-            return response()->json(['message' => 'Token is invalid'], 400);
-        } catch (\Exception $e) {
-            return response()->json(['message' => 'An error occurred while validating the token'], 500);
-        }
-    }
+    // Existing methods...
 }

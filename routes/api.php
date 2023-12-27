@@ -4,7 +4,10 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\PasswordPolicyController;
 use App\Http\Controllers\Auth\ForgotPasswordController;
-use App\Http\Controllers\Auth\ResetPasswordController; // Import the ResetPasswordController
+use App\Http\Controllers\Auth\ResetPasswordController;
+use Illuminate\Support\Facades\Validator;
+use Illuminate\Support\Facades\Hash;
+use App\Models\User;
 
 /*
 |--------------------------------------------------------------------------
@@ -12,8 +15,8 @@ use App\Http\Controllers\Auth\ResetPasswordController; // Import the ResetPasswo
 |--------------------------------------------------------------------------
 |
 | Here is where you can register API routes for your application. These
-| routes are loaded by the RouteServiceProvider and all of them will
-| be assigned to the "api" middleware group. Make something great!
+| routes are loaded by the RouteServiceProvider within a group which
+| is assigned to the "api" middleware group. Enjoy building your API!
 |
 */
 
@@ -32,3 +35,39 @@ Route::post('/users/password-reset', [ForgotPasswordController::class, 'sendPass
 
 // New route for validating password reset link
 Route::get('/users/password-reset/validate/{token}', [ResetPasswordController::class, 'validateResetToken']);
+
+// Reset Password route
+Route::put('/users/password-reset/{token}', function (Request $request, $token) {
+    $validator = Validator::make($request->all(), [
+        'password' => [
+            'required',
+            'min:6',
+            'regex:/^(?=.*[a-zA-Z])(?=.*\d).+$/',
+            function ($attribute, $value, $fail) use ($request) {
+                if ($value === $request->user()->email) {
+                    return $fail('Password cannot be the same as the email address.');
+                }
+            },
+        ],
+    ], [
+        'password.required' => 'Password is required.',
+        'password.min' => 'Password must be 6 digits or more.',
+        'password.regex' => 'Password must contain a mix of letters and numbers.',
+    ]);
+
+    if ($validator->fails()) {
+        return response()->json(['errors' => $validator->errors()], 422);
+    }
+
+    $user = User::where('password_reset_token', $token)->first();
+
+    if (!$user) {
+        return response()->json(['message' => 'The token does not exist or has expired.'], 404);
+    }
+
+    $user->password = Hash::make($request->password);
+    $user->password_reset_token = null; // Clear the reset token
+    $user->save();
+
+    return response()->json(['status' => 200, 'message' => 'Your password has been successfully reset.']);
+});
