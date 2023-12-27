@@ -83,7 +83,6 @@ class LoginController extends Controller
             } else {
                 return redirect()->intended('screen-menu_user')->with([
                     'session_token' => $user->session_token,
-                    // 'session_expiration' => $user->session_expiration, // This line is no longer needed
                 ]);
             }
         } else {
@@ -123,6 +122,27 @@ class LoginController extends Controller
             return response()->json(['message' => 'Session remains unchanged.']);
         } catch (\Exception $e) {
             return response()->json(['error' => 'An error occurred while maintaining the session: ' . $e->getMessage()], 500);
+        }
+    }
+
+    /**
+     * Cancel the login process.
+     *
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function cancelLoginProcess()
+    {
+        try {
+            // Perform any necessary cleanup or state reset here if needed
+
+            return response()->json([
+                'status' => 200,
+                'message' => 'Login process canceled successfully.'
+            ], 200);
+        } catch (\Exception $e) {
+            return response()->json([
+                'error' => 'An unexpected error occurred on the server: ' . $e->getMessage()
+            ], 500);
         }
     }
 
