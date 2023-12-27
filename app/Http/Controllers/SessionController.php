@@ -57,5 +57,51 @@ class SessionController extends Controller
         }
     }
 
+    /**
+     * Maintain the user session based on the session_token and remember flag.
+     *
+     * @param Request $request
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function maintainUserSession(Request $request)
+    {
+        $validator = Validator::make($request->all(), [
+            'session_token' => 'required|exists:sessions,session_token',
+            'remember' => 'required|boolean',
+        ]);
+
+        if ($validator->fails()) {
+            $errors = $validator->errors();
+            $response = ['status' => 400];
+            if ($errors->has('session_token')) {
+                $response['error'] = 'Invalid session token.';
+            } elseif ($errors->has('remember')) {
+                $response['error'] = 'Invalid value for remember option.';
+            }
+            return response()->json($response, 400);
+        }
+
+        try {
+            $session = Session::where('session_token', $request->session_token)->firstOrFail();
+
+            if ($request->remember) {
+                $session->expires_at = Carbon::now()->addDays(30); // or whatever logic determines the new expiration
+            } else {
+                $session->expires_at = Carbon::now()->addDay();
+            }
+
+            $session->save();
+
+            return response()->json([
+                'status' => 200,
+                'message' => 'Session maintained successfully.',
+                'session_expiration' => $session->expires_at->toIso8601String(),
+            ]);
+        } catch (\Exception $e) {
+            Log::error('Error maintaining session: ' . $e->getMessage());
+            return response()->json(['status' => 500, 'error' => 'An error occurred while maintaining the session.'], 500);
+        }
+    }
+
     // ... Rest of the existing code in the SessionController
 }
