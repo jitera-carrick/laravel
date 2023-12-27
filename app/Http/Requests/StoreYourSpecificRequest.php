@@ -30,12 +30,12 @@ class StoreYourSpecificRequest extends FormRequest
             'area_id' => [
                 'required',
                 'integer',
-                Rule::exists('areas', 'id'), // Ensure the area_id exists in the areas table
+                Rule::exists('request_areas', 'id'), // Ensure the area_id exists in the request_areas table
             ],
             'menu_id' => [
                 'required',
                 'integer',
-                Rule::exists('menus', 'id'), // Ensure the menu_id exists in the menus table
+                Rule::exists('request_menus', 'id'), // Ensure the menu_id exists in the request_menus table
             ],
             'hair_concerns' => 'string|max:3000', // Validate hair_concerns as a string with a max length of 3000
         ];
