@@ -36,12 +36,48 @@ class TreatmentPlanController extends Controller
 
     public function approveTreatmentPlan(Request $request, $id = null)
     {
-        // If $id is null, it means the new code is being used
+        if (!Auth::check()) {
+            return response()->json(['error' => 'Unauthorized'], 401);
+        }
+
         if (is_null($id)) {
             // New code for approveTreatmentPlan without $id
             // ... (new code for approveTreatmentPlan without $id)
         } else {
-            // ... (existing code for approveTreatmentPlan with $id)
+            // Existing code for approveTreatmentPlan with $id
+            if (!is_numeric($id)) {
+                return response()->json(['error' => 'Wrong format.'], 422);
+            }
+
+            $treatmentPlan = TreatmentPlan::find($id);
+
+            if (!$treatmentPlan) {
+                return response()->json(['error' => 'Treatment plan not found.'], 404);
+            }
+
+            if ($request->user()->id !== $treatmentPlan->user_id) {
+                return response()->json(['error' => 'Unauthorized.'], 401);
+            }
+
+            try {
+                DB::beginTransaction();
+                $treatmentPlan->status = 'approved';
+                $treatmentPlan->save();
+                DB::commit();
+
+                return response()->json([
+                    'status' => 200,
+                    'treatment_plan' => [
+                        'id' => $treatmentPlan->id,
+                        'status' => $treatmentPlan->status,
+                        'updated_at' => $treatmentPlan->updated_at->toIso8601String(),
+                    ]
+                ], 200);
+            } catch (\Exception $e) {
+                DB::rollBack();
+                Log::error($e->getMessage());
+                return response()->json(['error' => 'Internal Server Error'], 500);
+            }
         }
     }
 
@@ -51,16 +87,11 @@ class TreatmentPlanController extends Controller
             return response()->json(['error' => 'Unauthorized'], 401);
         }
 
-        // Use DeclineTreatmentPlanRequest if it's the existing code
         if ($request instanceof DeclineTreatmentPlanRequest && $treatment_plan_id !== null) {
             // ... (existing code for declineTreatmentPlan)
         } else {
             // New code for declineTreatmentPlan without DeclineTreatmentPlanRequest
             // ... (new code for declineTreatmentPlan without DeclineTreatmentPlanRequest)
-        }
-
-        // New code for declineTreatmentPlan with route model binding and authorization
-        try {
             // Validate the 'id' parameter
             if (!is_numeric($treatment_plan_id)) {
                 return response()->json(['message' => 'Wrong format.'], 422);
@@ -92,11 +123,6 @@ class TreatmentPlanController extends Controller
                 'status' => 200,
                 'treatment_plan' => new TreatmentPlanResource($treatmentPlan)
             ], 200);
-        } catch (ModelNotFoundException $e) {
-            return response()->json(['message' => 'Treatment plan not found.'], 404);
-        } catch (\Exception $e) {
-            Log::error($e->getMessage());
-            return response()->json(['message' => 'Internal Server Error'], 500);
         }
     }
 
