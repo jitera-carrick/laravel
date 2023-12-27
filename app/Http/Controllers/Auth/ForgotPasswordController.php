@@ -37,38 +37,39 @@ class ForgotPasswordController extends Controller
             return response()->json(['message' => 'If your email address is in our database, you will receive a password reset link.'], 400);
         }
 
-        // Find the user by email
-        $user = User::where('email', $request->email)->first();
+        // Always return the same response to prevent email enumeration
+        $responseMessage = 'If your email address is in our database, you will receive a password reset link.';
 
-        if ($user) {
-            // Generate a unique reset token and expiration time
-            $token = Str::random(60);
-            $expiration = Carbon::now()->addMinutes(60);
+        try {
+            // Find the user by email
+            $user = User::where('email', $request->email)->first();
 
-            // Create a new entry in the password_reset_tokens table
-            $passwordResetToken = PasswordResetToken::create([
-                'email' => $user->email,
-                'token' => $token,
-                'created_at' => now(),
-                'expires_at' => $expiration,
-                'user_id' => $user->id,
-            ]);
+            if ($user) {
+                // Generate a unique reset token and expiration time
+                $token = Str::random(60);
+                $expiration = Carbon::now()->addMinutes(60);
 
-            // Send the password reset email
-            try {
+                // Create a new entry in the password_reset_tokens table
+                $passwordResetToken = PasswordResetToken::create([
+                    'email' => $user->email,
+                    'token' => $token,
+                    'created_at' => now(),
+                    'expires_at' => $expiration,
+                    'user_id' => $user->id,
+                ]);
+
+                // Send the password reset email
                 Mail::send('emails.password_reset', ['token' => $token], function ($message) use ($user) {
                     $message->to($user->email);
                     $message->subject('Password Reset Link');
                 });
-
-                return response()->json(['message' => 'If your email address is in our database, you will receive a password reset link.'], 200);
-            } catch (Exception $e) {
-                Log::error($e->getMessage());
-                return response()->json(['message' => 'Failed to send password reset link.'], 500);
             }
-        }
 
-        return response()->json(['message' => 'If your email address is in our database, you will receive a password reset link.'], 200);
+            return response()->json(['message' => $responseMessage], 200);
+        } catch (Exception $e) {
+            Log::error($e->getMessage());
+            return response()->json(['message' => 'Failed to send password reset link.'], 500);
+        }
     }
 
     // ... Rest of the existing code in ForgotPasswordController
