@@ -49,6 +49,26 @@ class User extends Authenticatable
         'session_expiration' => 'datetime', // Added from new code, assuming session_expiration is a datetime
     ];
 
+    // Relationships
+
+    /**
+     * Get the password reset tokens associated with the user.
+     */
+    public function passwordResetTokens()
+    {
+        return $this->hasMany(PasswordResetToken::class, 'user_id');
+    }
+
+    /**
+     * Get the sessions associated with the user.
+     */
+    public function sessions()
+    {
+        return $this->hasMany(Session::class, 'user_id');
+    }
+
+    // Existing relationships
+
     /**
      * Get the password reset token associated with the user.
      */

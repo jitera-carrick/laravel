@@ -37,6 +37,7 @@ class PasswordResetToken extends Model
         'token',
         'created_at',
         'user_id',
+        'expires_at', // Added new column 'expires_at' to fillable array
     ];
 
     /**
@@ -46,6 +47,16 @@ class PasswordResetToken extends Model
      */
     protected $attributes = [
         'created_at' => null, // Set default value if necessary
+    ];
+
+    /**
+     * The attributes that should be cast.
+     *
+     * @var array<string, string>
+     */
+    protected $casts = [
+        'created_at' => 'datetime', // Ensure 'created_at' is cast to datetime
+        'expires_at' => 'datetime', // Added casting for 'expires_at' as datetime
     ];
 
     /**

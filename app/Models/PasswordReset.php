@@ -33,6 +33,7 @@ class PasswordReset extends Model
         'expiration',
         'status',
         'user_id',
+        'email', // Added new column 'email' to fillable
     ];
 
     /**
@@ -40,14 +41,27 @@ class PasswordReset extends Model
      *
      * @var array<int, string>
      */
-    protected $hidden = [];
+    protected $hidden = [
+        'reset_token', // Assuming we want to hide the reset token
+    ];
 
     /**
      * The attributes that should be cast.
      *
      * @var array<string, string>
      */
-    protected $casts = [];
+    protected $casts = [
+        'created_at' => 'datetime', // Added cast for 'created_at'
+        'updated_at' => 'datetime', // Added cast for 'updated_at'
+        'expiration' => 'datetime', // Added cast for 'expiration'
+    ];
+
+    /**
+     * Indicates if the model should be timestamped.
+     *
+     * @var bool
+     */
+    public $timestamps = true; // Changed to true to handle 'created_at' and 'updated_at'
 
     /**
      * Get the user that owns the password reset.

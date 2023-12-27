@@ -11,16 +11,15 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('password_resets', function (Blueprint $table) {
+        Schema::create('sessions', function (Blueprint $table) {
             $table->id();
+            $table->string('session_token')->unique();
+            $table->timestamp('expires_at');
+            $table->boolean('keep_session');
             $table->unsignedBigInteger('user_id');
-            $table->string('reset_token');
-            $table->timestamp('expiration');
-            $table->string('status');
-            $table->string('email')->index(); // Added email column with an index for faster searches
             $table->timestamps();
 
-            $table->foreign('user_id')->references('id')->on('users');
+            $table->foreign('user_id')->references('id')->on('users')->onDelete('cascade');
         });
     }
 
@@ -29,6 +28,6 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::dropIfExists('password_resets');
+        Schema::dropIfExists('sessions');
     }
 };
