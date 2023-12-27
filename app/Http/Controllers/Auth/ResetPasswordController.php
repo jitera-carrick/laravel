@@ -96,7 +96,7 @@ class ResetPasswordController extends Controller
 
         // Check if the token is provided
         if (empty($token)) {
-            return response()->json(['message' => 'Token is required.'], 400);
+            return response()->json(['valid' => false, 'message' => 'Token is required.'], 400);
         }
 
         // Find the password reset token in the database
@@ -104,11 +104,11 @@ class ResetPasswordController extends Controller
 
         // Check if the token exists and is not expired
         if (!$passwordResetToken || $passwordResetToken->isExpired()) {
-            return response()->json(['message' => 'Invalid or expired token.'], 404);
+            return response()->json(['valid' => false, 'message' => 'Invalid or expired token.'], 404);
         }
 
         // Return a success response if the token is valid
-        return response()->json(['status' => 200, 'message' => 'Token is valid. You may proceed to set a new password.'], 200);
+        return response()->json(['valid' => true, 'message' => 'Token is valid. You may proceed to set a new password.'], 200);
     }
 
     // Updated method to handle password reset errors
