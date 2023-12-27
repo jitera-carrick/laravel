@@ -133,5 +133,37 @@ class LoginController extends Controller
         }
     }
 
+    /**
+     * Handle the login failure request.
+     *
+     * @param \Illuminate\Http\Request $request
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function handleLoginFailure(Request $request)
+    {
+        $validator = Validator::make($request->all(), [
+            'email' => 'required|email',
+            'password' => 'required',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json(['errors' => $validator->errors()], 422);
+        }
+
+        $user = User::where('email', $request->email)->first();
+
+        if (!$user) {
+            return response()->json(['message' => 'Account not found.'], 401);
+        }
+
+        if (!Hash::check($request->password, $user->password)) {
+            return response()->json(['message' => 'Incorrect password.'], 401);
+        }
+
+        // If the code reaches this point, it means there was an unexpected error
+        Log::error('Unexpected error occurred during login failure handling.');
+        return response()->json(['error' => 'An unexpected error occurred.'], 500);
+    }
+
     // ... Rest of the existing code in the LoginController
 }
