@@ -11,7 +11,7 @@ use Illuminate\Support\Facades\Mail;
 use App\Mail\TalkRoomNewMessage;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\Log; // Import the Log facade
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Validator;
 
 class MessageController extends Controller
@@ -21,14 +21,14 @@ class MessageController extends Controller
     public function sendMessageAndAdjustTreatmentPlan(Request $request)
     {
         // Validate sender and receiver exist
-        $sender = User::find($request->sender_id);
-        $receiver = User::find($request->receiver_id);
+        $sender = User::find($request->sender_id ?? $request->user_id);
+        $receiver = User::find($request->receiver_id ?? ($request->stylist_id ? Stylist::find($request->stylist_id)->user_id : null));
 
         if (!$sender || !$receiver) {
             // Log the error details
             Log::error('Message sending failed: Invalid sender or receiver ID.', [
-                'sender_id' => $request->sender_id,
-                'receiver_id' => $request->receiver_id
+                'sender_id' => $request->sender_id ?? $request->user_id,
+                'receiver_id' => $request->receiver_id ?? $request->stylist_id
             ]);
 
             // Return a clear error message
@@ -37,8 +37,10 @@ class MessageController extends Controller
 
         // Validate the request data
         $validator = Validator::make($request->all(), [
-            'content' => 'required|max:500',
-            'sent_at' => 'required|date',
+            'content' => 'required|string|max:500',
+            'sent_at' => 'sometimes|required|date',
+            'user_id' => 'sometimes|required|integer',
+            'stylist_id' => 'sometimes|required|integer|exists:stylists,id',
         ]);
 
         if ($validator->fails()) {
@@ -46,7 +48,7 @@ class MessageController extends Controller
             if ($errors->has('content')) {
                 // Log the error details
                 Log::error('Message sending failed: Content exceeds 500 characters.', [
-                    'sender_id' => $request->sender_id,
+                    'sender_id' => $request->sender_id ?? $request->user_id,
                     'content_length' => strlen($request->content)
                 ]);
 
@@ -58,12 +60,17 @@ class MessageController extends Controller
             return response()->json(['error' => $validator->errors()->first()], 400);
         }
 
+        // Check if the user is logged in and the user_id matches the logged-in user
+        if (Auth::id() !== (int)($request->user_id ?? $request->sender_id)) {
+            return response()->json(['error' => 'Unauthorized access.'], 401);
+        }
+
         // Create a new message
         $message = new Message();
         $message->content = $request->content;
-        $message->sent_at = Carbon::parse($request->sent_at);
-        $message->user_id = $request->sender_id;
-        $message->receiver_id = $request->receiver_id;
+        $message->sent_at = $request->sent_at ? Carbon::parse($request->sent_at) : Carbon::now();
+        $message->user_id = $sender->id;
+        $message->receiver_id = $receiver->id;
         $message->save();
 
         // TODO: Adjust treatment plan details here if necessary
@@ -74,8 +81,8 @@ class MessageController extends Controller
         } catch (\Exception $e) {
             // Log the exception details
             Log::error('Message sending failed: ' . $e->getMessage(), [
-                'sender_id' => $request->sender_id,
-                'receiver_id' => $request->receiver_id,
+                'sender_id' => $sender->id,
+                'receiver_id' => $receiver->id,
                 'exception' => $e
             ]);
 
