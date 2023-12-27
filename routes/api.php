@@ -9,6 +9,7 @@ use App\Http\Controllers\HairStylistRequestController;
 use App\Http\Controllers\TreatmentPlanController;
 use App\Http\Controllers\ReservationController;
 use App\Models\TreatmentPlan;
+use App\Models\Reservation;
 
 /*
 |--------------------------------------------------------------------------
@@ -35,6 +36,7 @@ Route::middleware('auth:sanctum')->delete('/hair_stylist_requests/{id}', [HairSt
 Route::middleware('auth:sanctum')->put('/treatment_plans/{id}/approve', [TreatmentPlanController::class, 'approveTreatmentPlan'])->name('treatment_plans.approve');
 
 // Update the route for declining a treatment plan with validation and business logic
+// This route is updated to include the logic from the new code while maintaining the existing route's structure.
 Route::middleware('auth:sanctum')->put('/treatment_plans/{id}/decline', function (Request $request, $id) {
     if (!is_numeric($id)) {
         return response()->json([
@@ -73,66 +75,35 @@ Route::middleware('auth:sanctum')->put('/treatment_plans/{id}/auto_cancel_before
 
 // Adding new route for POST request to `/api/messages`
 Route::middleware('auth:sanctum')->group(function () {
-    Route::post('/messages', function (Request $request) {
-        $validator = Validator::make($request->all(), [
-            'sender_id' => 'required|exists:users,id',
-            'receiver_id' => 'required|exists:users,id',
-            'content' => 'required|max:500',
-            'sent_at' => 'required|date',
-        ]);
-
-        if ($validator->fails()) {
-            return response()->json([
-                'status' => 422,
-                'errors' => $validator->errors(),
-            ], 422);
-        }
-
-        try {
-            // Assuming MessageController exists and has the sendMessageAndAdjustTreatmentPlan method
-            $messageController = new MessageController();
-            return $messageController->sendMessageAndAdjustTreatmentPlan($request);
-        } catch (ModelNotFoundException $e) {
-            return response()->json([
-                'status' => 400,
-                'error' => 'User not found.',
-            ], 400);
-        } catch (\Exception $e) {
-            return response()->json([
-                'status' => 500,
-                'error' => 'An unexpected error occurred on the server.',
-            ], 500);
-        }
-    });
+    Route::post('/messages', [MessageController::class, 'sendMessageAndAdjustTreatmentPlan']);
 
     // New route for creating a provisional reservation
-    Route::post('/reservations', function (Request $request) {
-        $validator = Validator::make($request->all(), [
-            'scheduled_at' => 'required|date|after:now',
-            'treatment_plan_id' => 'required|exists:treatment_plans,id',
-        ]);
-
-        if ($validator->fails()) {
-            return response()->json([
-                'status' => 422,
-                'errors' => $validator->errors(),
-            ], 422);
-        }
-
-        try {
-            // Assuming ReservationController exists and has the createProvisionalReservation method
-            $reservationController = new ReservationController();
-            return $reservationController->createProvisionalReservation($request);
-        } catch (ModelNotFoundException $e) {
-            return response()->json([
-                'status' => 400,
-                'error' => 'Treatment plan not found.',
-            ], 400);
-        } catch (\Exception $e) {
-            return response()->json([
-                'status' => 500,
-                'error' => 'An unexpected error occurred on the server.',
-            ], 500);
-        }
-    })->name('reservations.createProvisional');
+    Route::post('/reservations', [ReservationController::class, 'createProvisionalReservation'])->name('reservations.createProvisional');
 });
+
+// New route for auto-canceling provisional reservations
+Route::middleware('auth:sanctum')->put('/reservations/{id}/auto-cancel', function (Request $request, $id) {
+    if (!is_numeric($id)) {
+        return response()->json([
+            'status' => 422,
+            'error' => 'Wrong format.',
+        ], 422);
+    }
+
+    $reservation = Reservation::find($id);
+
+    if (!$reservation) {
+        return response()->json([
+            'status' => 400,
+            'error' => 'Reservation not found.',
+        ], 400);
+    }
+
+    $reservation->status = 'auto-canceled';
+    $reservation->save();
+
+    return response()->json([
+        'status' => 200,
+        'reservation' => $reservation,
+    ], 200);
+})->where('id', '[0-9]+');

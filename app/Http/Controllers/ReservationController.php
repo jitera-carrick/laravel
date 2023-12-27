@@ -84,5 +84,45 @@ class ReservationController extends Controller
         }
     }
 
+    /**
+     * Auto-cancel a provisional reservation.
+     *
+     * @param Request $request
+     * @param int $reservationId
+     * @return \Illuminate\Http\Response
+     */
+    public function autoCancelProvisionalReservation(Request $request, $reservationId)
+    {
+        // Validate the reservation ID is a number
+        if (!is_numeric($reservationId)) {
+            return response()->json(['message' => 'Wrong format.'], 422);
+        }
+
+        try {
+            $reservation = Reservation::findOrFail($reservationId);
+
+            if ($reservation->status !== 'provisional') {
+                return response()->json(['message' => 'Reservation status is not provisional.'], 400);
+            }
+
+            $reservation->status = 'auto-canceled';
+            $reservation->save();
+
+            return response()->json([
+                'status' => 200,
+                'reservation' => [
+                    'id' => $reservation->id,
+                    'status' => $reservation->status,
+                    'updated_at' => $reservation->updated_at->toIso8601String(),
+                ],
+            ]);
+        } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $e) {
+            return response()->json(['message' => 'Reservation not found.'], 404);
+        } catch (\Exception $e) {
+            Log::error('Failed to auto-cancel provisional reservation: ' . $e->getMessage());
+            return response()->json(['message' => 'Failed to auto-cancel provisional reservation.'], 500);
+        }
+    }
+
     // ... (other methods in the controller)
 }
