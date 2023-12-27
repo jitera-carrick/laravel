@@ -7,7 +7,6 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Validator;
 use App\Models\User;
-use App\Models\PasswordReset;
 use App\Models\PasswordResetToken;
 use App\Notifications\ResetPasswordNotification;
 use Illuminate\Support\Facades\Notification;
@@ -35,13 +34,62 @@ class ResetPasswordController extends Controller
         // Existing validateResetToken method code...
     }
 
-    /**
-     * Validate the password reset token.
-     *
-     * @param Request $request
-     * @param string|null $token
-     * @return JsonResponse
-     */
+    // New method to set a new password
+    public function setNewPassword(Request $request)
+    {
+        // Use PasswordPolicyService for password validation
+        $passwordPolicyService = new PasswordPolicyService();
+        $passwordPolicy = $passwordPolicyService->getPasswordPolicy();
+
+        $validator = Validator::make($request->all(), [
+            'password' => array_merge([
+                'required',
+                'string',
+                'min:6',
+                'regex:/^(?=.*[a-zA-Z])(?=.*\d).+$/',
+                function ($attribute, $value, $fail) use ($request) {
+                    $token = $request->input('token');
+                    $passwordResetToken = PasswordResetToken::where('token', $token)->first();
+                    if ($passwordResetToken) {
+                        $user = User::where('email', $passwordResetToken->email)->first();
+                        if ($value === $user->email) {
+                            $fail('Password must be different from the email address.');
+                        }
+                    }
+                },
+            ], $passwordPolicyService->getPasswordValidationRules($passwordPolicy)),
+            'token' => 'required|string',
+        ], [
+            'password.min' => 'Password must be 6 digits or more.',
+            'password.regex' => 'Password must contain a mix of letters and numbers.',
+            'token.required' => 'Token is required.',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json(['errors' => $validator->errors()], 422);
+        }
+
+        $token = $request->input('token');
+        $passwordResetToken = PasswordResetToken::where('token', $token)->first();
+
+        if (!$passwordResetToken || $passwordResetToken->expires_at < now()) {
+            return response()->json(['message' => 'Token is invalid or has expired.'], 400);
+        }
+
+        $user = User::where('email', $passwordResetToken->email)->first();
+        if (!$user) {
+            return response()->json(['message' => 'User does not exist.'], 400);
+        }
+
+        $user->password = Hash::make($request->input('password'));
+        $user->save();
+
+        $passwordResetToken->delete();
+
+        return response()->json(['status' => 200, 'message' => 'Your password has been successfully updated.'], 200);
+    }
+
+    // Method to validate the password reset token
     public function validatePasswordResetToken(Request $request, $token = null): JsonResponse
     {
         // Use the token from the request if not provided as a parameter

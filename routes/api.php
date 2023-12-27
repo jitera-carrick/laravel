@@ -7,7 +7,6 @@ use App\Http\Controllers\Auth\ForgotPasswordController;
 use App\Http\Controllers\Auth\ResetPasswordController;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Facades\Hash;
-use App\Models\User;
 use App\Models\PasswordResetToken;
 use Illuminate\Support\Facades\Auth;
 
@@ -58,8 +57,9 @@ Route::post('/login/cancel', function () {
     ]);
 });
 
-// This route is added as per the guideline to validate the password reset token
-Route::get('/api/users/password_reset/validate_token/{token}', function ($token) {
+// Merged the two routes for validating the password reset token
+// and kept the name for the route as per the existing code
+Route::get('/users/validate-password-reset-token/{token}', function ($token) {
     if (empty($token)) {
         return response()->json(['message' => 'Token is required.'], 400);
     }
@@ -69,5 +69,44 @@ Route::get('/api/users/password_reset/validate_token/{token}', function ($token)
         return response()->json(['message' => 'Invalid or expired token.'], 404);
     }
 
-    return response()->json(['status' => 200, 'message' => 'Token is valid. You may proceed to set a new password.']);
+    return response()->json(['status' => 200, 'message' => 'Token is valid. You can proceed to set a new password.']);
 })->name('password.reset.validate.token');
+
+// New route for setting a new password
+Route::put('/users/password_reset/set_new_password', function (Request $request) {
+    $validator = Validator::make($request->all(), [
+        'password' => [
+            'required',
+            'min:6',
+            function ($attribute, $value, $fail) use ($request) {
+                if ($value === $request->user()->email) {
+                    $fail('Password must be different from the email address.');
+                }
+                if (!preg_match('/[a-zA-Z]/', $value) || !preg_match('/[0-9]/', $value)) {
+                    $fail('Password must contain a mix of letters and numbers.');
+                }
+            },
+        ],
+        'token' => 'required',
+    ]);
+
+    if ($validator->fails()) {
+        return response()->json(['message' => $validator->errors()->first()], 422);
+    }
+
+    $token = $request->input('token');
+    $passwordResetToken = PasswordResetToken::where('token', $token)->first();
+
+    if (!$passwordResetToken || $passwordResetToken->isExpired()) {
+        return response()->json(['message' => 'Invalid or expired token.'], 400);
+    }
+
+    $user = $passwordResetToken->user;
+    $user->password = Hash::make($request->input('password'));
+    $user->save();
+
+    // Invalidate the token after successful password reset
+    $passwordResetToken->delete();
+
+    return response()->json(['status' => 200, 'message' => 'Your password has been successfully updated.']);
+});
