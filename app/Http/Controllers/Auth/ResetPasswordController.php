@@ -9,7 +9,9 @@ use Illuminate\Support\Facades\Validator;
 use App\Models\User;
 use App\Models\PasswordResetToken;
 use App\Models\PasswordPolicy;
+use App\Models\PasswordReset;
 use App\Notifications\ResetPasswordNotification;
+use Illuminate\Support\Facades\Notification;
 
 class ResetPasswordController extends Controller
 {
@@ -18,12 +20,23 @@ class ResetPasswordController extends Controller
     // New method to handle password reset
     public function reset(Request $request)
     {
+        // Validate the token
+        $tokenData = PasswordResetToken::where('token', $request->token)
+                    ->where('email', $request->email)
+                    ->where('expires_at', '>', now())
+                    ->first();
+
+        if (!$tokenData) {
+            return response()->json(['message' => 'Invalid or expired password reset token.'], 422);
+        }
+
         // Retrieve password policy
         $passwordPolicy = PasswordPolicy::firstOrFail();
 
         // Validation rules
         $rules = [
-            'email' => 'required|email|exists:password_reset_tokens,email',
+            'email' => 'required|email|exists:users,email',
+            'token' => 'required',
             'password' => [
                 'required',
                 'confirmed',
@@ -53,11 +66,20 @@ class ResetPasswordController extends Controller
         $user->password = Hash::make($request->password);
         $user->save();
 
+        // Update the status in the "password_resets" table to indicate the password has been reset
+        $passwordReset = PasswordReset::where('email', $request->email)
+                          ->where('token', $request->token)
+                          ->first();
+        if ($passwordReset) {
+            $passwordReset->status = 'completed';
+            $passwordReset->save();
+        }
+
         // Delete the password reset token
-        PasswordResetToken::where('email', $request->email)->delete();
+        $tokenData->delete();
 
         // Trigger a ResetPasswordNotification
-        $user->notify(new ResetPasswordNotification());
+        Notification::send($user, new ResetPasswordNotification());
 
         // Return a success response
         return response()->json(['message' => 'Password has been successfully reset.']);
