@@ -7,20 +7,21 @@ use App\Models\TreatmentPlan;
 use App\Models\Reservation;
 use App\Models\Stylist;
 use App\Models\User;
+use App\Models\Message; // Import Message model
 use App\Mail\TreatmentPlanCancelled;
-use App\Mail\TreatmentPlanNotification;
+use App\Mail\TreatmentPlanNotification; // New Mailable class for notifications
 use App\Mail\TreatmentPlanFixedCustomer;
 use App\Mail\TreatmentPlanFixedStylist;
 use App\Mail\TreatmentPlanFixedOwner;
-use App\Mail\TreatmentPlanDeclinedStylist;
+use App\Mail\TreatmentPlanDeclinedStylist; // Assuming this is the correct namespace for the new Mailable
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
-use App\Http\Resources\TreatmentPlanResource;
+use App\Http\Resources\TreatmentPlanResource; // Correct namespace for TreatmentPlanResource
 use Illuminate\Validation\Rule;
-use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\DB; // Added for DB transactions
 use Illuminate\Support\Facades\Log;
 
 class TreatmentPlanController extends Controller
@@ -172,6 +173,73 @@ class TreatmentPlanController extends Controller
             DB::rollBack();
             Log::error($e->getMessage());
             return response()->json(['error' => 'An error occurred while auto-canceling the treatment plan.'], 500);
+        }
+    }
+
+    // New method sendMessageAndAdjustTreatmentPlan
+    public function sendMessageAndAdjustTreatmentPlan(Request $request)
+    {
+        // Ensure user is authenticated and authorized
+        $this->middleware('auth');
+
+        // Validate the request parameters
+        $validatedData = $request->validate([
+            'content' => 'required|string|max:500',
+            'user_id' => 'required|integer|exists:users,id',
+            'stylist_id' => 'required|integer|exists:stylists,id',
+        ], [
+            'content.required' => 'The content of the message is required.',
+            'content.max' => 'You cannot input more than 500 characters.',
+            'user_id.required' => 'The user ID is required.',
+            'user_id.exists' => 'User not found.',
+            'stylist_id.required' => 'The stylist ID is required.',
+            'stylist_id.exists' => 'Stylist not found.',
+        ]);
+
+        // Check if the authenticated user is the same as the user_id provided
+        if (Auth::id() != $validatedData['user_id']) {
+            return response()->json(['error' => 'Unauthorized'], 401);
+        }
+
+        try {
+            // Start transaction
+            DB::beginTransaction();
+
+            // Create a new message
+            $message = new Message();
+            $message->content = $validatedData['content'];
+            $message->user_id = $validatedData['user_id'];
+            $message->sent_at = now();
+            $message->read = false;
+            $message->save();
+
+            // Find the relevant treatment plan and adjust it
+            $treatmentPlan = TreatmentPlan::where('user_id', $validatedData['user_id'])
+                                ->where('stylist_id', $validatedData['stylist_id'])
+                                ->firstOrFail();
+            // Update the treatment plan as necessary
+            // Assuming we are just updating the status for the example
+            $treatmentPlan->status = 'adjusted';
+            $treatmentPlan->save();
+
+            // Commit transaction
+            DB::commit();
+
+            // Return the newly created message details
+            return response()->json([
+                'status' => 200,
+                'message' => [
+                    'id' => $message->id,
+                    'content' => $message->content,
+                    'sent_at' => $message->sent_at->toIso8601String(),
+                    'user_id' => $message->user_id,
+                    'stylist_id' => $validatedData['stylist_id'],
+                ]
+            ], 200);
+        } catch (\Exception $e) {
+            // Rollback transaction on error
+            DB::rollBack();
+            return response()->json(['error' => $e->getMessage()], 500);
         }
     }
 
