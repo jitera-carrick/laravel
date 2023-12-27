@@ -25,6 +25,7 @@ class Message extends Model
         'content',
         'sent_at',
         'user_id',
+        'read', // Added new fillable attribute from new code
     ];
 
     /**
@@ -34,6 +35,7 @@ class Message extends Model
      */
     protected $casts = [
         'sent_at' => 'datetime',
+        'read' => 'boolean', // Added cast for new attribute from new code
     ];
 
     /**
@@ -43,4 +45,7 @@ class Message extends Model
     {
         return $this->belongsTo(User::class, 'user_id');
     }
+
+    // Assuming that the "One many users.message_id" relation is a typo and should be "One to many" from users to messages
+    // No additional code needed for this relationship since it's already defined in the User model
 }
