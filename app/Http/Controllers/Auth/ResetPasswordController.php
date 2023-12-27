@@ -17,6 +17,7 @@ use App\Mail\ResetPasswordConfirmationMail;
 use App\Services\PasswordPolicyService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Route; // Import Route facade for defining routes
 
 class ResetPasswordController extends Controller
 {
@@ -63,5 +64,44 @@ class ResetPasswordController extends Controller
         return response()->json(['status' => 200, 'message' => 'Token is valid. You may proceed to set a new password.'], 200);
     }
 
+    // New method to handle password reset errors
+    public function handlePasswordResetErrors(Request $request)
+    {
+        // Initialize an array to hold validation errors
+        $errors = [];
+
+        // Validate the email parameter if it exists
+        if ($request->has('email') && !filter_var($request->input('email'), FILTER_VALIDATE_EMAIL)) {
+            $errors['email'] = 'Invalid email format.';
+        }
+
+        // Validate the token parameter if it exists
+        if ($request->has('token') && empty($request->input('token'))) {
+            $errors['token'] = 'Token cannot be empty.';
+        }
+
+        // Validate the password parameter if it exists
+        if ($request->has('password')) {
+            $passwordPolicyService = new PasswordPolicyService();
+            $passwordPolicy = $passwordPolicyService->getPasswordPolicy();
+            $password = $request->input('password');
+            $passwordErrors = $passwordPolicyService->validatePassword($password, $passwordPolicy);
+            if (!empty($passwordErrors)) {
+                $errors['password'] = $passwordErrors;
+            }
+        }
+
+        // Check if there are any errors and return a response
+        if (!empty($errors)) {
+            return response()->json(['status' => 422, 'error' => $errors], 422);
+        }
+
+        // If no parameters are provided or other errors occur
+        return response()->json(['status' => 400, 'error' => 'An error occurred during the password reset process.'], 400);
+    }
+
     // Existing methods...
 }
+
+// Define the route for handling password reset errors
+Route::get('/api/users/password_reset/error_handling', [ResetPasswordController::class, 'handlePasswordResetErrors']);
