@@ -7,10 +7,12 @@ use Illuminate\Http\Request;
 use App\Models\User;
 use Illuminate\Support\Str;
 use App\Models\PasswordReset;
-use App\Notifications\ResetPasswordNotification;
+use App\Notifications\ResetPasswordNotification; // Keep for compatibility
 use Illuminate\Foundation\Auth\SendsPasswordResetEmails;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Mail; // Added for the new feature
 use Carbon\Carbon;
+use Exception; // Added for exception handling
 
 class ForgotPasswordController extends Controller
 {
@@ -36,8 +38,6 @@ class ForgotPasswordController extends Controller
             $expiration = Carbon::now()->addMinutes(60);
 
             // Create a new entry in the password_resets table
-            // Check if the table name is 'password_resets' or 'password_reset_tokens'
-            // and use the appropriate model.
             $passwordReset = PasswordReset::create([
                 'email' => $user->email, // Ensure 'email' field is included for compatibility
                 'token' => $token, // Use 'token' instead of 'reset_token' for compatibility
@@ -47,7 +47,24 @@ class ForgotPasswordController extends Controller
             ]);
 
             // Send the password reset email
-            $user->notify(new ResetPasswordNotification($token));
+            try {
+                Mail::send('emails.password_reset', ['token' => $token], function ($message) use ($user) {
+                    $message->to($user->email);
+                    $message->subject('Password Reset Link');
+                });
+
+                // Update the status in the password_resets table to 'sent'
+                $passwordReset->update(['status' => 'sent']);
+
+                // Return a success response
+                return response()->json(['message' => 'Password reset link has been sent to your email address.'], 200);
+            } catch (Exception $e) {
+                // Log the exception
+                report($e);
+
+                // Return a failure response
+                return response()->json(['message' => 'Failed to send password reset link.'], 500);
+            }
         }
 
         // Return a response with a generic message
