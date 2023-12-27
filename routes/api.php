@@ -85,3 +85,30 @@ Route::middleware('auth:sanctum')->put('/hair_stylist_requests/{id}', function (
 Route::middleware('auth:sanctum')->post('/treatment_plans/messages', function (Request $request) {
     // ... (Keep the logic from the new code here)
 });
+
+// Add new route for cancelling a treatment plan by its ID
+Route::middleware('auth:sanctum')->put('/treatment_plans/{id}/cancel', function (Request $request, $id) {
+    if (!is_numeric($id)) {
+        return response()->json([
+            'status' => 422,
+            'error' => 'Wrong format.',
+        ], 422);
+    }
+
+    $treatmentPlan = TreatmentPlan::find($id);
+
+    if (!$treatmentPlan) {
+        return response()->json([
+            'status' => 400,
+            'error' => 'Treatment plan not found.',
+        ], 400);
+    }
+
+    $treatmentPlan->status = 'canceled';
+    $treatmentPlan->save();
+
+    return response()->json([
+        'status' => 200,
+        'treatment_plan' => $treatmentPlan,
+    ], 200);
+});

@@ -244,4 +244,57 @@ class TreatmentPlanController extends Controller
     }
 
     // ... (other methods in the controller)
+
+    // New method to cancel a treatment plan by its ID
+    public function cancelTreatmentPlanById(Request $request, $id)
+    {
+        if (!Auth::check()) {
+            return response()->json(['error' => 'Unauthorized'], 401);
+        }
+
+        if (!is_numeric($id)) {
+            return response()->json(['error' => 'Wrong format.'], 422);
+        }
+
+        $treatmentPlan = TreatmentPlan::find($id);
+
+        if (!$treatmentPlan) {
+            return response()->json(['error' => 'Treatment plan not found.'], 404);
+        }
+
+        if ($treatmentPlan->status !== 'approved') {
+            return response()->json(['error' => 'Only approved treatment plans can be canceled.'], 400);
+        }
+
+        if (Auth::id() !== $treatmentPlan->user_id) {
+            return response()->json(['error' => 'User does not have permission to cancel this treatment plan.'], 403);
+        }
+
+        $treatmentPlan->status = 'canceled';
+        $treatmentPlan->save();
+
+        $reservation = Reservation::where('treatment_plan_id', $treatmentPlan->id)
+                                  ->where('status', 'confirmed')
+                                  ->first();
+
+        if ($reservation) {
+            $reservation->status = 'canceled';
+            $reservation->save();
+        }
+
+        Mail::to($treatmentPlan->user->email)->send(new TreatmentPlanCancelled($treatmentPlan));
+        if ($treatmentPlan->stylist && $treatmentPlan->stylist->user) {
+            Mail::to($treatmentPlan->stylist->user->email)->send(new TreatmentPlanCancelled($treatmentPlan));
+        }
+        Mail::to('salon@example.com')->send(new TreatmentPlanCancelled($treatmentPlan)); // Salon owner email
+
+        return response()->json([
+            'status' => 200,
+            'treatment_plan' => [
+                'id' => $treatmentPlan->id,
+                'status' => $treatmentPlan->status,
+                'updated_at' => $treatmentPlan->updated_at->toIso8601String(),
+            ]
+        ]);
+    }
 }
