@@ -30,25 +30,19 @@ Route::middleware('auth:sanctum')->get('/user', function (Request $request) {
 });
 
 // New route for creating a hair stylist request
-// The new code has a conflicting route with a different URI and controller method.
-// We will keep the original route and add the new one as an alternative.
 Route::middleware('auth:sanctum')->post('/hair_stylist_requests', [HairStylistRequestController::class, 'createHairStylistRequest']);
 Route::middleware('auth:sanctum')->post('/hair-stylist-requests', [HairStylistRequestController::class, 'store']);
 
 // Updated route for cancelling a hair stylist request registration
-// Merged the logic from the new code into the existing route structure.
 Route::middleware('auth:sanctum')->delete('/hair_stylist_requests/{id}', [HairStylistRequestController::class, 'cancelRequest'])->name('hair_stylist_requests.cancel');
 
 // Add new route for approving a treatment plan
-// The new code has a conflicting route with a different implementation.
-// We will keep the original route and add the new one as an alternative.
 Route::middleware('auth:sanctum')->put('/treatment_plans/{id}/approve', [TreatmentPlanController::class, 'approveTreatmentPlan'])->name('treatment_plans.approve');
 Route::middleware('auth:sanctum')->put('/treatment_plans/{id}/approve', function (Request $request, $id) {
     // ... (Keep the logic from the new code here)
 })->name('treatment_plans.approve.alternative');
 
 // Update the route for declining a treatment plan with validation and business logic
-// This route is updated to include the logic from the new code while maintaining the existing route's structure.
 Route::middleware('auth:sanctum')->put('/treatment_plans/{id}/decline', [TreatmentPlanController::class, 'declineTreatmentPlan'])->name('treatment_plans.decline');
 
 // Add new route for auto cancelling treatment plans before appointment
@@ -66,8 +60,6 @@ Route::middleware('auth:sanctum')->group(function () {
 Route::middleware('auth:sanctum')->put('/reservations/{id}/auto-cancel', [ReservationController::class, 'autoCancel'])->where('id', '[0-9]+');
 
 // Add new route for auto cancelling a treatment plan
-// The new code has a conflicting route with a different implementation.
-// We will keep the original route and add the new one as an alternative.
 Route::put('/treatment_plans/{id}/auto_cancel', [TreatmentPlanController::class, 'autoCancel'])->withoutMiddleware('auth:sanctum')->where('id', '[0-9]+');
 Route::middleware('auth:sanctum')->put('/treatment_plans/{id}/auto-cancel', function (Request $request, $id) {
     // ... (Keep the logic from the new code here)
@@ -93,6 +85,7 @@ Route::put('/hair-stylist-requests/auto-expire', function () {
 })->middleware('can:administrate')->name('hair_stylist_requests.autoExpire');
 
 // Add new route for updating a hair stylist request
+// Merged the logic from the new code into the existing route structure.
 Route::middleware('auth:sanctum')->put('/hair_stylist_requests/{id}', function (Request $request, $id) {
     $validator = Validator::make($request->all(), [
         'area_ids' => 'required|array|min:1',
@@ -100,6 +93,12 @@ Route::middleware('auth:sanctum')->put('/hair_stylist_requests/{id}', function (
         'hair_concerns' => 'nullable|string|max:3000',
         'images' => 'nullable|array',
         'images.*' => 'file|mimes:png,jpg,jpeg|max:5120', // max 5MB
+    ], [
+        'area_ids.required' => 'At least one area must be selected.',
+        'menu_ids.required' => 'At least one menu must be selected.',
+        'hair_concerns.max' => 'Hair concerns and requests must be less than 3000 characters.',
+        'images.*.mimes' => 'Invalid image format or size.',
+        'images.*.max' => 'Invalid image format or size.',
     ]);
 
     if ($validator->fails()) {
@@ -110,24 +109,31 @@ Route::middleware('auth:sanctum')->put('/hair_stylist_requests/{id}', function (
     }
 
     try {
-        $hairStylistRequest = HairStylistRequest::where('id', $id)
-            ->where('user_id', $request->user()->id)
-            ->firstOrFail();
+        $hairStylistRequest = HairStylistRequest::findOrFail($id);
+
+        // Assuming the user can only edit their own requests
+        if ($request->user()->id !== $hairStylistRequest->user_id) {
+            return response()->json([
+                'status' => 403,
+                'error' => 'User does not have permission to edit this request.',
+            ], 403);
+        }
 
         $hairStylistRequest->area_ids = $request->area_ids;
         $hairStylistRequest->menu_ids = $request->menu_ids;
         $hairStylistRequest->hair_concerns = $request->hair_concerns;
 
-        // Handle image uploads
+        // Handle image uploads if provided
         if ($request->hasFile('images')) {
+            $images = [];
             foreach ($request->file('images') as $image) {
                 $path = $image->store('public/hair_stylist_requests');
-                $hairStylistRequest->images()->create([
+                $images[] = [
                     'file_path' => Storage::url($path),
-                    'file_format' => $image->getClientOriginalExtension(),
-                    'file_size' => $image->getSize(),
-                ]);
+                    'file_size' => round(Storage::size($path) / 1024, 2), // size in KB
+                ];
             }
+            $hairStylistRequest->images = $images;
         }
 
         $hairStylistRequest->save();
@@ -138,9 +144,9 @@ Route::middleware('auth:sanctum')->put('/hair_stylist_requests/{id}', function (
         ], 200);
     } catch (ModelNotFoundException $e) {
         return response()->json([
-            'status' => 400,
-            'error' => 'Request not found or you do not have permission to edit this request.',
-        ], 400);
+            'status' => 404,
+            'error' => 'Request not found.',
+        ], 404);
     } catch (\Exception $e) {
         return response()->json([
             'status' => 500,
