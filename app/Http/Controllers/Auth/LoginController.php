@@ -140,9 +140,49 @@ class LoginController extends Controller
         ], 500);
     }
 
-    public function maintainUserSession($sessionToken, $keepSession = false)
+    /**
+     * Maintain the user session based on the session token and keepSession flag.
+     *
+     * @param Request $request
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function maintainUserSession(Request $request)
     {
-        // ... Existing maintainUserSession method code
+        $sessionToken = $request->input('session_token');
+        $keepSession = $request->input('keep_session', false);
+
+        // Validate the "session_token" and "keep_session" parameters
+        $request->validate([
+            'session_token' => 'required|exists:sessions,session_token',
+            'keep_session' => 'required|boolean',
+        ]);
+
+        try {
+            $session = Session::where('session_token', $sessionToken)->first();
+
+            if (!$session) {
+                return response()->json(['message' => 'Invalid session token.'], 400);
+            }
+
+            if ($session->expires_at->isPast()) {
+                return response()->json(['message' => 'Session has expired.'], 401);
+            }
+
+            if ($keepSession) {
+                $session->expires_at = Carbon::now()->addDays(90);
+                $session->save();
+
+                return response()->json([
+                    'status' => 200,
+                    'message' => 'Session maintained successfully.',
+                    'session_expiration' => $session->expires_at->toIso8601String()
+                ]);
+            }
+
+            return response()->json(['message' => 'Session remains unchanged.']);
+        } catch (\Exception $e) {
+            return response()->json(['error' => 'An error occurred while maintaining the session: ' . $e->getMessage()], 500);
+        }
     }
 
     public function cancelLoginProcess()

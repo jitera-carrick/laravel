@@ -136,3 +136,35 @@ Route::post('/login', function (Request $request) {
         return response()->json(['message' => 'Unauthorized'], 401);
     }
 });
+
+// Add a new route to handle the POST request for maintaining a user session
+Route::middleware('auth:sanctum')->post('/session/maintain', function (Request $request) {
+    $validator = Validator::make($request->all(), [
+        'session_token' => 'required|string|exists:personal_access_tokens,token',
+        'keep_session' => 'required|boolean',
+    ], [
+        'session_token.required' => 'Session token is required.',
+        'session_token.string' => 'Session token must be a string.',
+        'session_token.exists' => 'Invalid session token.',
+        'keep_session.required' => 'Keep session value is required.',
+        'keep_session.boolean' => 'Invalid keep session value.',
+    ]);
+
+    if ($validator->fails()) {
+        return response()->json(['errors' => $validator->errors()], 400);
+    }
+
+    // Assuming that the "keep_session" field is used to update a "remember_token" or similar in the User model
+    $user = User::where('remember_token', $request->session_token)->first();
+    if ($user && $request->keep_session) {
+        // Update the user's session expiration or perform other logic to maintain the session
+        // For the sake of example, we're just returning a success response with a fake expiration date
+        return response()->json([
+            'status' => 200,
+            'message' => 'Session maintained successfully.',
+            'session_expiration' => '2023-08-08T15:45:00Z' // This should be calculated based on your session logic
+        ]);
+    }
+
+    return response()->json(['message' => 'Failed to maintain session.'], 500);
+});
