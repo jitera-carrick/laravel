@@ -24,6 +24,7 @@ class Stylist extends Model
     protected $fillable = [
         'profile',
         'user_id',
+        'message_id', // Added new fillable attribute from new code
     ];
 
     /**
@@ -42,6 +43,8 @@ class Stylist extends Model
      */
     protected $casts = [
         // Add any fields that need to be cast here.
+        'created_at' => 'datetime', // Added cast for new attribute from new code
+        'updated_at' => 'datetime', // Added cast for new attribute from new code
     ];
 
     /**
@@ -50,6 +53,14 @@ class Stylist extends Model
     public function user()
     {
         return $this->belongsTo(User::class, 'user_id');
+    }
+
+    /**
+     * Get the message that the stylist is associated with.
+     */
+    public function message()
+    {
+        return $this->belongsTo(Message::class, 'message_id');
     }
 
     /**

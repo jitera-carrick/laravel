@@ -46,6 +46,11 @@ class Message extends Model
         return $this->belongsTo(User::class, 'user_id');
     }
 
-    // Assuming that the "One many users.message_id" relation is a typo and should be "One to many" from users to messages
-    // No additional code needed for this relationship since it's already defined in the User model
+    /**
+     * Get the stylist associated with the message.
+     */
+    public function stylist()
+    {
+        return $this->hasOne(Stylist::class, 'message_id');
+    }
 }

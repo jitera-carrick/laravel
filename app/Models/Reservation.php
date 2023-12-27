@@ -9,38 +9,13 @@ class Reservation extends Model
 {
     use HasFactory;
 
-    /**
-     * The table associated with the model.
-     *
-     * @var string
-     */
-    protected $table = 'reservations';
+    // ... (other properties and methods)
 
     /**
-     * The attributes that are mass assignable.
-     *
-     * @var array<int, string>
+     * Get the user that made the reservation.
      */
-    protected $fillable = [
-        'status',
-        'scheduled_at',
-        'treatment_plan_id',
-    ];
-
-    /**
-     * The attributes that should be cast.
-     *
-     * @var array<string, string>
-     */
-    protected $casts = [
-        'scheduled_at' => 'datetime',
-    ];
-
-    /**
-     * Get the treatment plan that owns the reservation.
-     */
-    public function treatmentPlan()
+    public function user()
     {
-        return $this->belongsTo(TreatmentPlan::class, 'treatment_plan_id');
+        return $this->belongsTo(User::class, 'user_id');
     }
 }

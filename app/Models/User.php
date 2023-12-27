@@ -83,6 +83,14 @@ class User extends Authenticatable
     }
 
     /**
+     * Get the reservations for the user.
+     */
+    public function reservations()
+    {
+        return $this->hasMany(Reservation::class, 'user_id');
+    }
+
+    /**
      * Get the message that the user has sent.
      */
     public function sentMessage()
