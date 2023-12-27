@@ -40,6 +40,13 @@ class User extends Authenticatable
      */
     protected $casts = [
         'email_verified_at' => 'datetime',
-        'password' => 'hashed',
     ];
+
+    /**
+     * Get the password reset token associated with the user.
+     */
+    public function passwordResetToken()
+    {
+        return $this->hasOne(PasswordResetToken::class);
+    }
 }
