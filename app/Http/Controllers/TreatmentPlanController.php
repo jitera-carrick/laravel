@@ -140,7 +140,7 @@ class TreatmentPlanController extends Controller
     }
 
     // New method for auto-canceling treatment plans
-    public function autoCancelTreatmentPlan(Request $request, $id)
+    public function autoCancelUnapprovedTreatmentPlan(Request $request, $id)
     {
         // Validate that $id is an integer
         if (!is_numeric($id) || intval($id) != $id) {
@@ -149,13 +149,27 @@ class TreatmentPlanController extends Controller
 
         try {
             $treatmentPlan = TreatmentPlan::findOrFail($id);
-            $treatmentPlan->status = 'auto_cancelled';
-            $treatmentPlan->save();
+            if ($treatmentPlan->status !== 'approved') {
+                DB::beginTransaction();
+                $treatmentPlan->status = 'auto_cancelled';
+                $treatmentPlan->save();
+                DB::commit();
 
-            return response()->json(new TreatmentPlanResource($treatmentPlan), 200);
+                // Cancel the associated reservation if it exists
+                $reservation = Reservation::where('treatment_plan_id', $treatmentPlan->id)->first();
+                if ($reservation) {
+                    $reservation->status = 'cancelled';
+                    $reservation->save();
+                }
+
+                return response()->json(new TreatmentPlanResource($treatmentPlan), 200);
+            } else {
+                return response()->json(['message' => 'No action taken. Treatment plan is already approved.'], 200);
+            }
         } catch (ModelNotFoundException $e) {
-            return response()->json(['error' => 'Treatment plan not found.'], 400);
+            return response()->json(['error' => 'Treatment plan not found.'], 404);
         } catch (\Exception $e) {
+            DB::rollBack();
             Log::error($e->getMessage());
             return response()->json(['error' => 'An error occurred while auto-canceling the treatment plan.'], 500);
         }
