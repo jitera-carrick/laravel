@@ -29,7 +29,49 @@ class TreatmentPlanController extends Controller
 
     public function createTreatmentPlan(Request $request)
     {
-        // ... (new code for createTreatmentPlan)
+        if (!Auth::check()) {
+            return response()->json(['error' => 'Unauthorized'], 401);
+        }
+
+        $validator = Validator::make($request->all(), [
+            'details' => 'required',
+            'stylist_id' => 'required|exists:stylists,id',
+            'user_id' => 'required|exists:users,id',
+        ], [
+            'details.required' => 'Treatment plan details are required.',
+            'stylist_id.exists' => 'Stylist not found.',
+            'user_id.exists' => 'User not found.',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json(['errors' => $validator->errors()], 422);
+        }
+
+        $validated = $validator->validated();
+
+        try {
+            DB::beginTransaction();
+
+            $treatmentPlan = new TreatmentPlan([
+                'details' => $validated['details'],
+                'stylist_id' => $validated['stylist_id'],
+                'user_id' => $validated['user_id'],
+            ]);
+
+            $treatmentPlan->save();
+
+            DB::commit();
+
+            return response()->json([
+                'status' => 200,
+                'treatment_plan' => new TreatmentPlanResource($treatmentPlan)
+            ]);
+
+        } catch (\Exception $e) {
+            DB::rollBack();
+            Log::error($e->getMessage());
+            return response()->json(['error' => 'An unexpected error occurred on the server.'], 500);
+        }
     }
 
     public function approveTreatmentPlan(Request $request, $id = null)
