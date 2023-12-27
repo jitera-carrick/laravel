@@ -5,9 +5,11 @@ use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\PasswordPolicyController;
 use App\Http\Controllers\Auth\ForgotPasswordController;
 use App\Http\Controllers\Auth\ResetPasswordController;
+use App\Http\Controllers\Auth\LoginController;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Facades\Hash;
 use App\Models\User;
+use Illuminate\Support\Facades\Auth;
 
 /*
 |--------------------------------------------------------------------------
@@ -73,7 +75,7 @@ Route::put('/users/password-reset/{token}', function (Request $request, $token) 
 });
 
 // Add a new route to handle the password reset request API endpoint
-Route::post('/api/password/reset/request', function (Request $request) {
+Route::post('/password/reset/request', function (Request $request) {
     $validator = Validator::make($request->all(), [
         'email' => 'required|email|exists:users,email',
     ], [
@@ -93,5 +95,44 @@ Route::post('/api/password/reset/request', function (Request $request) {
         return response()->json(['status' => 200, 'message' => 'Password reset email sent successfully.']);
     } else {
         return response()->json(['status' => 500, 'message' => 'An unexpected error occurred.'], 500);
+    }
+});
+
+// Define a new route for the login API
+Route::post('/login', function (Request $request) {
+    $validator = Validator::make($request->all(), [
+        'email' => 'required|email',
+        'password' => 'required|min:8',
+    ], [
+        'email.required' => 'Email is required.',
+        'email.email' => 'Invalid email format.',
+        'password.required' => 'Password is required.',
+        'password.min' => 'Password must be at least 8 characters.',
+    ]);
+
+    if ($validator->fails()) {
+        return response()->json(['errors' => $validator->errors()], 400);
+    }
+
+    $credentials = $request->only('email', 'password');
+    $remember = $request->input('remember', false);
+
+    if (Auth::attempt($credentials, $remember)) {
+        $user = Auth::user();
+        $tokenResult = $user->createToken('Personal Access Token');
+        $token = $tokenResult->token;
+        if ($remember) {
+            $token->expires_at = now()->addWeeks(1);
+        }
+        $token->save();
+
+        return response()->json([
+            'status' => 200,
+            'message' => 'Login successful.',
+            'session_token' => $tokenResult->accessToken,
+            'session_expiration' => $token->expires_at
+        ]);
+    } else {
+        return response()->json(['message' => 'Unauthorized'], 401);
     }
 });
