@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Http\Requests\StoreHairStylistRequest;
+use App\Http\Requests\UpdateHairStylistRequest; // Import the UpdateHairStylistRequest form request
 use App\Models\Request;
 use App\Models\RequestArea;
 use App\Models\RequestMenu;
@@ -11,6 +12,7 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request as HttpRequest;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Str;
 
@@ -78,6 +80,7 @@ class HairStylistRequestController extends Controller
                         'request_id' => $hairStylistRequest->id,
                         'file_path' => $filePath,
                         'file_size' => $file->getSize(),
+                        'file_format' => $file->getClientOriginalExtension(), // Added file_format from new code
                     ]);
                     $image->save();
                 }
@@ -156,4 +159,73 @@ class HairStylistRequestController extends Controller
     }
 
     // ... other methods ...
+
+    public function editRequest(UpdateHairStylistRequest $request, $requestId): JsonResponse
+    {
+        $validated = $request->validated();
+
+        try {
+            DB::beginTransaction();
+
+            $hairStylistRequest = Request::where('id', $requestId)
+                ->where('user_id', Auth::id())
+                ->firstOrFail();
+
+            if (isset($validated['area_ids'])) {
+                RequestArea::where('request_id', $hairStylistRequest->id)->delete();
+                foreach ($validated['area_ids'] as $areaId) {
+                    RequestArea::create([
+                        'request_id' => $hairStylistRequest->id,
+                        'area_id' => $areaId,
+                    ]);
+                }
+            }
+
+            if (isset($validated['menu_ids'])) {
+                RequestMenu::where('request_id', $hairStylistRequest->id)->delete();
+                foreach ($validated['menu_ids'] as $menuId) {
+                    RequestMenu::create([
+                        'request_id' => $hairStylistRequest->id,
+                        'menu_id' => $menuId,
+                    ]);
+                }
+            }
+
+            if (isset($validated['hair_concerns'])) {
+                $hairStylistRequest->update(['hair_concerns' => $validated['hair_concerns']]);
+            }
+
+            if (isset($validated['images'])) {
+                $existingImages = Image::where('request_id', $hairStylistRequest->id)->get();
+                foreach ($existingImages as $existingImage) {
+                    Storage::delete($existingImage->file_path);
+                    $existingImage->delete();
+                }
+
+                foreach ($validated['images'] as $file) {
+                    $filePath = $file->store('images', 'public');
+                    Image::create([
+                        'request_id' => $hairStylistRequest->id,
+                        'file_path' => $filePath,
+                        'file_size' => $file->getSize(),
+                        'file_format' => $file->getClientOriginalExtension(),
+                    ]);
+                }
+            }
+
+            DB::commit();
+
+            return response()->json([
+                'message' => 'Hair stylist request updated successfully.',
+                'data' => $hairStylistRequest->fresh(),
+            ], 200);
+
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return response()->json([
+                'message' => 'Failed to update hair stylist request.',
+                'error' => $e->getMessage(),
+            ], 500);
+        }
+    }
 }
