@@ -15,14 +15,14 @@ class AutoCancelTreatmentPlans extends Command
      *
      * @var string
      */
-    protected $signature = 'treatmentplans:autocancel';
+    protected $signature = 'treatmentplans:autocancel {current_time?}';
 
     /**
      * The console command description.
      *
      * @var string
      */
-    protected $description = 'Automatically cancel treatment plans that have not been reconfirmed 2 hours before the scheduled time';
+    protected $description = 'Automatically cancels unapproved treatment plans after 48 hours';
 
     /**
      * Execute the console command.
@@ -31,40 +31,57 @@ class AutoCancelTreatmentPlans extends Command
      */
     public function handle()
     {
-        $cancelledPlans = [];
-        $now = Carbon::now();
-        $twoHoursBefore = $now->copy()->subHours(2); // Corrected to subtract hours
+        // Retrieve the 'current_time' argument if provided, otherwise use the current system time
+        $current_time = $this->argument('current_time') ? new Carbon($this->argument('current_time')) : Carbon::now();
+        $cutoff_time = $current_time->copy()->subHours(48);
 
-        $treatmentPlans = TreatmentPlan::where('status', 'approved')->get();
+        try {
+            // Cancel unapproved treatment plans that are older than 48 hours
+            $canceled_plans = TreatmentPlan::where('status', '!=', 'approved')
+                ->where('created_at', '<', $cutoff_time)
+                ->update(['status' => 'canceled']);
 
-        foreach ($treatmentPlans as $plan) {
-            $reservation = Reservation::where('treatment_plan_id', $plan->id)->first();
+            $this->info("Successfully canceled {$canceled_plans} unapproved treatment plans.");
 
-            if ($reservation && $now->gte($reservation->scheduled_at->subHours(2)) && $now->lt($reservation->scheduled_at)) {
-                $plan->status = 'cancelled';
-                $plan->save();
+            // The following code is for the previous functionality of the command
+            // It should remain intact as per the instructions
+            $cancelledPlans = [];
+            $twoHoursBefore = $current_time->copy()->subHours(2);
 
-                $reservation->status = 'cancelled';
-                $reservation->save();
+            $treatmentPlans = TreatmentPlan::where('status', 'approved')->get();
 
-                // Send email notifications to the Customer, Hair Stylist, and Beauty Salon
-                // Assuming that the email templates and user retrieval logic are already defined
-                $customer = $plan->user;
-                $stylist = $plan->stylist;
-                $salon = 'salon@example.com'; // Placeholder for salon email
+            foreach ($treatmentPlans as $plan) {
+                $reservation = Reservation::where('treatment_plan_id', $plan->id)->first();
 
-                Mail::to($customer->email)->send(new \App\Mail\TreatmentPlanCancelledCustomer($plan, $reservation));
-                Mail::to($stylist->email)->send(new \App\Mail\TreatmentPlanCancelledStylist($plan, $reservation));
-                Mail::to($salon)->send(new \App\Mail\TreatmentPlanCancelledOwner($plan, $reservation));
+                if ($reservation && $current_time->gte($reservation->scheduled_at->subHours(2)) && $current_time->lt($reservation->scheduled_at)) {
+                    $plan->status = 'cancelled';
+                    $plan->save();
 
-                $cancelledPlans[] = [
-                    'treatment_plan_id' => $plan->id,
-                    'reservation_id' => $reservation->id,
-                    'cancelled_at' => $now->toDateTimeString(),
-                ];
+                    $reservation->status = 'cancelled';
+                    $reservation->save();
+
+                    // Send email notifications to the Customer, Hair Stylist, and Beauty Salon
+                    // Assuming that the email templates and user retrieval logic are already defined
+                    $customer = $plan->user;
+                    $stylist = $plan->stylist;
+                    $salon = 'salon@example.com'; // Placeholder for salon email
+
+                    Mail::to($customer->email)->send(new \App\Mail\TreatmentPlanCancelledCustomer($plan, $reservation));
+                    Mail::to($stylist->email)->send(new \App\Mail\TreatmentPlanCancelledStylist($plan, $reservation));
+                    Mail::to($salon)->send(new \App\Mail\TreatmentPlanCancelledOwner($plan, $reservation));
+
+                    $cancelledPlans[] = [
+                        'treatment_plan_id' => $plan->id,
+                        'reservation_id' => $reservation->id,
+                        'cancelled_at' => $current_time->toDateTimeString(),
+                    ];
+                }
             }
-        }
 
-        return $cancelledPlans;
+            return 0; // Success
+        } catch (\Exception $e) {
+            $this->error("An error occurred: {$e->getMessage()}");
+            return 1; // Error
+        }
     }
 }
