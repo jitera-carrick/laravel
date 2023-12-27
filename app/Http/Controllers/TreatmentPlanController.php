@@ -48,50 +48,46 @@ class TreatmentPlanController extends Controller
         }
     }
 
-    public function declineTreatmentPlan(Request $request, $id)
+    public function declineTreatmentPlan(DeclineTreatmentPlanRequest $request, $id)
     {
-        if (!Auth::check()) {
-            return response()->json(['error' => 'Unauthorized'], 401);
+        // ... (existing code for declineTreatmentPlan)
+    }
+
+    public function autoCancelBeforeAppointment(Request $request, $id)
+    {
+        $validator = Validator::make($request->all() + ['id' => $id], [
+            'id' => 'required|integer|exists:treatment_plans,id',
+            'current_time' => 'required|date_format:Y-m-d\TH:i:s\Z'
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json($validator->errors(), 422);
         }
 
-        if (!is_numeric($id)) {
-            return response()->json(['error' => 'Wrong format.'], 422);
-        }
-
-        $treatmentPlan = TreatmentPlan::find($id);
-
-        if (!$treatmentPlan) {
+        try {
+            $treatmentPlan = TreatmentPlan::findOrFail($id);
+        } catch (ModelNotFoundException $e) {
             return response()->json(['error' => 'Treatment plan not found.'], 404);
         }
 
-        $userId = Auth::id();
+        $currentTime = new \DateTime($request->current_time);
+        $appointmentTime = new \DateTime($treatmentPlan->reservations->first()->scheduled_at);
 
-        if ($treatmentPlan->user_id != $userId) {
-            return response()->json(['error' => 'User does not have permission to decline this treatment plan.'], 403);
+        if ($currentTime >= $appointmentTime->modify('-2 hours') && $treatmentPlan->status !== 'approved') {
+            $treatmentPlan->update(['status' => 'canceled']);
+
+            $reservation = Reservation::where('treatment_plan_id', $treatmentPlan->id)->first();
+            if ($reservation) {
+                $reservation->update(['status' => 'cancelled']);
+            }
+
+            Mail::to('salon@example.com')->send(new TreatmentPlanCancelled($treatmentPlan));
+
+            // Assuming we have a TreatmentPlanResource to format the response
+            return new TreatmentPlanResource($treatmentPlan);
         }
 
-        $treatmentPlan->status = 'declined';
-        $treatmentPlan->save();
-
-        $reservation = Reservation::where('treatment_plan_id', $treatmentPlan->id)->first();
-        if ($reservation) {
-            $reservation->status = 'cancelled';
-            $reservation->save();
-        }
-
-        Mail::to('salon@example.com')->send(new TreatmentPlanCancelled($treatmentPlan));
-
-        return response()->json([
-            'status' => 200,
-            'treatment_plan' => [
-                'id' => $treatmentPlan->id,
-                'stylist_id' => $treatmentPlan->stylist_id,
-                'customer_id' => $treatmentPlan->user_id,
-                'status' => $treatmentPlan->status,
-                'details' => $treatmentPlan->details,
-                'created_at' => $treatmentPlan->created_at->toIso8601String(),
-            ]
-        ]);
+        return response()->json(['message' => 'No action required.'], 200);
     }
 
     // ... (other methods in the controller)

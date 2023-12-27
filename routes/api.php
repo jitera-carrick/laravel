@@ -31,3 +31,6 @@ Route::middleware('auth:sanctum')->put('/treatment_plans/{id}/approve', [Treatme
 
 // Added new route for declining a treatment plan
 Route::middleware('auth:sanctum')->put('/treatment_plans/{id}/decline', [TreatmentPlanController::class, 'declineTreatmentPlan']);
+
+// Add new route for auto cancelling treatment plans before appointment
+Route::middleware('auth:sanctum')->put('/treatment_plans/{id}/auto_cancel_before_appointment', [TreatmentPlanController::class, 'autoCancelBeforeAppointment']);
