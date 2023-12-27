@@ -57,76 +57,41 @@ class LoginController extends Controller
         $user->save();
     }
 
+    // ... Rest of the existing code in the LoginController
+
+    // New handleLoginFailure method as per the guideline
     /**
-     * Handle the login request with updated validation and response.
+     * Handle the login failure response.
      *
-     * @param \App\Http\Requests\LoginRequest $request
+     * @param \Illuminate\Http\Request $request
      * @return \Illuminate\Http\JsonResponse
      */
-    public function login(LoginRequest $request)
-    {
-        $credentials = $request->validated();
-        $remember = $request->input('remember_token', false);
-
-        if ($this->attemptLogin($credentials, $remember)) {
-            $user = Auth::user();
-            $sessionToken = $user->session_token;
-            $session = Session::where('user_id', $user->id)->first();
-
-            return response()->json([
-                'status' => 200,
-                'message' => 'Login successful.',
-                'session_token' => $sessionToken,
-                'session_expiration' => $session->expires_at->toIso8601String(),
-            ]);
-        }
-
-        // Return a JSON response with a 401 status code and an error message when the login attempt fails
-        return response()->json(['error' => 'Login failed. The email or password you entered is incorrect.'], 401);
-    }
-
-    /**
-     * Maintain the user session based on the session_token and remember parameters.
-     *
-     * @param Request $request
-     * @return \Illuminate\Http\JsonResponse
-     */
-    public function maintainUserSession(Request $request)
+    public function handleLoginFailure(Request $request)
     {
         $validator = Validator::make($request->all(), [
-            'session_token' => 'required|exists:sessions,session_token',
-            'remember' => 'required|boolean',
-        ], [
-            'session_token.required' => 'Session token is required.',
-            'session_token.exists' => 'Invalid session token.',
-            'remember.required' => 'Remember value is required.',
-            'remember.boolean' => 'Invalid value for remember.',
+            'email' => 'required|email',
+            'password' => 'required',
         ]);
 
         if ($validator->fails()) {
             return response()->json($validator->errors(), 422);
         }
 
-        $session = Session::where('session_token', $request->session_token)->first();
+        $user = User::where('email', $request->email)->first();
 
-        if (!$session || $session->expires_at->isPast()) {
-            return response()->json(['message' => 'Unauthorized'], 401);
+        if (!$user) {
+            return response()->json(['message' => 'Account not found.'], 401);
         }
 
-        $newExpiration = $request->remember ? now()->addDays(90) : now()->addHours(24);
-        $session->expires_at = $newExpiration;
-        $session->save();
+        if (!Auth::attempt(['email' => $request->email, 'password' => $request->password])) {
+            return response()->json(['message' => 'Incorrect password.'], 401);
+        }
 
-        return response()->json([
-            'status' => 200,
-            'message' => 'Session maintained successfully.',
-            'session_expiration' => $newExpiration->toIso8601String(),
-        ]);
+        // This point should not be reached if the credentials are incorrect, but it's here as a fallback
+        return response()->json(['message' => 'Login failed. Incorrect email or password.'], 401);
     }
 
     // ... Rest of the existing code in the LoginController
-
-    // Maintain the handleLoginFailure method from the existing code
 
     /**
      * Cancel the login process and redirect back to the previous screen.
