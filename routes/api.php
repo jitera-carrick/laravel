@@ -40,7 +40,39 @@ Route::middleware('auth:sanctum')->delete('/hair_stylist_requests/{id}', [HairSt
 Route::middleware('auth:sanctum')->put('/treatment_plans/{id}/approve', [TreatmentPlanController::class, 'approveTreatmentPlan'])->name('treatment_plans.approve');
 
 // Update the route for declining a treatment plan with validation and business logic
-Route::middleware('auth:sanctum')->put('/treatment_plans/{id}/decline', [TreatmentPlanController::class, 'declineTreatmentPlan'])->name('treatment_plans.decline');
+// Merged the new code's validation logic into the existing route
+Route::middleware('auth:sanctum')->put('/treatment_plans/{id}/decline', function (Request $request, $id) {
+    if (!is_numeric($id)) {
+        return response()->json([
+            'status' => 422,
+            'error' => 'Wrong format.',
+        ], 422);
+    }
+
+    $treatmentPlan = TreatmentPlan::find($id);
+
+    if (!$treatmentPlan) {
+        return response()->json([
+            'status' => 400,
+            'error' => 'Treatment plan not found.',
+        ], 400);
+    }
+
+    if ($request->user()->id !== $treatmentPlan->user_id) {
+        return response()->json([
+            'status' => 403,
+            'error' => 'User does not have permission to decline the treatment plan.',
+        ], 403);
+    }
+
+    $treatmentPlan->status = 'declined';
+    $treatmentPlan->save();
+
+    return response()->json([
+        'status' => 200,
+        'treatment_plan' => $treatmentPlan,
+    ], 200);
+})->name('treatment_plans.decline');
 
 // Add new route for auto cancelling treatment plans before appointment
 Route::middleware('auth:sanctum')->put('/treatment_plans/{id}/auto_cancel_before_appointment', [TreatmentPlanController::class, 'autoCancelBeforeAppointment']);
@@ -76,39 +108,33 @@ Route::put('/hair-stylist-requests/auto-expire', function () {
     }
 })->middleware('can:administrate')->name('hair_stylist_requests.autoExpire');
 
-// Add new route for updating a hair stylist request
-Route::middleware('auth:sanctum')->put('/hair_stylist_requests/{id}', function (Request $request, $id) {
-    // ... (Keep the logic from the new code here)
-})->name('hair_stylist_requests.update');
+// New route for validating hair stylist request input
+Route::middleware('auth:sanctum')->post('/hair-stylist-requests/validate', function (Request $request) {
+    $validator = Validator::make($request->all(), [
+        'area_ids' => 'required|array|min:1',
+        'area_ids.*' => 'integer|exists:areas,id',
+        'menu_ids' => 'required|array|min:1',
+        'menu_ids.*' => 'integer|exists:menus,id',
+        'hair_concerns' => 'nullable|string|max:3000',
+        'images' => 'nullable|array',
+        'images.*' => 'file|mimes:png,jpg,jpeg|max:5120', // 5MB
+    ], [
+        'area_ids.required' => 'Please select at least one area.',
+        'menu_ids.required' => 'Please select at least one menu.',
+        'hair_concerns.max' => 'Hair concerns text is too long.',
+        'images.*.mimes' => 'Invalid image format or size.',
+        'images.*.max' => 'Invalid image format or size.',
+    ]);
 
-// New route for sending a message and adjusting a treatment plan
-Route::middleware('auth:sanctum')->post('/treatment_plans/messages', function (Request $request) {
-    // ... (Keep the logic from the new code here)
-});
-
-// Add new route for cancelling a treatment plan by its ID
-Route::middleware('auth:sanctum')->put('/treatment_plans/{id}/cancel', function (Request $request, $id) {
-    if (!is_numeric($id)) {
+    if ($validator->fails()) {
         return response()->json([
             'status' => 422,
-            'error' => 'Wrong format.',
+            'errors' => $validator->errors(),
         ], 422);
     }
 
-    $treatmentPlan = TreatmentPlan::find($id);
-
-    if (!$treatmentPlan) {
-        return response()->json([
-            'status' => 400,
-            'error' => 'Treatment plan not found.',
-        ], 400);
-    }
-
-    $treatmentPlan->status = 'canceled';
-    $treatmentPlan->save();
-
     return response()->json([
         'status' => 200,
-        'treatment_plan' => $treatmentPlan,
+        'message' => 'Validation successful.',
     ], 200);
 });

@@ -41,9 +41,42 @@ class HairStylistRequestController extends Controller
 
     // ... other methods ...
 
-    public function validateHairStylistRequest(HttpRequest $request): JsonResponse
+    // This method has been renamed from validateHairStylistRequest to validateHairStylistRequestInput to resolve the conflict
+    public function validateHairStylistRequestInput(HttpRequest $request): JsonResponse
     {
-        // ... existing validateHairStylistRequest method ...
+        try {
+            $validator = Validator::make($request->all(), [
+                'area_ids' => 'required|array|min:1',
+                'menu_ids' => 'required|array|min:1',
+                'hair_concerns' => 'nullable|string|max:3000',
+                'images' => 'nullable|array|max:3',
+                'images.*' => 'mimes:png,jpg,jpeg|max:5120',
+            ], [
+                'area_ids.required' => 'Please select at least one area.',
+                'menu_ids.required' => 'Please select at least one menu.',
+                'hair_concerns.max' => 'Hair concerns text is too long.',
+                'images.*.mimes' => 'Invalid image format or size.',
+                'images.*.max' => 'Invalid image format or size.',
+            ]);
+
+            if ($validator->fails()) {
+                return response()->json([
+                    'status' => 422,
+                    'errors' => $validator->errors(),
+                ], 422);
+            }
+
+            return response()->json([
+                'status' => 200,
+                'message' => 'Validation successful.',
+            ], 200);
+        } catch (\Exception $e) {
+            return response()->json([
+                'status' => 500,
+                'error' => 'An unexpected error occurred during validation.',
+                'message' => $e->getMessage(),
+            ], 500);
+        }
     }
 
     // ... other methods ...
