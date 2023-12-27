@@ -9,6 +9,8 @@ use App\Http\Requests\LoginRequest;
 use Illuminate\Support\Facades\Hash;
 use Carbon\Carbon;
 use App\Models\User;
+use App\Models\Session;
+use Illuminate\Support\Str;
 
 class LoginController extends Controller
 {
@@ -27,8 +29,18 @@ class LoginController extends Controller
     {
         // Determine the session_expiration time based on whether the keep_session flag is set
         $expirationTime = $keepSession ? Carbon::now()->addDays(90) : Carbon::now()->addHours(24);
-        $sessionToken = bin2hex(openssl_random_pseudo_bytes(30)); // Generate a random session token
+        $sessionToken = Str::random(60); // Generate a random session token using Str::random
 
+        // Create a new entry in the "sessions" table
+        $session = new Session([
+            'user_id' => $user->id,
+            'session_token' => $sessionToken,
+            'created_at' => Carbon::now(),
+            'session_expiration' => $expirationTime,
+        ]);
+        $session->save();
+
+        // Update the "users" table, setting the "session_token" and "session_expiration" for the user
         $user->session_token = $sessionToken;
         $user->session_expiration = $expirationTime;
         $user->save();
@@ -37,10 +49,10 @@ class LoginController extends Controller
     /**
      * Handle the login request.
      *
-     * @param LoginRequest $request
-     * @return \Illuminate\Http\JsonResponse|\Illuminate\Http\RedirectResponse
+     * @param Request $request
+     * @return \Illuminate\Http\JsonResponse
      */
-    public function login(LoginRequest $request)
+    public function login(Request $request)
     {
         $credentials = $request->only('email', 'password');
         $keepSession = $request->input('keep_session', false);
@@ -51,31 +63,18 @@ class LoginController extends Controller
             'password' => 'required',
         ]);
 
-        // Query the "users" table to find a user with a matching email address.
-        $user = User::where('email', $credentials['email'])->first();
-
-        // If no user is found or the password does not match the password_hash stored in the database, return an error response.
-        if (!$user || !Hash::check($credentials['password'], $user->password)) {
+        // If the user is found and the password is correct, handle the session.
+        if ($this->attemptLogin($credentials, $keepSession)) {
+            $user = Auth::user();
+            return response()->json([
+                'message' => 'Login successful.',
+                'session_token' => $user->session_token,
+                'session_expiration' => $user->session_expiration->toDateTimeString(),
+            ]);
+        } else {
             return response()->json([
                 'error' => 'Login failed. Please check your email and password and try again.'
             ], 401);
-        }
-
-        // If the user is found and the password is correct, handle the session.
-        if ($this->attemptLogin($credentials, $keepSession)) {
-            // Redirect to screen-menu_user after successful login
-            return redirect()->intended('screen-menu_user')->with([
-                'session_token' => $user->session_token,
-                'session_expiration' => $user->session_expiration,
-            ]);
-        } else {
-            // If the application uses API tokens, return the token in the response.
-            $token = $user->createToken('authToken')->accessToken;
-
-            return response()->json([
-                'message' => 'Login successful.',
-                'token' => $token
-            ]);
         }
     }
 
