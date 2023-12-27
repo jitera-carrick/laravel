@@ -16,7 +16,7 @@ use App\Mail\ResetPasswordConfirmationMail;
 use App\Services\PasswordPolicyService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Log;
-use Illuminate\Support\Facades\Route; // Import Route facade for defining routes
+use Illuminate\Support\Facades\Route;
 
 class ResetPasswordController extends Controller
 {
@@ -37,13 +37,78 @@ class ResetPasswordController extends Controller
     // New method to set a new password
     public function setNewPassword(Request $request)
     {
-        // Existing setNewPassword method code...
+        // Use PasswordPolicyService for password validation
+        $passwordPolicyService = new PasswordPolicyService();
+        $passwordPolicy = $passwordPolicyService->getPasswordPolicy();
+
+        $validator = Validator::make($request->all(), [
+            'email' => 'required|email', // Add email validation
+            'password' => array_merge([
+                'required',
+                'string',
+                'confirmed', // Add password confirmation validation
+                'min:6', // Ensure password has a minimum length of 6 characters
+                'regex:/^(?=.*[a-zA-Z])(?=.*\d).+$/', // Ensure password contains letters and numbers
+            ], $passwordPolicyService->getPasswordValidationRules($passwordPolicy)),
+            'token' => 'required|string',
+        ], [
+            'password.confirmed' => 'The password confirmation does not match.', // Add custom error message for password confirmation
+            'password.min' => 'Password must be 6 characters or more.', // Custom error message for minimum length
+            'password.regex' => 'Password must contain a mix of letters and numbers.', // Custom error message for regex
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json(['errors' => $validator->errors()], 422);
+        }
+
+        $token = $request->input('token');
+        $email = $request->input('email');
+        $passwordResetToken = PasswordResetToken::where('token', $token)->first();
+
+        if (!$passwordResetToken || $passwordResetToken->expires_at < now()) {
+            return response()->json(['message' => 'Token is invalid or has expired.'], 400);
+        }
+
+        $user = User::where('email', $email)->first();
+        if (!$user) {
+            return response()->json(['message' => 'User does not exist.'], 400);
+        }
+
+        // Encrypt the new password and update the user's password in the database
+        $user->password = Hash::make($request->input('password'));
+        $user->save();
+
+        // Set the status of the reset token to indicate it has been used
+        $passwordResetToken->status = 'used'; // Set the status to 'used'
+        $passwordResetToken->save();
+
+        // Send a confirmation email to the user
+        Mail::to($user->email)->send(new ResetPasswordConfirmationMail($user));
+
+        return response()->json(['status' => 200, 'message' => 'Your password has been successfully updated.'], 200);
     }
 
     // Method to validate the password reset token
     public function validatePasswordResetToken(Request $request, $token = null): JsonResponse
     {
-        // Existing validatePasswordResetToken method code...
+        // Use the token from the request if not provided as a parameter
+        $token = $token ?? $request->route('token');
+
+        // Check if the token is provided
+        if (empty($token)) {
+            return response()->json(['message' => 'Token is required.'], 400);
+        }
+
+        // Find the password reset token in the database
+        $passwordResetToken = PasswordResetToken::where('token', $token)->first();
+
+        // Check if the token exists and is not expired
+        if (!$passwordResetToken || $passwordResetToken->isExpired()) {
+            return response()->json(['message' => 'Invalid or expired token.'], 404);
+        }
+
+        // Return a success response if the token is valid
+        return response()->json(['status' => 200, 'message' => 'Token is valid. You may proceed to set a new password.'], 200);
     }
 
     // Updated method to handle password reset errors
