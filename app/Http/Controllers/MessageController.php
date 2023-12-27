@@ -5,9 +5,12 @@ namespace App\Http\Controllers;
 use App\Http\Requests\MessageRequest;
 use App\Models\Message;
 use App\Models\User;
+use App\Models\Stylist;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Mail;
 use App\Mail\TalkRoomNewMessage;
 use Carbon\Carbon;
+use Illuminate\Support\Facades\Auth;
 
 class MessageController extends Controller
 {
@@ -46,6 +49,41 @@ class MessageController extends Controller
             'receiver_id' => $message->receiver_id, // Use the receiver_id from the message
             'content' => $message->content,
             'sent_at' => $message->sent_at,
+        ]);
+    }
+
+    public function sendUserMessage(Request $request)
+    {
+        $request->validate([
+            'content' => 'required|string|max:500',
+            'recipient_id' => 'required|exists:stylists,user_id',
+        ]);
+
+        $user = Auth::user();
+        if (!$user || $user->is_logged_in !== true) {
+            return response()->json(['error' => 'User must be logged in to send messages.'], 401);
+        }
+
+        $recipient = Stylist::where('user_id', $request->recipient_id)->first();
+        if (!$recipient) {
+            return response()->json(['error' => 'Recipient must be a valid Hair Stylist.'], 404);
+        }
+
+        $message = new Message([
+            'content' => $request->content,
+            'user_id' => $user->id,
+            'receiver_id' => $recipient->user_id,
+            'sent_at' => Carbon::now(),
+            'read' => false,
+        ]);
+        $message->save();
+
+        Mail::to($recipient->user->email)->send(new TalkRoomNewMessage($message->content, url('/talkroom')));
+
+        return response()->json([
+            'message_id' => $message->id,
+            'sent_at' => $message->sent_at,
+            'read' => $message->read,
         ]);
     }
 
