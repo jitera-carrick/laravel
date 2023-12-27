@@ -3,6 +3,7 @@
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\PasswordPolicyController;
+use App\Http\Controllers\Auth\ForgotPasswordController;
 use App\Http\Controllers\Auth\ResetPasswordController; // Import the ResetPasswordController
 
 /*
@@ -25,6 +26,9 @@ Route::middleware(['auth:sanctum', 'can:update-password-policy'])->group(functio
     Route::put('/password-policy', [PasswordPolicyController::class, 'update']);
     Route::patch('/password-policy', [PasswordPolicyController::class, 'update']);
 });
+
+// Add a new route to handle the POST request for sending a password reset link
+Route::post('/users/password-reset', [ForgotPasswordController::class, 'sendPasswordResetLink']);
 
 // New route for validating password reset link
 Route::get('/users/password-reset/validate/{token}', [ResetPasswordController::class, 'validateResetToken']);

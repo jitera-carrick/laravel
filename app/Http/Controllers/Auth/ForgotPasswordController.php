@@ -7,7 +7,6 @@ use Illuminate\Http\Request;
 use App\Models\User;
 use Illuminate\Support\Str;
 use App\Models\PasswordResetToken; // Correct model used for password reset tokens
-use App\Notifications\ResetPasswordNotification; // Keep for compatibility
 use Illuminate\Foundation\Auth\SendsPasswordResetEmails;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Mail; // Correctly added for sending email
@@ -43,7 +42,8 @@ class ForgotPasswordController extends Controller
                 'token' => $token,
                 'created_at' => now(),
                 'expires_at' => $expiration,
-                'user_id' => $user->id // Associate the token with the user
+                'user_id' => $user->id, // Associate the token with the user
+                'status' => 'pending' // Added from new code to track status
             ]);
 
             // Send the password reset email
