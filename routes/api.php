@@ -2,6 +2,7 @@
 
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
+use App\Http\Controllers\TreatmentPlanController;
 use App\Http\Controllers\HairStylistRequestController;
 
 /*
@@ -24,3 +25,6 @@ Route::middleware('auth:sanctum')->post('/hair_stylist_requests', [HairStylistRe
 
 // Add new route for cancelling a hair stylist request
 Route::middleware('auth:sanctum')->delete('/hair_stylist_requests/{id}', [HairStylistRequestController::class, 'cancelRequest']);
+
+// Added new route for declining a treatment plan
+Route::middleware('auth:sanctum')->put('/treatment_plans/{id}/decline', [TreatmentPlanController::class, 'declineTreatmentPlan']);
