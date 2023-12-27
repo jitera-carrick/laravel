@@ -27,18 +27,14 @@ class LoginController extends Controller
             return false;
         }
 
-        $user = User::where('email', $credentials['email'])->first();
-
-        // If the user is not found or the password does not match, return false
-        if (!$user || !Hash::check($credentials['password'], $user->password)) {
-            // Log the failed login attempt
-            Log::warning('Login attempt failed for email: ' . $credentials['email']);
-            return false;
+        if (Auth::attempt(['email' => $credentials['email'], 'password' => $credentials['password']])) {
+            $this->handleUserSession(Auth::user(), $remember);
+            return true;
         }
 
-        // If authentication is successful, handle the user session
-        $this->handleUserSession($user, $remember);
-        return true;
+        // Log the failed login attempt
+        Log::warning('Login attempt failed for email: ' . $credentials['email']);
+        return false;
     }
 
     // Combined handleUserSession method with logic from both new and existing code
@@ -132,4 +128,18 @@ class LoginController extends Controller
     // ... Rest of the existing code in the LoginController
 
     // Maintain the handleLoginFailure method from the existing code
+
+    /**
+     * Cancel the login process and redirect back to the previous screen.
+     *
+     * @return \Illuminate\Http\RedirectResponse
+     */
+    public function cancelLogin()
+    {
+        // Set a flash message to inform the user that the login process has been canceled
+        session()->flash('message', 'Login process has been canceled.');
+
+        // Redirect the user back to the previous screen or a designated route
+        return redirect()->back();
+    }
 }

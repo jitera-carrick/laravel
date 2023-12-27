@@ -1,6 +1,7 @@
 <?php
 
 use Illuminate\Support\Facades\Route;
+use App\Http\Controllers\Controller;
 
 /*
 |--------------------------------------------------------------------------
@@ -16,3 +17,7 @@ use Illuminate\Support\Facades\Route;
 Route::get('/', function () {
     return view('welcome');
 });
+
+// Update the existing route '/cancel-login' to utilize the `cancelLogin` method from the `Controller` class.
+// The cancelLogin method should be created in the Controller to handle the cancellation process.
+Route::get('/cancel-login', [Controller::class, 'cancelLogin'])->name('cancel-login');
