@@ -118,3 +118,19 @@ Route::post('/login/cancel', function () {
         'message' => 'Login process canceled successfully.'
     ]);
 });
+
+// New route for initiating the password reset process
+Route::post('/users/password_reset/initiate', function (Request $request) {
+    $validator = Validator::make($request->all(), [
+        'email' => 'required|email',
+    ]);
+
+    if ($validator->fails()) {
+        return response()->json([
+            'message' => $validator->errors()->first()
+        ], 422);
+    }
+
+    // Assuming ForgotPasswordController has a method initiatePasswordReset that handles the business logic
+    return app(ForgotPasswordController::class)->initiatePasswordReset($request);
+});
