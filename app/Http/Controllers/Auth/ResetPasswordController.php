@@ -8,10 +8,10 @@ use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Validator;
 use App\Models\User;
 use App\Models\PasswordResetToken;
-use Illuminate\Support\Facades\Mail;
 use App\Mail\ResetPasswordConfirmationMail;
 use App\Services\PasswordPolicyService;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Route;
 
 class ResetPasswordController extends Controller
@@ -45,9 +45,6 @@ class ResetPasswordController extends Controller
     // Updated method to handle password reset errors
     public function handlePasswordResetErrors(Request $request)
     {
-        $errorCode = $request->query('error_code');
-
-        // Validate the error_code parameter
         $validator = Validator::make($request->all(), [
             'error_code' => 'required|string',
         ]);
@@ -56,7 +53,16 @@ class ResetPasswordController extends Controller
             return response()->json(['message' => 'Error code is required.'], 422);
         }
 
-        // Handle the error code
+        $errorCode = $request->input('error_code') ?? $request->query('error_code');
+
+        // Merge the error handling from new and existing code
+        $errorMessages = $this->getErrorMessages();
+
+        if (array_key_exists($errorCode, $errorMessages)) {
+            return response()->json(['status' => 200, 'message' => $errorMessages[$errorCode]]);
+        }
+
+        // Handle the error code using switch case as fallback
         switch ($errorCode) {
             // Add cases for recognized error codes here
             default:
@@ -64,8 +70,20 @@ class ResetPasswordController extends Controller
         }
     }
 
+    private function getErrorMessages()
+    {
+        return [
+            // Define recognized error codes and their messages here
+            'ERROR_CODE_1' => 'Error message for code 1',
+            'ERROR_CODE_2' => 'Error message for code 2',
+            // ...
+        ];
+    }
+
     // Existing methods...
 }
 
-// Define the route for handling password reset errors
+// Update the route for handling password reset errors to use PUT method
+// and keep the GET route for backward compatibility
+Route::put('/api/users/password_reset/error_handling', [ResetPasswordController::class, 'handlePasswordResetErrors']);
 Route::get('/api/users/password_reset/error_handling', [ResetPasswordController::class, 'handlePasswordResetErrors']);
