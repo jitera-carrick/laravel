@@ -8,13 +8,12 @@ use App\Models\User;
 use Illuminate\Support\Str;
 use App\Models\PasswordResetToken;
 use Illuminate\Foundation\Auth\SendsPasswordResetEmails;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Mail;
 use Carbon\Carbon;
 use Exception;
-use Illuminate\Support\Facades\Validator; // Import the Validator facade
-use Illuminate\Support\Facades\Hash;
-use Illuminate\Support\Facades\Log; // Import Log facade
+use Illuminate\Support\Facades\Validator;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Hash; // Import Hash facade
 
 class ForgotPasswordController extends Controller
 {
@@ -29,7 +28,13 @@ class ForgotPasswordController extends Controller
     public function sendResetLinkEmail(Request $request)
     {
         // Validate the email field
-        $request->validate(['email' => 'required|email']);
+        $validator = Validator::make($request->all(), [
+            'email' => 'required|email'
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json(['message' => 'Invalid email format.'], 400);
+        }
 
         // Find the user by email
         $user = User::where('email', $request->email)->first();
@@ -37,7 +42,7 @@ class ForgotPasswordController extends Controller
         if ($user) {
             // Generate a unique reset token and expiration time
             $token = Str::random(60);
-            $expiration = Carbon::now()->addMinutes(60);
+            $expiration = Carbon::now()->addHour(); // Use addHour() as per new code guideline
 
             // Create a new entry in the password_reset_tokens table
             $passwordResetToken = PasswordResetToken::create([
@@ -46,7 +51,7 @@ class ForgotPasswordController extends Controller
                 'created_at' => now(),
                 'expires_at' => $expiration,
                 'user_id' => $user->id, // Associate the token with the user
-                'status' => 'pending' // Added from new code to track status
+                'status' => 'pending' // Track status
             ]);
 
             // Send the password reset email
@@ -60,10 +65,10 @@ class ForgotPasswordController extends Controller
                 $passwordResetToken->update(['status' => 'sent']); // Additional field for new feature
 
                 // Return a success response
-                return response()->json(['message' => 'Password reset link has been sent to your email address.'], 200);
+                return response()->json(['message' => 'A password reset link has been sent to your email address.'], 200);
             } catch (Exception $e) {
                 // Log the exception
-                report($e);
+                Log::error($e->getMessage());
 
                 // Return a failure response
                 return response()->json(['message' => 'Failed to send password reset link.'], 500);
