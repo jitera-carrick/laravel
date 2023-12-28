@@ -9,6 +9,7 @@ use App\Models\RequestImage;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request as HttpRequest;
+use Illuminate\Support\Facades\Validator;
 
 class UserController extends Controller
 {
@@ -66,6 +67,69 @@ class UserController extends Controller
         return response()->json($responseData);
     }
 
+    // New method to create a request
+    public function createRequest(HttpRequest $httpRequest): JsonResponse
+    {
+        // Ensure the user is authenticated
+        $userId = $httpRequest->input('user_id');
+        $user = User::find($userId);
+        if (!$user || $userId != Auth::id()) {
+            return response()->json(['message' => 'Unauthorized.'], 401);
+        }
+
+        // Validate the input fields
+        $validator = Validator::make($httpRequest->all(), [
+            'area' => 'required|string',
+            'menu' => 'required|string',
+            'hair_concerns' => 'nullable|string|max:3000',
+            'image_path' => 'nullable|array',
+            'image_path.*' => 'image|mimes:jpeg,png,jpg,gif,svg|max:5120', // 5MB
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json(['message' => $validator->errors()->first()], 422);
+        }
+
+        $validatedData = $validator->validated();
+
+        // Check if the user has an existing request that has not passed a certain date and time
+        $existingRequest = HairStylistRequest::where('user_id', $user->id)
+            ->where('status', 'pending')
+            ->where('created_at', '>', now()->subDays(30)) // Example: Check if the request was created within the last 30 days
+            ->first();
+
+        if ($existingRequest) {
+            return response()->json(['message' => 'You already have a pending request.'], 422);
+        }
+
+        // Create a new request
+        $request = new HairStylistRequest([
+            'user_id' => $user->id,
+            'area' => $validatedData['area'],
+            'menu' => $validatedData['menu'],
+            'hair_concerns' => $validatedData['hair_concerns'] ?? '',
+            'status' => 'pending',
+        ]);
+        $request->save();
+
+        // Create request images if provided
+        if (isset($validatedData['image_path'])) {
+            foreach ($validatedData['image_path'] as $image) {
+                $requestImage = new RequestImage([
+                    'request_id' => $request->id,
+                    'image_path' => $image->store('request_images', 'public'), // Example: Store the image in the 'public/request_images' directory
+                ]);
+                $requestImage->save();
+            }
+        }
+
+        // Return a JSON response with a confirmation message
+        return response()->json([
+            'message' => 'Request successfully registered.',
+            'request_id' => $request->id,
+        ]);
+    }
+
     // Updated method to cancel a hair stylist request
     public function cancelHairStylistRequest(HttpRequest $request): JsonResponse
     {
@@ -94,36 +158,6 @@ class UserController extends Controller
             'status' => $hairStylistRequest->status,
             'message' => 'Hair stylist request registration has been successfully canceled.'
         ]);
-    }
-
-    // New method to delete a request image
-    public function deleteRequestImage(HttpRequest $request): JsonResponse
-    {
-        // Validate the image_id and check if it exists in the request_images table
-        $validatedData = $request->validate([
-            'image_id' => 'required|exists:request_images,id',
-        ]);
-
-        // Use the RequestImage model to find the image by image_id
-        $requestImage = RequestImage::find($validatedData['image_id']);
-
-        // If the image does not exist, return a response with an error message and a 404 status code
-        if (!$requestImage) {
-            return response()->json(['message' => 'Image not found.'], 404);
-        }
-
-        // Implement authorization logic to verify that the authenticated user has permission to delete the image
-        $hairStylistRequest = HairStylistRequest::find($requestImage->request_id);
-        if (!$hairStylistRequest || $hairStylistRequest->user_id != Auth::id()) {
-            // If the user is not authorized, return a response with an error message and a 403 status code
-            return response()->json(['message' => 'Unauthorized to delete this image.'], 403);
-        }
-
-        // If the image exists and the user is authorized, delete the image record from the request_images table
-        $requestImage->delete();
-
-        // Return a response with a confirmation message indicating that the image has been successfully deleted
-        return response()->json(['message' => 'Image has been successfully deleted.'], 200);
     }
 
     // ... other methods ...
