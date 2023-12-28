@@ -3,7 +3,10 @@
 namespace App\Http\Controllers;
 
 use App\Http\Requests\UpdateUserProfileRequest;
+use App\Http\Requests\CreateHairStylistRequest;
 use App\Models\User;
+use App\Models\Request;
+use App\Models\RequestImage;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Notification;
@@ -11,6 +14,7 @@ use App\Notifications\VerifyEmailNotification;
 use Carbon\Carbon;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Validation\ValidationException;
+use Illuminate\Support\Facades\Validator;
 
 class UserController extends Controller
 {
@@ -61,7 +65,6 @@ class UserController extends Controller
         return response()->json(['message' => 'Profile updated successfully.'], 200);
     }
 
-    // New method for updating user profile information
     public function updateUserProfile(UpdateUserProfileRequest $request): JsonResponse
     {
         $user = Auth::user();
@@ -94,6 +97,61 @@ class UserController extends Controller
                 'name' => $user->name,
                 'email' => $user->email,
                 'updated_at' => $user->updated_at->toIso8601String(),
+            ]
+        ], 200);
+    }
+
+    public function createHairStylistRequest(CreateHairStylistRequest $request): JsonResponse
+    {
+        // Ensure that the user_id corresponds to a logged-in customer
+        if ($request->user_id != Auth::id()) {
+            return response()->json(['message' => 'Unauthorized action.'], 403);
+        }
+
+        // Validate "area" and "menu" fields
+        $validator = Validator::make($request->all(), [
+            'area' => 'required|string',
+            'menu' => 'required|string',
+            'hair_concerns' => 'sometimes|string|max:3000',
+            'image_paths.*' => 'sometimes|file|image|max:5120|mimes:png,jpg,jpeg',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json(['message' => $validator->errors()], 422);
+        }
+
+        // Create a new entry in the requests table using the validated data
+        $hairStylistRequest = Request::create([
+            'user_id' => $request->user_id,
+            'area' => $request->area,
+            'menu' => $request->menu,
+            'hair_concerns' => $request->hair_concerns,
+            'status' => 'pending', // Default status
+        ]);
+
+        // If image_paths are provided, iterate over each path and create new entries in the request_images table
+        if ($request->has('image_paths')) {
+            $images = $request->file('image_paths');
+            if (count($images) > 3) {
+                return response()->json(['message' => 'You can only upload up to 3 images.'], 422);
+            }
+
+            foreach ($images as $image) {
+                $path = $image->store('request_images', 'public'); // Assuming 'public' disk is configured
+                RequestImage::create([
+                    'image_path' => $path,
+                    'request_id' => $hairStylistRequest->id,
+                ]);
+            }
+        }
+
+        // Return a success response with the request ID, status, and a confirmation message
+        return response()->json([
+            'status' => 200,
+            'message' => 'Hair stylist request created successfully.',
+            'request' => [
+                'id' => $hairStylistRequest->id,
+                'status' => $hairStylistRequest->status,
             ]
         ], 200);
     }
