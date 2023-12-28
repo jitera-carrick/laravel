@@ -3,7 +3,6 @@
 namespace App\Http\Controllers;
 
 use App\Http\Requests\UpdateUserProfileRequest;
-use App\Http\Requests\CreateHairStylistRequest;
 use App\Models\User;
 use App\Models\Request;
 use App\Models\RequestImage;
@@ -14,7 +13,6 @@ use App\Notifications\VerifyEmailNotification;
 use Carbon\Carbon;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Validation\ValidationException;
-use Illuminate\Support\Facades\Validator;
 
 class UserController extends Controller
 {
@@ -73,6 +71,7 @@ class UserController extends Controller
         try {
             $validatedData = $request->validate([
                 'name' => 'required|string|max:255',
+                // The unique validation rule should ignore the current user's ID
                 'email' => 'required|email|unique:users,email,' . $user->id,
             ]);
         } catch (ValidationException $e) {
@@ -101,58 +100,31 @@ class UserController extends Controller
         ], 200);
     }
 
-    public function createHairStylistRequest(CreateHairStylistRequest $request): JsonResponse
+    /**
+     * Deletes a request image associated with a hair stylist request.
+     *
+     * @param int $request_id The ID of the request.
+     * @param int $image_id The ID of the image to be deleted.
+     * @return JsonResponse
+     * @throws ValidationException If the image is not associated with the request.
+     */
+    public function deleteRequestImage(int $request_id, int $image_id): JsonResponse
     {
-        // Ensure that the user_id corresponds to a logged-in customer
-        if ($request->user_id != Auth::id()) {
-            return response()->json(['message' => 'Unauthorized action.'], 403);
-        }
+        // Ensure that the request exists
+        $request = Request::findOrFail($request_id);
 
-        // Validate "area" and "menu" fields
-        $validator = Validator::make($request->all(), [
-            'area' => 'required|string',
-            'menu' => 'required|string',
-            'hair_concerns' => 'sometimes|string|max:3000',
-            'image_paths.*' => 'sometimes|file|image|max:5120|mimes:png,jpg,jpeg',
-        ]);
+        // Check if the image is associated with the request
+        $image = RequestImage::where('request_id', $request_id)
+                             ->where('id', $image_id)
+                             ->firstOrFail();
 
-        if ($validator->fails()) {
-            return response()->json(['message' => $validator->errors()], 422);
-        }
+        // Delete the image
+        $image->delete();
 
-        // Create a new entry in the requests table using the validated data
-        $hairStylistRequest = Request::create([
-            'user_id' => $request->user_id,
-            'area' => $request->area,
-            'menu' => $request->menu,
-            'hair_concerns' => $request->hair_concerns,
-            'status' => 'pending', // Default status
-        ]);
-
-        // If image_paths are provided, iterate over each path and create new entries in the request_images table
-        if ($request->has('image_paths')) {
-            $images = $request->file('image_paths');
-            if (count($images) > 3) {
-                return response()->json(['message' => 'You can only upload up to 3 images.'], 422);
-            }
-
-            foreach ($images as $image) {
-                $path = $image->store('request_images', 'public'); // Assuming 'public' disk is configured
-                RequestImage::create([
-                    'image_path' => $path,
-                    'request_id' => $hairStylistRequest->id,
-                ]);
-            }
-        }
-
-        // Return a success response with the request ID, status, and a confirmation message
+        // Return a confirmation message
         return response()->json([
-            'status' => 200,
-            'message' => 'Hair stylist request created successfully.',
-            'request' => [
-                'id' => $hairStylistRequest->id,
-                'status' => $hairStylistRequest->status,
-            ]
+            'message' => 'Image deleted successfully.',
+            'image_id' => $image_id
         ], 200);
     }
 }
