@@ -21,11 +21,8 @@ Route::middleware('auth:sanctum')->get('/user', function (Request $request) {
     return $request->user();
 });
 
-// New route for resetting the user's password
-Route::post('/users/reset-password', [ResetPasswordController::class, 'resetPassword']);
-
 // New route for user registration with throttle middleware
 Route::post('/users/register', [RegisterController::class, 'register'])->middleware('throttle:api');
 
-// New route for validating the password reset token
-Route::get('/users/validate_password_reset_token/{token}', [ResetPasswordController::class, 'validatePasswordResetToken']);
+// Updated route for resetting the user's password with PUT method and token parameter
+Route::put('/users/reset_password/{token}', [ResetPasswordController::class, 'resetPassword']);

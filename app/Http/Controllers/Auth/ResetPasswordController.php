@@ -15,7 +15,6 @@ use Illuminate\Http\Request;
 use App\Models\User;
 use App\Models\PasswordResetToken;
 use Illuminate\Support\Facades\Mail;
-use Exception;
 
 class ResetPasswordController extends Controller
 {
@@ -38,13 +37,22 @@ class ResetPasswordController extends Controller
         // ...
     }
 
-    // New method for validating password reset token
-    public function validatePasswordResetToken($token): JsonResponse
+    // Updated method for resetting password with token
+    public function resetPasswordWithToken(Request $request, $token): JsonResponse
     {
-        if (empty($token)) {
-            return ApiResponse::error(['message' => 'Token is required.'], 400);
+        $validator = Validator::make($request->all(), [
+            'password' => 'required|min:8|regex:/^(?=.*[a-zA-Z])(?=.*\d).+$/',
+        ], [
+            'password.required' => 'Password is required.',
+            'password.min' => 'Password must be at least 8 characters long.',
+            'password.regex' => 'Password does not meet the required policy.',
+        ]);
+
+        if ($validator->fails()) {
+            return ApiResponse::error($validator->errors(), 422);
         }
 
+        DB::beginTransaction();
         try {
             $passwordResetToken = PasswordResetToken::where('token', $token)
                 ->where('used', false)
@@ -52,12 +60,28 @@ class ResetPasswordController extends Controller
                 ->first();
 
             if (!$passwordResetToken) {
-                return ApiResponse::error(['message' => 'Invalid or expired token.'], 404);
+                DB::rollBack();
+                return ApiResponse::error(['message' => 'Token is required.'], 404);
             }
 
-            return ApiResponse::success(['message' => 'Token is valid. You may proceed to reset your password.']);
-        } catch (Exception $e) {
-            return ApiResponse::error(['message' => 'An error occurred while validating the token.'], 500);
+            $user = $passwordResetToken->user; // Assuming the PasswordResetToken model has a 'user' relationship
+            if (!$user) {
+                DB::rollBack();
+                return ApiResponse::error(['message' => 'User not found.'], 404);
+            }
+
+            $user->password = Hash::make($request->password);
+            $user->last_password_reset = Carbon::now();
+            $user->save();
+
+            $passwordResetToken->used = true;
+            $passwordResetToken->save();
+
+            DB::commit();
+            return ApiResponse::success(['message' => 'Your password has been successfully reset.'], 200);
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return ApiResponse::error(['message' => 'An error occurred while resetting the password.'], 500);
         }
     }
 
