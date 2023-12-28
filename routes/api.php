@@ -23,4 +23,4 @@ Route::middleware('auth:sanctum')->get('/user', function (Request $request) {
 // New route for resetting the user's password
 Route::post("/users/reset-password", [ResetPasswordController::class, 'resetPassword']);
 // New route for user registration with throttle middleware
-Route::post("/users/register", [RegisterController::class, "register"])->middleware('throttle:api');
+Route::post("/users/register", [RegisterController::class, "register"])->middleware("throttle:api");
