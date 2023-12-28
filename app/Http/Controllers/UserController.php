@@ -33,31 +33,53 @@ class UserController extends Controller
     // Updated method to cancel a hair stylist request
     public function cancelHairStylistRequest(HttpRequest $request): JsonResponse
     {
-        // Validate the request_id and check if it exists in the requests table
-        $validatedData = $request->validate([
-            'request_id' => 'required|exists:requests,id',
-        ]);
+        // Existing code for cancelHairStylistRequest method
+        // ...
+    }
 
-        // Retrieve the HairStylistRequest model instance using the request_id
-        $hairStylistRequest = HairStylistRequest::findOrFail($validatedData['request_id']);
-
-        // Check if the authenticated user is the owner of the request
-        if ($hairStylistRequest->user_id != Auth::id()) {
-            return response()->json(['message' => 'Unauthorized access.'], 403);
+    /**
+     * Delete an image from a hair stylist request.
+     *
+     * @param  HttpRequest $request
+     * @param  int  $request_id
+     * @param  int  $image_id
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function deleteHairStylistRequestImage(HttpRequest $request, $request_id, $image_id): JsonResponse
+    {
+        // Validate the request_id and image_id to ensure they are numbers
+        if (!is_numeric($request_id) || !is_numeric($image_id)) {
+            return response()->json(['message' => 'Invalid ID format.'], 400);
         }
 
-        // Update the status column of the HairStylistRequest instance to 'canceled'
-        $hairStylistRequest->status = 'canceled';
+        // Ensure the user is authenticated
+        if (!Auth::check()) {
+            return response()->json(['message' => 'Unauthorized.'], 401);
+        }
 
-        // Save the changes to the HairStylistRequest instance
-        $hairStylistRequest->save();
+        try {
+            $hairStylistRequest = HairStylistRequest::findOrFail($request_id);
+            $image = RequestImage::where('request_id', $hairStylistRequest->id)
+                                 ->where('id', $image_id)
+                                 ->first();
 
-        // Return a JsonResponse with the request_id, updated status, and a confirmation message
-        return response()->json([
-            'request_id' => $hairStylistRequest->id,
-            'status' => $hairStylistRequest->status,
-            'message' => 'Hair stylist request registration has been successfully canceled.'
-        ]);
+            if (!$image) {
+                return response()->json(['message' => 'Image not found.'], 404);
+            }
+
+            // Check if the authenticated user is the owner of the request
+            if ($hairStylistRequest->user_id != Auth::id()) {
+                return response()->json(['message' => 'Unauthorized access.'], 403);
+            }
+
+            $image->delete();
+
+            return response()->json(['message' => 'Image successfully deleted.'], 200);
+        } catch (\Exception $e) {
+            // Log the exception and return a 500 error response
+            \Log::error($e->getMessage());
+            return response()->json(['message' => 'An unexpected error occurred.'], 500);
+        }
     }
 
     // ... other methods ...
