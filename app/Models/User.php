@@ -2,7 +2,6 @@
 
 namespace App\Models;
 
-// use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
@@ -65,5 +64,11 @@ class User extends Authenticatable
     public function passwordResetToken() // Relationship name changed to singular form
     {
         return $this->hasOne(PasswordResetToken::class, 'user_id');
+    }
+
+    // Define the one-to-many relationship with Request
+    public function requests()
+    {
+        return $this->hasMany(Request::class, 'user_id');
     }
 }
