@@ -20,7 +20,11 @@ class RegisterController extends Controller
         // Validate that all required fields are provided and not empty.
         $validator = Validator::make($request->all(), [
             'name' => 'required|string|max:255',
-            'email' => 'required|string|email|max:255|unique:users,email',
+            'email' => ['required', 'string', 'email', 'max:255', 'unique:users,email', function($attribute, $value, $fail) {
+                if (!filter_var($value, FILTER_VALIDATE_EMAIL)) {
+                    return $fail($attribute.' is invalid.');
+                }
+            }],
             'password' => 'required|string|min:8|confirmed',
         ], [
             'name.required' => 'The name is required.',
@@ -37,11 +41,17 @@ class RegisterController extends Controller
             throw new ValidationException($validator);
         }
 
+        // Hash the password with a generated salt
+        $salt = Str::random(16);
+        $hashedPassword = Hash::make($request->password . $salt);
+
         // Create the user
         $user = User::create([
             'name' => $request->name,
             'email' => $request->email,
-            'password' => Hash::make($request->password),
+            'password_hash' => $hashedPassword,
+            'password_salt' => $salt,
+            'email_verified_at' => null, // Set email_verified_at to null for new registrations
             'remember_token' => Str::random(60),
             // 'created_at' and 'updated_at' will be automatically set by Eloquent
         ]);
