@@ -6,10 +6,12 @@ use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Validator;
+use Illuminate\Support\Facades\Cookie;
 use Illuminate\Support\Str;
 use App\Models\LoginAttempt;
 use App\Models\User;
-use App\Models\Session; // Import the Session model
+
+use App\Models\Session;
 use App\Services\RecaptchaService; // Import the RecaptchaService
 
 class LoginController extends Controller
@@ -69,20 +71,40 @@ class LoginController extends Controller
         }
     }
 
-    public function cancelLogout(Request $request)
+  public function logout(Request $request)
     {
-        $sessionToken = $request->cookie('session_token');
+        try {
+            $sessionToken = $request->cookie('session_token'); // Use the cookie method to retrieve the session token
+            $session = Session::where('session_token', $sessionToken)
+                              ->where('is_active', true)
+                              ->first();
 
-        if (!$sessionToken) {
-            return response()->json(['message' => 'No session token provided.'], 400);
+            if ($session) {
+                $user = $session->user;
+                $user->is_logged_in = false;
+                $user->save();
+
+                $session->is_active = false;
+                $session->save();
+
+                Cookie::queue(Cookie::forget('session_token'));
+
+                return response()->json([
+                    'status' => 200,
+                    'message' => 'Logout successful.'
+                ]);
+            }
+
+            return response()->json([
+                'status' => 400,
+                'message' => 'No active session found.'
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'status' => 500,
+                'message' => 'An error occurred during logout.',
+                'error' => $e->getMessage()
+            ]);
         }
-
-        $session = Session::where('session_token', $sessionToken)->first();
-
-        if ($session && $session->is_active) {
-            return response()->json(['message' => 'Logout cancelled. You are still logged in.']);
-        }
-
-        return response()->json(['message' => 'Session not found or inactive.'], 404);
     }
 }
