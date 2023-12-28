@@ -40,6 +40,11 @@ class User extends Authenticatable
      */
     protected $casts = [
         'email_verified_at' => 'datetime',
-        'password' => 'hashed',
     ];
+
+    // Define the one-to-many relationship with LoginAttempt
+    public function loginAttempts()
+    {
+        return $this->hasMany(LoginAttempt::class, 'user_id');
+    }
 }
