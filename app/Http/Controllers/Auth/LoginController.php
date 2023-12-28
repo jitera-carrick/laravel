@@ -11,7 +11,7 @@ use App\Models\LoginAttempt;
 use App\Models\User;
 use App\Models\Session; // Import the Session model
 use App\Services\RecaptchaService; // Import the RecaptchaService
-use Exception; // Import Exception class
+use Illuminate\Support\Facades\Auth; // Import the Auth facade
 
 class LoginController extends Controller
 {
@@ -70,35 +70,44 @@ class LoginController extends Controller
         }
     }
 
-    // Updated cancelLogout method as per the new guidelines
     public function cancelLogout(Request $request)
     {
+        $sessionToken = $request->cookie('session_token');
+
+        if (!$sessionToken) {
+            return response()->json(['message' => 'No session token provided.'], 400);
+        }
+
+        $session = Session::where('session_token', $sessionToken)->first();
+
+        if ($session && $session->is_active) {
+            return response()->json(['message' => 'Logout cancelled. You are still logged in.']);
+        }
+
+        return response()->json(['message' => 'Session not found or inactive.'], 404);
+    }
+
+    // New logout method
+    public function logout(Request $request)
+    {
+        if (!Auth::check()) {
+            return response()->json([
+                'status' => 401,
+                'message' => 'User is not authenticated.'
+            ], 401);
+        }
+
         try {
-            // Assuming the user is authenticated using Oauth2 method with Access Token
-            $user = $request->user();
-            if (!$user) {
-                return response()->json([
-                    'status' => 401,
-                    'message' => 'User is not authenticated.'
-                ], 401);
-            }
+            // Revoke the token that was used to authenticate the current request
+            $request->user()->token()->revoke();
 
-            $activeSession = $user->sessions()->where('is_active', true)->first();
-
-            if ($activeSession) {
-                // Optionally, you could also update the session's data here if needed
-                return response()->json([
-                    'status' => 200,
-                    'message' => 'Logout has been cancelled successfully.'
-                ], 200);
-            } else {
-                return response()->json([
-                    'status' => 401,
-                    'message' => 'No active session found or user is not authenticated.'
-                ], 401);
-            }
-        } catch (Exception $e) {
-            // Log the exception if needed
+            // Return a success response
+            return response()->json([
+                'status' => 200,
+                'message' => 'You have been successfully logged out.'
+            ], 200);
+        } catch (\Exception $e) {
+            // Return an error response in case of exception
             return response()->json([
                 'status' => 500,
                 'message' => 'An unexpected error occurred on the server.'
