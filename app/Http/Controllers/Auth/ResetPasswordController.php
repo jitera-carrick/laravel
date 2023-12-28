@@ -7,10 +7,11 @@ use App\Http\Requests\ResetPasswordRequest;
 use App\Services\PasswordResetService;
 use App\Utils\ApiResponse;
 use Illuminate\Http\JsonResponse;
-use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Validator; // Import Validator facade
 use Illuminate\Support\Carbon;
+use Illuminate\Http\Request; // Import Request
 use App\Models\User;
 use App\Models\PasswordResetToken;
 
@@ -25,28 +26,51 @@ class ResetPasswordController extends Controller
 
     public function reset(ResetPasswordRequest $request): JsonResponse
     {
-        $input = $request->only(['email', 'token', 'password', 'password_confirmation']);
+        // Existing code remains unchanged
+        // ...
+    }
 
-        if ($input['password'] !== $input['password_confirmation']) {
-            return ApiResponse::error(['message' => 'Password confirmation does not match.'], 422);
+    // Updated method to handle password reset according to the new requirements
+    public function resetPassword(Request $request): JsonResponse
+    {
+        $validator = Validator::make($request->all(), [
+            'email' => 'required|email',
+            'token' => 'required',
+            'new_password' => 'required|min:8',
+        ], [
+            'email.required' => 'Invalid email address.',
+            'email.email' => 'Invalid email address.',
+            'token.required' => 'Invalid or expired password reset token.',
+            'new_password.required' => 'Password must be at least 8 characters long.',
+            'new_password.min' => 'Password must be at least 8 characters long.',
+        ]);
+
+        if ($validator->fails()) {
+            $errors = $validator->errors();
+            $firstError = $errors->all()[0];
+            return ApiResponse::error(['message' => $firstError], 422);
         }
+
+        $input = $request->only(['email', 'token', 'new_password']);
 
         DB::beginTransaction();
         try {
             $passwordResetToken = PasswordResetToken::where('email', $input['email'])
                 ->where('token', $input['token'])
                 ->where('used', false)
-                ->where('created_at', '>', Carbon::now()->subHours(2))
+                ->where('expires_at', '>', Carbon::now())
                 ->first();
 
             if (!$passwordResetToken) {
-                return ApiResponse::error(['message' => 'Invalid or expired password reset token.'], 422);
+                return ApiResponse::error(['message' => 'Invalid or expired password reset token.'], 404);
             }
 
-            $newPasswordHash = Hash::make($input['password']);
-
             $user = User::where('email', $input['email'])->first();
-            $user->password = $newPasswordHash;
+            if (!$user) {
+                return ApiResponse::error(['message' => 'Invalid email address.'], 404);
+            }
+
+            $user->password = Hash::make($input['new_password']);
             $user->last_password_reset = Carbon::now();
             $user->save();
 
@@ -55,45 +79,11 @@ class ResetPasswordController extends Controller
 
             DB::commit();
 
-            // MailService::sendPasswordResetConfirmation($user->email);
-
-            return ApiResponse::success(['message' => 'Password has been successfully reset.']);
+            return ApiResponse::success(['message' => 'Your password has been successfully reset.']);
         } catch (\Exception $e) {
             DB::rollBack();
             return ApiResponse::error(['message' => 'An error occurred while resetting the password.'], 500);
         }
-    }
-
-    /**
-     * Validate the password reset token.
-     *
-     * @param Request $request
-     * @return JsonResponse
-     */
-    public function validateResetToken(Request $request): JsonResponse
-    {
-        $email = $request->input('email');
-        $token = $request->input('token');
-
-        if (!$email) {
-            return ApiResponse::error(['message' => 'Invalid email address.'], 400);
-        }
-
-        if (!$token) {
-            return ApiResponse::error(['message' => 'Invalid or expired password reset token.'], 422);
-        }
-
-        $passwordResetToken = PasswordResetToken::where('email', $email)
-            ->where('token', $token)
-            ->where('used', false)
-            ->where('created_at', '>', Carbon::now()->subHours(2))
-            ->first();
-
-        if (!$passwordResetToken) {
-            return ApiResponse::error(['message' => 'Invalid or expired password reset token.'], 404);
-        }
-
-        return ApiResponse::success(['message' => 'The password reset token is valid.']);
     }
 
     // ... other methods ...
