@@ -47,8 +47,8 @@ class ForgotPasswordController extends Controller
 
         // Return a success response
         return response()->json([
-            'status' => 200,
+            'status' => 'success',
             'message' => 'Password reset link has been sent to your email.'
-        ]);
+        ], 200);
     }
 }
