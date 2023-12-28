@@ -3,12 +3,14 @@
 namespace App\Http\Controllers;
 
 use App\Http\Requests\UpdateUserProfileRequest;
+use App\Http\Requests\EditHairStylistRequest; // New request class for editing hair stylist request
 use App\Models\User;
-use App\Models\Request;
-use App\Models\RequestImage;
+use App\Models\Request; // Import the Request model
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Notification;
+use Illuminate\Support\Facades\Validator; // Import the Validator facade
+use Illuminate\Support\Facades\DB; // Import the DB facade for transactions
 use App\Notifications\VerifyEmailNotification;
 use Carbon\Carbon;
 use Illuminate\Http\JsonResponse;
@@ -71,7 +73,6 @@ class UserController extends Controller
         try {
             $validatedData = $request->validate([
                 'name' => 'required|string|max:255',
-                // The unique validation rule should ignore the current user's ID
                 'email' => 'required|email|unique:users,email,' . $user->id,
             ]);
         } catch (ValidationException $e) {
@@ -100,31 +101,64 @@ class UserController extends Controller
         ], 200);
     }
 
-    /**
-     * Deletes a request image associated with a hair stylist request.
-     *
-     * @param int $request_id The ID of the request.
-     * @param int $image_id The ID of the image to be deleted.
-     * @return JsonResponse
-     * @throws ValidationException If the image is not associated with the request.
-     */
-    public function deleteRequestImage(int $request_id, int $image_id): JsonResponse
+    // New method for editing hair stylist request
+    public function editHairStylistRequest(EditHairStylistRequest $request): JsonResponse
     {
-        // Ensure that the request exists
-        $request = Request::findOrFail($request_id);
+        $user = Auth::user();
+        $requestId = $request->route('request_id'); // Assuming the request_id is passed as a route parameter
 
-        // Check if the image is associated with the request
-        $image = RequestImage::where('request_id', $request_id)
-                             ->where('id', $image_id)
-                             ->firstOrFail();
+        // Use Eloquent's findOrFail to retrieve the request and ensure it belongs to the authenticated user
+        $hairStylistRequest = Request::where('user_id', $user->id)->findOrFail($requestId);
 
-        // Delete the image
-        $image->delete();
+        // Begin transaction
+        DB::beginTransaction();
+        try {
+            // For updating `area` and `menu`
+            if ($request->filled('area')) {
+                $hairStylistRequest->area = $request->input('area');
+            }
+            if ($request->filled('menu')) {
+                $hairStylistRequest->menu = $request->input('menu');
+            }
 
-        // Return a confirmation message
-        return response()->json([
-            'message' => 'Image deleted successfully.',
-            'image_id' => $image_id
-        ], 200);
+            // For the `hair_concerns` field
+            if ($request->filled('hair_concerns')) {
+                if (strlen($request->input('hair_concerns')) > 3000) {
+                    return response()->json(['message' => 'Hair concerns may not be greater than 3000 characters.'], 422);
+                }
+                $hairStylistRequest->hair_concerns = $request->input('hair_concerns');
+            }
+
+            // Handling `image_paths`
+            if ($request->has('image_paths')) {
+                // Delete old images
+                $hairStylistRequest->requestImages()->delete();
+
+                // Insert new images
+                foreach ($request->image_paths as $imagePath) {
+                    $hairStylistRequest->requestImages()->create(['image_path' => $imagePath]);
+                }
+            }
+
+            // Update the updated_at timestamp
+            $hairStylistRequest->updated_at = Carbon::now();
+
+            // Save the request's updated information
+            $hairStylistRequest->save();
+
+            // Commit the transaction
+            DB::commit();
+
+            // Return a JsonResponse with the request ID and a success message
+            return response()->json([
+                'status' => 200,
+                'message' => 'Request updated successfully.',
+                'request_id' => $hairStylistRequest->id,
+            ], 200);
+        } catch (\Exception $e) {
+            // Rollback the transaction on error
+            DB::rollback();
+            return response()->json(['message' => 'Failed to update the request.'], 500);
+        }
     }
 }
