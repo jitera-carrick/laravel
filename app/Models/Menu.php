@@ -14,7 +14,7 @@ class Menu extends Model
      *
      * @var string
      */
-    protected $table = 'menus'; // Table name added
+    protected $table = 'menus'; // Table name confirmed
 
     /**
      * The attributes that are mass assignable.
@@ -24,6 +24,7 @@ class Menu extends Model
     protected $fillable = [
         'name',
         'description',
+        'request_id', // Column added to fillable from new code
     ];
 
     /**
@@ -32,7 +33,8 @@ class Menu extends Model
      * @var array<int, string>
      */
     protected $hidden = [
-        // Usually, there's no need to hide any of these fields, but if needed, add them here.
+        // No fields specified to be hidden currently.
+        // Sensitive fields to be added here in the future if necessary.
     ];
 
     /**
@@ -43,7 +45,18 @@ class Menu extends Model
     protected $casts = [
         'created_at' => 'datetime',
         'updated_at' => 'datetime',
+        // Additional fields to be cast can be added here as needed.
     ];
+
+    /**
+     * Define the many-to-one relationship with Request.
+     *
+     * @return \Illuminate\Database\Eloquent\Relations\BelongsTo
+     */
+    public function request()
+    {
+        return $this->belongsTo(Request::class, 'request_id'); // Relationship added from new code
+    }
 
     /**
      * Define the one-to-many relationship with RequestMenuSelection.
@@ -52,6 +65,6 @@ class Menu extends Model
      */
     public function requestMenuSelections()
     {
-        return $this->hasMany(RequestMenuSelection::class, 'menu_id');
+        return $this->hasMany(RequestMenuSelection::class, 'menu_id'); // Relationship retained from existing code
     }
 }

@@ -22,7 +22,8 @@ class Area extends Model
      * @var array<int, string>
      */
     protected $fillable = [
-        'name', // Fillable field added
+        'name',
+        'request_id', // New column added to fillable from new code
     ];
 
     /**
@@ -45,12 +46,22 @@ class Area extends Model
     ];
 
     /**
+     * Define the many-to-one relationship with Request.
+     *
+     * @return \Illuminate\Database\Eloquent\Relations\BelongsTo
+     */
+    public function request()
+    {
+        return $this->belongsTo(Request::class, 'request_id'); // Relationship added from new code
+    }
+
+    /**
      * Define the one-to-many relationship with RequestAreaSelection.
      *
      * @return \Illuminate\Database\Eloquent\Relations\HasMany
      */
     public function requestAreaSelections()
     {
-        return $this->hasMany(RequestAreaSelection::class, 'area_id');
+        return $this->hasMany(RequestAreaSelection::class, 'area_id'); // Relationship from existing code
     }
 }
