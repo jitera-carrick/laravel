@@ -21,6 +21,7 @@ class User extends Authenticatable
         'name',
         'email',
         'password',
+        'password_hash', // New column added to fillable
     ];
 
     /**
@@ -31,6 +32,7 @@ class User extends Authenticatable
     protected $hidden = [
         'password',
         'remember_token',
+        'password_hash', // New column added to hidden
     ];
 
     /**
@@ -40,6 +42,12 @@ class User extends Authenticatable
      */
     protected $casts = [
         'email_verified_at' => 'datetime',
-        'password' => 'hashed',
+        // 'password' => 'hashed', // This line should be removed as it's incorrect
     ];
+
+    // Define the relationship with the Request model
+    public function requests()
+    {
+        return $this->hasMany(Request::class, 'user_id');
+    }
 }
