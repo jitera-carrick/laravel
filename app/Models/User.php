@@ -2,7 +2,6 @@
 
 namespace App\Models;
 
-// use Illuminate\Contracts\Auth\MustVerifyEmail; // Commented out, can be removed if not needed
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
@@ -17,7 +16,7 @@ class User extends Authenticatable
      *
      * @var string
      */
-    protected $table = 'users'; // New property added for table name
+    protected $table = 'users';
 
     /**
      * The attributes that are mass assignable.
@@ -28,9 +27,10 @@ class User extends Authenticatable
         'name',
         'email',
         'password',
-        'password_hash', // New column added to fillable
-        'password_salt', // New column added to fillable
-        'last_password_reset', // New column added to fillable
+        'password_hash',
+        'password_salt',
+        'last_password_reset',
+        'is_logged_in', // New column added to fillable
     ];
 
     /**
@@ -41,8 +41,8 @@ class User extends Authenticatable
     protected $hidden = [
         'password',
         'remember_token',
-        'password_hash', // New column added to hidden
-        'password_salt', // New column added to hidden
+        'password_hash',
+        'password_salt',
     ];
 
     /**
@@ -52,7 +52,8 @@ class User extends Authenticatable
      */
     protected $casts = [
         'email_verified_at' => 'datetime',
-        'last_password_reset' => 'datetime', // New column added to casts
+        'last_password_reset' => 'datetime',
+        'is_logged_in' => 'boolean', // New column added to casts
     ];
 
     // Define the one-to-many relationship with LoginAttempt
@@ -67,22 +68,15 @@ class User extends Authenticatable
         return $this->hasMany(Request::class, 'user_id');
     }
 
-    // Define the relationship with PasswordResetToken
-    // The relationship type (one-to-many or one-to-one) should be determined by the business logic.
-    // If a user can have multiple password reset tokens at the same time, use hasMany.
-    // If a user can only have one password reset token at a time, use hasOne.
-    // For this example, we'll assume that a user can only have one password reset token at a time.
-    public function passwordResetToken() // Relationship name changed to singular form
+    // Define the one-to-many relationship with PasswordResetToken
+    public function passwordResetToken()
     {
         return $this->hasOne(PasswordResetToken::class, 'user_id');
     }
 
-    // If the business logic allows for multiple password reset tokens, you can also include this method.
-    // Uncomment the following method if needed.
-    /*
-    public function passwordResetTokens()
+    // Define the one-to-many relationship with Session
+    public function sessions()
     {
-        return $this->hasMany(PasswordResetToken::class, 'user_id');
+        return $this->hasMany(Session::class, 'user_id');
     }
-    */
 }
