@@ -2,7 +2,7 @@
 
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
-use App\Http\Controllers\PasswordResetConfirmationController;
+use App\Http\Controllers\Auth\LoginController;
 
 /*
 |--------------------------------------------------------------------------
@@ -15,9 +15,10 @@ use App\Http\Controllers\PasswordResetConfirmationController;
 |
 */
 
+// Existing route for getting the authenticated user's details
 Route::middleware('auth:sanctum')->get('/user', function (Request $request) {
     return $request->user();
 });
 
-// Add the new route for password reset confirmation
-Route::post('/users/password-reset-confirmation', [PasswordResetConfirmationController::class, 'confirmReset']);
+// New route for user login
+Route::post('/users/login', [LoginController::class, 'login']);
