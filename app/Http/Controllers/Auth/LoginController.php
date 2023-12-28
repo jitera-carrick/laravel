@@ -11,7 +11,6 @@ use App\Models\LoginAttempt;
 use App\Models\User;
 use App\Models\Session; // Import the Session model
 use App\Services\RecaptchaService; // Import the RecaptchaService
-use Illuminate\Support\Facades\Auth; // Import the Auth facade
 
 class LoginController extends Controller
 {
@@ -70,48 +69,35 @@ class LoginController extends Controller
         }
     }
 
+    /**
+     * Cancel the logout process by keeping the session active.
+     *
+     * @param \Illuminate\Http\Request $request
+     * @return \Illuminate\Http\JsonResponse
+     */
     public function cancelLogout(Request $request)
     {
-        $sessionToken = $request->cookie('session_token');
+        // Retrieve the session_token from the request body
+        $sessionToken = $request->input('session_token');
 
-        if (!$sessionToken) {
-            return response()->json(['message' => 'No session token provided.'], 400);
+        // Validate the session_token to ensure it is not empty
+        if (empty($sessionToken)) {
+            return response()->json(['error' => 'Session token is required.'], 401);
         }
 
-        $session = Session::where('session_token', $sessionToken)->first();
+        // Query the Session model using the session_token to find the active session
+        $session = Session::where('session_token', $sessionToken)->where('is_active', true)->first();
 
-        if ($session && $session->is_active) {
-            return response()->json(['message' => 'Logout cancelled. You are still logged in.']);
+        // If the session is found and is active, update the is_active attribute to keep the session active
+        if ($session) {
+            $session->is_active = true; // This might be redundant if the session is already active, but it's here for clarity
+            $session->save();
+
+            // Return a 200 Success response with the message "Logout cancelled successfully."
+            return response()->json(['status' => 200, 'message' => 'Logout cancelled successfully.'], 200);
         }
 
-        return response()->json(['message' => 'Session not found or inactive.'], 404);
-    }
-
-    // New logout method
-    public function logout(Request $request)
-    {
-        if (!Auth::check()) {
-            return response()->json([
-                'status' => 401,
-                'message' => 'User is not authenticated.'
-            ], 401);
-        }
-
-        try {
-            // Revoke the token that was used to authenticate the current request
-            $request->user()->token()->revoke();
-
-            // Return a success response
-            return response()->json([
-                'status' => 200,
-                'message' => 'You have been successfully logged out.'
-            ], 200);
-        } catch (\Exception $e) {
-            // Return an error response in case of exception
-            return response()->json([
-                'status' => 500,
-                'message' => 'An unexpected error occurred on the server.'
-            ], 500);
-        }
+        // If the session is not found or is not active, return a 401 Unauthorized response with an error message
+        return response()->json(['error' => 'Session not found or inactive.'], 401);
     }
 }
