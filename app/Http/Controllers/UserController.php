@@ -4,7 +4,8 @@ namespace App\Http\Controllers;
 
 use App\Http\Requests\UpdateUserProfileRequest;
 use App\Models\User;
-use App\Models\Request as HairStylistRequest; // Renamed to avoid confusion with HTTP Request
+use App\Models\Request;
+use App\Models\RequestImage;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Notification;
@@ -12,6 +13,10 @@ use App\Notifications\VerifyEmailNotification;
 use Carbon\Carbon;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Validation\ValidationException;
+use Illuminate\Database\Eloquent\ModelNotFoundException;
+use Illuminate\Http\Request as HttpRequest;
+use Illuminate\Support\Facades\Validator;
+use Illuminate\Support\Str;
 
 class UserController extends Controller
 {
@@ -70,7 +75,6 @@ class UserController extends Controller
         try {
             $validatedData = $request->validate([
                 'name' => 'required|string|max:255',
-                // The email validation rule is updated to ignore the user's own email
                 'email' => 'required|email|unique:users,email,' . $user->id,
             ]);
         } catch (ValidationException $e) {
@@ -99,37 +103,61 @@ class UserController extends Controller
         ], 200);
     }
 
-    public function expireRequest(int $request_id): JsonResponse
+    public function createHairStylistRequest(HttpRequest $httpRequest): JsonResponse
     {
-        try {
-            $request = HairStylistRequest::findOrFail($request_id);
-
-            // Assuming there is a method to check if the treatment plan's date and time have passed
-            // This is a placeholder for the actual logic that would determine if the request is expired
-            if (Carbon::now()->greaterThan($request->created_at->addDays(30))) { // Example condition
-                $request->status = 'expired';
-                $request->save();
-
-                return response()->json([
-                    'success' => true,
-                    'message' => 'Request has been successfully expired.'
-                ], 200);
-            } else {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'Request expiration date has not passed yet.'
-                ], 400);
-            }
-        } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $e) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Request not found.'
-            ], 404);
-        } catch (\Exception $e) {
-            return response()->json([
-                'success' => false,
-                'message' => 'An error occurred while expiring the request.'
-            ], 500);
+        // Ensure the user_id corresponds to the currently authenticated user
+        $user = Auth::user();
+        if ($httpRequest->user_id != $user->id) {
+            return response()->json(['success' => false, 'message' => 'Unauthorized action.'], 403);
         }
+
+        // Validate the incoming request
+        $validator = Validator::make($httpRequest->all(), [
+            'area' => 'required|string',
+            'menu' => 'required|string',
+            'hair_concerns' => 'nullable|string|max:3000',
+            'image_paths' => 'nullable|array|max:3',
+            'image_paths.*' => 'required_with:image_paths|image|mimes:png,jpg,jpeg|max:5120', // Custom validation rules would be added here
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json(['success' => false, 'message' => $validator->errors()], 422);
+        }
+
+        // Create a new Request model instance
+        $request = new Request([
+            'user_id' => $user->id,
+            'area' => $httpRequest->area,
+            'menu' => $httpRequest->menu,
+            'hair_concerns' => $httpRequest->hair_concerns,
+            'status' => 'pending',
+        ]);
+
+        // Save the Request model instance to the database
+        $request->save();
+
+        // Iterate over the image_paths array and create RequestImage model instances
+        if ($httpRequest->has('image_paths')) {
+            foreach ($httpRequest->image_paths as $image_path) {
+                // Assuming the image_path is a valid uploaded file instance
+                $filename = Str::random(10) . '.' . $image_path->getClientOriginalExtension();
+                $image_path->storeAs('request_images', $filename, 'public');
+
+                $requestImage = new RequestImage([
+                    'request_id' => $request->id,
+                    'image_path' => 'request_images/' . $filename,
+                ]);
+                $requestImage->save();
+            }
+        }
+
+        // Return a JSON response with a success message
+        return response()->json([
+            'success' => true,
+            'message' => 'Hair stylist request created successfully.',
+            'request_id' => $request->id,
+        ], 201);
     }
+
+    // ... existing methods ...
 }
