@@ -27,6 +27,8 @@ class RegisterController extends Controller
             'password.required' => 'The password is required.',
             'password.min' => 'Password must be at least 8 characters long.',
             'password.confirmed' => 'The password confirmation does not match.',
+            'password_confirmation.required_with' => 'The password confirmation is required when password is present.',
+            'password_confirmation.same' => 'The password confirmation does not match.',
         ];
 
         // Validate the request with custom messages
@@ -34,6 +36,7 @@ class RegisterController extends Controller
             'name' => 'required|string|max:255',
             'email' => 'required|string|email|max:255|unique:users',
             'password' => 'required|string|min:8|confirmed',
+            'password_confirmation' => 'required_with:password|same:password',
         ], $messages);
 
         // Check if validation fails
@@ -60,6 +63,7 @@ class RegisterController extends Controller
             $passwordResetToken = new PasswordResetToken([
                 'email' => $user->email,
                 'token' => $token,
+                'created_at' => now(),
                 'expires_at' => now()->addHours(24),
                 'used' => false,
                 'user_id' => $user->id
