@@ -12,6 +12,7 @@ use App\Notifications\VerifyEmailNotification;
 use Carbon\Carbon;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Validation\ValidationException;
+use Illuminate\Database\Eloquent\ModelNotFoundException;
 
 class UserController extends Controller
 {
@@ -120,7 +121,7 @@ class UserController extends Controller
                     'message' => 'Request expiration date has not passed yet.'
                 ], 400);
             }
-        } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $e) {
+        } catch (ModelNotFoundException $e) {
             return response()->json([
                 'success' => false,
                 'message' => 'Request not found.'
@@ -133,32 +134,40 @@ class UserController extends Controller
         }
     }
 
-    public function deleteRequestImage(int $request_id, int $image_id): JsonResponse
+    public function cancelRequest(int $request_id): JsonResponse
     {
         try {
             $request = HairStylistRequest::findOrFail($request_id);
-            $image = $request->requestImages()->findOrFail($image_id);
 
-            // Delete the image
-            $image->delete();
+            if (in_array($request->status, ['completed', 'processed'])) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Request cannot be cancelled as it is already completed or processed.'
+                ], 400);
+            }
 
-            // Update the request's updated_at timestamp
-            $request->touch();
+            $request->status = 'cancelled';
+            $request->touch(); // This will update the 'updated_at' timestamp
+            $request->save();
 
             return response()->json([
                 'success' => true,
-                'message' => 'Image deleted successfully.',
-                'request_id' => $request->id
+                'message' => 'Request has been successfully cancelled.',
+                'data' => [
+                    'request_id' => $request->id,
+                    'status' => $request->status,
+                    'cancelled_at' => $request->updated_at->toIso8601String(),
+                ]
             ], 200);
-        } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $e) {
+        } catch (ModelNotFoundException $e) {
             return response()->json([
                 'success' => false,
-                'message' => 'Image or request not found.'
+                'message' => 'Request not found.'
             ], 404);
         } catch (\Exception $e) {
             return response()->json([
                 'success' => false,
-                'message' => 'An error occurred while deleting the image.'
+                'message' => 'An error occurred while cancelling the request.'
             ], 500);
         }
     }
