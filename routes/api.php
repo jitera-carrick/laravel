@@ -2,7 +2,7 @@
 
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
-use App\Http\Controllers\Auth\LoginController;
+use App\Http\Controllers\Auth\RegisterController; // Import the RegisterController
 
 /*
 |--------------------------------------------------------------------------
@@ -15,10 +15,9 @@ use App\Http\Controllers\Auth\LoginController;
 |
 */
 
-// Existing route for getting the authenticated user's details
 Route::middleware('auth:sanctum')->get('/user', function (Request $request) {
     return $request->user();
 });
 
-// New route for user login
-Route::post('/users/login', [LoginController::class, 'login']);
+// Define a new POST route for user registration
+Route::post('/users/register', [RegisterController::class, 'register']);

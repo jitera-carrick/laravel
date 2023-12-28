@@ -10,28 +10,42 @@ use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Mail;
 use App\Mail\VerificationEmail;
 use Illuminate\Support\Str;
+use Illuminate\Support\Facades\Validator;
 
 class RegisterController extends Controller
 {
     public function register(Request $request)
     {
-        // Validate the request
-        $this->validate($request, [
+        // Custom error messages
+        $messages = [
+            'name.required' => 'The name is required.',
+            'email.required' => 'The email is required.',
+            'email.email' => 'Invalid email format.',
+            'email.unique' => 'Email already registered.',
+            'password.required' => 'The password is required.',
+            'password.min' => 'Password must be at least 8 characters long.',
+        ];
+
+        // Validate the request with custom messages
+        $validator = Validator::make($request->all(), [
             'name' => 'required|string|max:255',
             'email' => 'required|string|email|max:255|unique:users',
             'password' => 'required|string|min:8|confirmed',
-        ]);
+        ], $messages);
 
-        // Check if the email is unique
-        if (User::where('email', $request->email)->exists()) {
-            return response()->json(['message' => 'The email has already been taken.'], 400);
+        // Check if validation fails
+        if ($validator->fails()) {
+            return response()->json(['errors' => $validator->errors()], 422);
         }
+
+        // Get validated data
+        $validatedData = $validator->validated();
 
         // Create a new user instance
         $user = new User();
-        $user->name = $request->name;
-        $user->email = $request->email;
-        $user->password = Hash::make($request->password);
+        $user->name = $validatedData['name'];
+        $user->email = $validatedData['email'];
+        $user->password = Hash::make($validatedData['password']);
         $user->email_verified_at = null; // Set email verification flag to null
         $user->save();
 
@@ -51,10 +65,14 @@ class RegisterController extends Controller
 
         // Return a response with the user's details
         return response()->json([
-            'id' => $user->id,
-            'name' => $user->name,
-            'email' => $user->email,
-            'message' => 'Registration successful. Please check your email to verify your account.'
+            'status' => 201,
+            'message' => 'User registered successfully.',
+            'user' => [
+                'id' => $user->id,
+                'name' => $user->name,
+                'email' => $user->email,
+                'created_at' => $user->created_at->toIso8601String(),
+            ]
         ], 201);
     }
 }
