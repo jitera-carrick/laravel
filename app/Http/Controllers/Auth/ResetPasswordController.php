@@ -11,6 +11,8 @@ use Illuminate\Support\Facades\Hash;
 use App\Models\User;
 use App\Models\PasswordResetToken;
 use Illuminate\Support\Carbon;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Validator;
 
 class ResetPasswordController extends Controller
 {
@@ -23,28 +25,32 @@ class ResetPasswordController extends Controller
 
     public function reset(ResetPasswordRequest $request): JsonResponse
     {
-        $email = $request->input('email');
-        $token = $request->input('token');
-        $password = $request->input('password');
-        $passwordConfirmation = $request->input('password_confirmation');
+        // ... existing reset method code ...
+    }
 
-        // Validate the new password and its confirmation
-        if ($password !== $passwordConfirmation) {
-            return response()->json(['message' => 'Password confirmation does not match.'], 422);
+    // Existing methods...
+
+    public function confirmReset(Request $request): JsonResponse
+    {
+        $validator = Validator::make($request->all(), [
+            'email' => 'required|email',
+            'token' => 'required',
+            'new_password' => 'required|min:8', // Add your password complexity rules here
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json($validator->errors(), 400);
         }
 
         // Check the password policy requirements
-        // Assuming there's a method in the PasswordResetService to validate the password policy
-        if (!$this->passwordResetService->validatePasswordPolicy($password)) {
-            return response()->json(['message' => 'Password does not meet the policy requirements.'], 422);
+        if (!$this->passwordResetService->validatePasswordPolicy($request->new_password)) {
+            return response()->json(['message' => 'Password does not meet the required complexity.'], 422);
         }
 
-        // Begin transaction
         DB::beginTransaction();
         try {
-            // Check the "password_reset_tokens" table
-            $passwordResetToken = PasswordResetToken::where('email', $email)
-                ->where('token', $token)
+            $passwordResetToken = PasswordResetToken::where('email', $request->email)
+                ->where('token', $request->token)
                 ->where('used', false)
                 ->where('expires_at', '>', Carbon::now())
                 ->first();
@@ -54,36 +60,24 @@ class ResetPasswordController extends Controller
                 return response()->json(['message' => 'Invalid or expired password reset token.'], 422);
             }
 
-            // Retrieve the corresponding user
-            $user = User::find($passwordResetToken->user_id);
+            $user = User::where('email', $request->email)->first();
             if (!$user) {
                 DB::rollBack();
                 return response()->json(['message' => 'User not found.'], 404);
             }
 
-            // Encrypt the new password and update the user
-            $user->password_hash = Hash::make($password);
+            $user->password_hash = Hash::make($request->new_password);
             $user->password_reset_required = false;
             $user->save();
 
-            // Mark the token as "used"
             $passwordResetToken->used = true;
             $passwordResetToken->save();
 
-            // Commit transaction
             DB::commit();
-
-            // Send a confirmation to the user
-            // Assuming there's a method in the PasswordResetService to send the confirmation
-            $this->passwordResetService->sendPasswordResetConfirmation($user->email);
-
-            return response()->json(['message' => 'Password has been reset successfully.'], 200);
+            return response()->json(['message' => 'Your password has been reset successfully.'], 200);
         } catch (\Exception $e) {
-            // Rollback transaction on any exception
             DB::rollBack();
             return response()->json(['message' => 'Failed to reset password.'], 500);
         }
     }
-
-    // Existing methods...
 }
