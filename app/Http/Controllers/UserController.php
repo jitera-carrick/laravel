@@ -9,12 +9,14 @@ use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Notification;
 use App\Notifications\VerifyEmailNotification;
 use Carbon\Carbon;
+use Illuminate\Http\JsonResponse;
+use Illuminate\Validation\ValidationException;
 
 class UserController extends Controller
 {
     // ... other methods ...
 
-    public function updateProfile(UpdateUserProfileRequest $request)
+    public function updateProfile(UpdateUserProfileRequest $request): JsonResponse
     {
         // Retrieve the user with the given ID instead of using Auth::user()
         $user = User::findOrFail($request->user_id);
@@ -57,5 +59,42 @@ class UserController extends Controller
         }
 
         return response()->json(['message' => 'Profile updated successfully.'], 200);
+    }
+
+    // New method for updating user profile information
+    public function updateUserProfile(UpdateUserProfileRequest $request): JsonResponse
+    {
+        $user = Auth::user();
+
+        // Validate the request parameters
+        try {
+            $validatedData = $request->validate([
+                'name' => 'required|string|max:255',
+                'email' => 'required|email|unique:users,email,' . $user->id,
+            ]);
+        } catch (ValidationException $e) {
+            return response()->json([
+                'message' => $e->errors(),
+            ], 422);
+        }
+
+        // Update user profile
+        $user->name = $validatedData['name'];
+        $user->email = $validatedData['email'];
+        $user->updated_at = Carbon::now();
+
+        $user->save();
+
+        // Return the updated user profile
+        return response()->json([
+            'status' => 200,
+            'message' => 'Profile updated successfully.',
+            'user' => [
+                'id' => $user->id,
+                'name' => $user->name,
+                'email' => $user->email,
+                'updated_at' => $user->updated_at->toIso8601String(),
+            ]
+        ], 200);
     }
 }
