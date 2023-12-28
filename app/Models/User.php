@@ -30,7 +30,10 @@ class User extends Authenticatable
         'password_hash',
         'password_salt',
         'last_password_reset',
+        'remember_token', // New column added to fillable
         'is_logged_in', // New column added to fillable
+        'username', // New column added to fillable
+        'session_token', // New column added to fillable
     ];
 
     /**
@@ -43,6 +46,7 @@ class User extends Authenticatable
         'remember_token',
         'password_hash',
         'password_salt',
+        'session_token', // New column added to hidden
     ];
 
     /**
@@ -69,9 +73,9 @@ class User extends Authenticatable
     }
 
     // Define the one-to-many relationship with PasswordResetToken
-    public function passwordResetToken()
+    public function passwordResetTokens() // Updated to plural form to reflect one-to-many relationship
     {
-        return $this->hasOne(PasswordResetToken::class, 'user_id');
+        return $this->hasMany(PasswordResetToken::class, 'user_id');
     }
 
     // Define the one-to-many relationship with Session
