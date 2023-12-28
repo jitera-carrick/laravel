@@ -53,20 +53,35 @@ class UserController extends Controller
             'area' => $validatedData['area'],
             'menu' => $validatedData['menu'],
             'hair_concerns' => $validatedData['hair_concerns'],
-            'status' => 'open', // Default status set to 'open'
+            // Use 'pending' as default status if not specified in the new code
+            'status' => $validatedData['status'] ?? 'pending',
         ]);
 
         // Save the new request
         $hairStylistRequest->save();
 
+        // Associate area selections with the request
+        $hairStylistRequest->requestAreaSelections()->create([
+            'area_id' => $validatedData['area'],
+        ]);
+
+        // Associate menu selections with the request
+        $hairStylistRequest->requestMenuSelections()->create([
+            'menu_id' => $validatedData['menu'],
+        ]);
+
         // Save images associated with the request
         if (isset($validatedData['image_paths'])) {
             foreach ($validatedData['image_paths'] as $image) {
-                $requestImage = new RequestImage([
-                    'image_path' => $image->store('request_images', 'public'), // Store the image and get the path
-                    'request_id' => $hairStylistRequest->id,
+                // Check if the image is a file instance or a path
+                if ($image instanceof \Illuminate\Http\UploadedFile) {
+                    $imagePath = $image->store('request_images', 'public'); // Store the image and get the path
+                } else {
+                    $imagePath = $image; // Assume $image is a path
+                }
+                $hairStylistRequest->requestImages()->create([
+                    'image_path' => $imagePath,
                 ]);
-                $requestImage->save();
             }
         }
 
@@ -74,12 +89,26 @@ class UserController extends Controller
         return response()->json([
             'request_id' => $hairStylistRequest->id,
             'status' => $hairStylistRequest->status,
-            'area' => $hairStylistRequest->area,
-            'menu' => $hairStylistRequest->menu,
+            'area_selections' => $hairStylistRequest->requestAreaSelections,
+            'menu_selections' => $hairStylistRequest->requestMenuSelections,
             'hair_concerns' => $hairStylistRequest->hair_concerns,
             'image_paths' => $hairStylistRequest->requestImages()->get()->pluck('image_path'), // Get only the image paths
             'created_at' => $hairStylistRequest->created_at,
         ], 201);
+    }
+
+    // New method to cancel a hair stylist request
+    public function cancelHairStylistRequest(HttpRequest $request): JsonResponse
+    {
+        // Validate that the "user_id" corresponds to a logged-in customer.
+        if ($request->user('api')->id != Auth::id()) {
+            return response()->json(['message' => 'Unauthorized access.'], 403);
+        }
+
+        // Since we're not making any changes to the database, we can simply return a confirmation message.
+        return response()->json([
+            'message' => 'Hair stylist request registration has been canceled.'
+        ]);
     }
 
     // ... other methods ...
