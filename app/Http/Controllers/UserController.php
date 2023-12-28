@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Http\Requests\UpdateUserProfileRequest;
+use App\Http\Requests\UpdateHairStylistRequest; // Import the UpdateHairStylistRequest
 use App\Models\User;
 use App\Models\Request as HairStylistRequest; // Renamed to avoid confusion with HTTP Request
 use App\Models\RequestAreaSelection;
@@ -33,30 +34,53 @@ class UserController extends Controller
     // Updated method to cancel a hair stylist request
     public function cancelHairStylistRequest(HttpRequest $request): JsonResponse
     {
-        // Validate the request_id and check if it exists in the requests table
-        $validatedData = $request->validate([
-            'request_id' => 'required|exists:requests,id',
-        ]);
+        // Existing code for cancelHairStylistRequest method
+        // ...
+    }
 
-        // Retrieve the HairStylistRequest model instance using the request_id
-        $hairStylistRequest = HairStylistRequest::findOrFail($validatedData['request_id']);
+    // New method to update a hair stylist request
+    public function updateHairStylistRequest(UpdateHairStylistRequest $request, $id): JsonResponse
+    {
+        $hairStylistRequest = HairStylistRequest::find($id);
 
-        // Check if the authenticated user is the owner of the request
-        if ($hairStylistRequest->user_id != Auth::id()) {
-            return response()->json(['message' => 'Unauthorized access.'], 403);
+        if (!$hairStylistRequest) {
+            return response()->json(['message' => 'Request not found.'], 404);
         }
 
-        // Update the status column of the HairStylistRequest instance to 'canceled'
-        $hairStylistRequest->status = 'canceled';
+        if ($hairStylistRequest->user_id != Auth::id()) {
+            return response()->json(['message' => 'Unauthorized access.'], 401);
+        }
 
-        // Save the changes to the HairStylistRequest instance
+        $hairStylistRequest->fill($request->validated());
+
+        // Handle file uploads for images if provided
+        if ($request->hasFile('images')) {
+            $allowedFileTypes = ['png', 'jpg', 'jpeg'];
+            $maxFileSize = 5 * 1024 * 1024; // 5MB
+            $files = $request->file('images');
+
+            if (count($files) > 3) {
+                return response()->json(['message' => 'You can only upload up to 3 images.'], 400);
+            }
+
+            foreach ($files as $file) {
+                if (!$file->isValid() || !in_array($file->getClientOriginalExtension(), $allowedFileTypes) || $file->getSize() > $maxFileSize) {
+                    return response()->json(['message' => 'Invalid image format or file size too large.'], 400);
+                }
+
+                // Assuming RequestImage is a model that handles the storage of images
+                // and has a relationship with HairStylistRequest
+                $requestImage = new RequestImage();
+                $requestImage->path = $file->store('images'); // This will store the image and return the path
+                $hairStylistRequest->images()->save($requestImage);
+            }
+        }
+
         $hairStylistRequest->save();
 
-        // Return a JsonResponse with the request_id, updated status, and a confirmation message
         return response()->json([
-            'request_id' => $hairStylistRequest->id,
-            'status' => $hairStylistRequest->status,
-            'message' => 'Hair stylist request registration has been successfully canceled.'
+            'status' => 200,
+            'request' => $hairStylistRequest
         ]);
     }
 
