@@ -13,6 +13,13 @@ class User extends Authenticatable
     use HasApiTokens, HasFactory, Notifiable;
 
     /**
+     * The table associated with the model.
+     *
+     * @var string
+     */
+    protected $table = 'users'; // New property added for table name
+
+    /**
      * The attributes that are mass assignable.
      *
      * @var array<int, string>
@@ -54,9 +61,9 @@ class User extends Authenticatable
         return $this->hasMany(LoginAttempt::class, 'user_id');
     }
 
-    // Define the one-to-many relationship with PasswordResetToken
-    public function passwordResetTokens()
+    // Define the one-to-one relationship with PasswordResetToken
+    public function passwordResetToken() // Relationship name changed to singular form
     {
-        return $this->hasMany(PasswordResetToken::class, 'user_id');
+        return $this->hasOne(PasswordResetToken::class, 'user_id');
     }
 }
