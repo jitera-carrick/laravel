@@ -10,6 +10,7 @@ use Illuminate\Support\Str;
 use App\Models\LoginAttempt;
 use App\Models\User;
 use App\Services\RecaptchaService; // Import the RecaptchaService
+use Illuminate\Support\Facades\Auth; // Import the Auth facade
 
 class LoginController extends Controller
 {
@@ -76,13 +77,16 @@ class LoginController extends Controller
      */
     public function cancelLogout(Request $request)
     {
-        // Retrieve the "session_token" from the cookies to identify the user's session.
-        $sessionToken = $request->cookie('session_token');
+        // Check if the user is authenticated
+        if (!Auth::check()) {
+            // Return error response if the user is not authenticated
+            return response()->json(['error' => 'User is not authenticated.'], 401);
+        }
 
-        // No action is taken on the backend as the logout process is cancelled by the user.
-        // Return a message indicating the logout process has been cancelled and the user remains logged in.
+        // Since the user is authenticated, we can simply return a success message.
         return response()->json([
-            'message' => 'Logout process has been cancelled. You are still logged in.',
+            'status' => 200,
+            'message' => 'Logout has been cancelled successfully.'
         ]);
     }
 }
