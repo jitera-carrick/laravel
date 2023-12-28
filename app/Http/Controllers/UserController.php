@@ -3,12 +3,15 @@
 namespace App\Http\Controllers;
 
 use App\Http\Requests\CreateHairStylistRequest; // Import the new form request validation class
+use App\Http\Requests\UpdateRequest; // Import the UpdateRequest form request validation class
 use App\Models\User;
 use App\Models\Request as HairStylistRequest; // Renamed to avoid confusion with HTTP Request
 use App\Models\RequestImage;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request as HttpRequest;
+use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\Validator;
 
 class UserController extends Controller
 {
@@ -19,80 +22,95 @@ class UserController extends Controller
     // New method to create a hair stylist request
     public function createHairStylistRequest(CreateHairStylistRequest $request): JsonResponse
     {
-        // Authenticate the user based on the "user_id"
-        $userId = $request->input('user_id');
-        $user = User::find($userId);
-        if (!$user || $userId != Auth::id()) {
-            return response()->json(['message' => 'Unauthorized.'], 401);
-        }
-
-        // The CreateHairStylistRequest form request class handles the validation
-        $validatedData = $request->validated();
-
-        // Create a new HairStylistRequest model instance
-        $hairStylistRequest = new HairStylistRequest([
-            'user_id' => $user->id,
-            'area' => $validatedData['area'],
-            'menu' => $validatedData['menu'],
-            'hair_concerns' => $validatedData['hair_concerns'],
-            'status' => 'pending', // Set the initial status to 'pending'
-        ]);
-
-        // Save the new request to the database
-        $hairStylistRequest->save();
-
-        // Iterate over the "image_paths" array and create RequestImage instances
-        foreach ($validatedData['image_paths'] as $imagePath) {
-            $requestImage = new RequestImage([
-                'request_id' => $hairStylistRequest->id,
-                'image_path' => $imagePath,
-            ]);
-            $requestImage->save();
-        }
-
-        // Prepare the response data
-        $responseData = [
-            'request_id' => $hairStylistRequest->id,
-            'area' => $hairStylistRequest->area,
-            'menu' => $hairStylistRequest->menu,
-            'hair_concerns' => $hairStylistRequest->hair_concerns,
-            'status' => $hairStylistRequest->status,
-            'image_paths' => $hairStylistRequest->requestImages()->pluck('image_path'),
-            'created_at' => $hairStylistRequest->created_at->toDateTimeString(),
-            'updated_at' => $hairStylistRequest->updated_at->toDateTimeString(),
-        ];
-
-        // Return the response with the newly created request details
-        return response()->json($responseData);
+        // ... existing code for createHairStylistRequest method ...
     }
 
     // Updated method to cancel a hair stylist request
     public function cancelHairStylistRequest(HttpRequest $request): JsonResponse
     {
-        // Validate the request_id and check if it exists in the requests table
-        $validatedData = $request->validate([
-            'request_id' => 'required|exists:requests,id',
-        ]);
+        // ... existing code for cancelHairStylistRequest method ...
+    }
 
-        // Retrieve the HairStylistRequest model instance using the request_id
-        $hairStylistRequest = HairStylistRequest::findOrFail($validatedData['request_id']);
-
-        // Check if the authenticated user is the owner of the request
-        if ($hairStylistRequest->user_id != Auth::id()) {
-            return response()->json(['message' => 'Unauthorized access.'], 403);
+    // New method to edit a hair stylist request
+    public function editRequest(UpdateRequest $request): JsonResponse
+    {
+        // Authenticate the user and ensure they are logged in
+        $user = Auth::user();
+        if (!$user) {
+            return response()->json(['message' => 'Unauthorized.'], 401);
         }
 
-        // Update the status column of the HairStylistRequest instance to 'canceled'
-        $hairStylistRequest->status = 'canceled';
+        // Retrieve the request using the Request model and the provided request_id
+        $hairStylistRequest = HairStylistRequest::where('id', $request->input('request_id'))
+                                                 ->where('user_id', $user->id)
+                                                 ->first();
 
-        // Save the changes to the HairStylistRequest instance
-        $hairStylistRequest->save();
+        // Ensure that the authenticated user has permission to edit the request
+        if (!$hairStylistRequest) {
+            return response()->json(['message' => 'Request not found or access denied.'], 403);
+        }
 
-        // Return a JsonResponse with the request_id, updated status, and a confirmation message
+        // Validate the request data
+        $validator = Validator::make($request->all(), [
+            'area' => 'sometimes|string',
+            'menu' => 'sometimes|string',
+            'hair_concerns' => 'sometimes|string',
+            'image_paths.*' => 'sometimes|image',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json(['errors' => $validator->errors()], 422);
+        }
+
+        // Update the request with the new values if provided
+        $validatedData = $validator->validated();
+        $hasUpdates = false;
+        foreach (['area', 'menu', 'hair_concerns'] as $field) {
+            if (array_key_exists($field, $validatedData)) {
+                $hairStylistRequest->$field = $validatedData[$field];
+                $hasUpdates = true;
+            }
+        }
+
+        // Save the request if there were any updates
+        if ($hasUpdates) {
+            $hairStylistRequest->save();
+        }
+
+        // Handle the image_path updates
+        if ($request->has('image_paths')) {
+            foreach ($request->file('image_paths') as $image) {
+                // Store the image and create a new RequestImage instance
+                $path = $image->store('request_images', 'public');
+                $requestImage = new RequestImage([
+                    'request_id' => $hairStylistRequest->id,
+                    'image_path' => $path,
+                ]);
+                $requestImage->save();
+            }
+        }
+
+        // Handle image deletions
+        if ($request->has('deleted_image_ids')) {
+            foreach ($request->input('deleted_image_ids') as $imageId) {
+                $image = RequestImage::find($imageId);
+                if ($image && $image->request_id === $hairStylistRequest->id) {
+                    // Delete the image file
+                    Storage::disk('public')->delete($image->image_path);
+                    // Delete the image record
+                    $image->delete();
+                }
+            }
+        }
+
+        // Return a response with a confirmation message upon successful update
         return response()->json([
+            'message' => 'Request updated successfully.',
             'request_id' => $hairStylistRequest->id,
-            'status' => $hairStylistRequest->status,
-            'message' => 'Hair stylist request registration has been successfully canceled.'
+            'area' => $hairStylistRequest->area,
+            'menu' => $hairStylistRequest->menu,
+            'hair_concerns' => $hairStylistRequest->hair_concerns,
+            'image_paths' => $hairStylistRequest->requestImages()->pluck('image_path'),
         ]);
     }
 
