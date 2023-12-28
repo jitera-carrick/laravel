@@ -3,64 +3,47 @@
 namespace App\Http\Controllers\Auth;
 
 use App\Http\Controllers\Controller;
-use Illuminate\Http\Request;
 use App\Models\PasswordResetToken;
-use App\Models\User;
-use Illuminate\Support\Facades\Hash;
-use Illuminate\Support\Facades\Validator;
-use Illuminate\Support\Facades\Config;
-use Illuminate\Support\Facades\Notification;
-use App\Notifications\ResetPasswordNotification;
+use Illuminate\Http\Request;
+use Illuminate\Support\Carbon;
 
 class ResetPasswordController extends Controller
 {
-    // Add the reset method below
+    // ... (other methods in the controller)
 
-    public function reset(Request $request)
+    // Add the new method below
+
+    /**
+     * Verify the reset password token.
+     *
+     * @param Request $request
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function verifyResetToken(Request $request)
     {
-        // Validate the request
-        $validator = Validator::make($request->all(), [
+        $request->validate([
             'email' => 'required|email',
             'token' => 'required|string',
-            'password' => 'required|confirmed|min:' . Config::get('auth.password_length'),
         ]);
 
-        if ($validator->fails()) {
-            return response()->json(['errors' => $validator->errors()], 400);
-        }
-
-        // Retrieve the token entry
-        $passwordResetToken = PasswordResetToken::where('email', $request->email)
+        $tokenRecord = PasswordResetToken::where('email', $request->email)
             ->where('token', $request->token)
-            ->where('used', false)
-            ->where('expires_at', '>', now())
             ->first();
 
-        if (!$passwordResetToken) {
-            return response()->json(['message' => 'Invalid token or email.'], 404);
+        if (!$tokenRecord) {
+            return response()->json(['message' => 'This password reset token is invalid.'], 404);
         }
 
-        // Find the user by email
-        $user = User::where('email', $request->email)->first();
-
-        if (!$user) {
-            return response()->json(['message' => 'User not found.'], 404);
+        if ($tokenRecord->used) {
+            return response()->json(['message' => 'This password reset token has already been used.'], 400);
         }
 
-        // Update the user's password
-        $user->password = Hash::make($request->password);
-        $user->password_reset_required = false;
-        $user->save();
+        if (Carbon::parse($tokenRecord->expires_at)->isPast()) {
+            return response()->json(['message' => 'This password reset token has expired.'], 400);
+        }
 
-        // Mark the token as used
-        $passwordResetToken->used = true;
-        $passwordResetToken->save();
-
-        // Dispatch the reset password notification
-        Notification::send($user, new ResetPasswordNotification());
-
-        return response()->json(['message' => 'Password has been successfully reset.'], 200);
+        return response()->json(['message' => 'The password reset token is valid. You can proceed to reset your password.'], 200);
     }
 
-    // Existing methods...
+    // ... (rest of the code in the controller)
 }

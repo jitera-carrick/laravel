@@ -4,41 +4,44 @@ namespace App\Http\Controllers\Auth;
 
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
-use App\Models\User;
 use App\Models\PasswordResetToken;
-use Illuminate\Support\Str;
-use App\Notifications\ResetPasswordNotification;
+use Illuminate\Support\Facades\Response;
 
 class ForgotPasswordController extends Controller
 {
-    // ... (other methods)
+    // ... (other methods in the controller)
 
-    public function sendResetToken(Request $request)
+    // Add the new method below
+    public function verifyResetToken(Request $request)
     {
-        $request->validate(['email' => 'required|email']);
+        try {
+            $email = $request->input('email');
+            $token = $request->input('token');
 
-        $user = User::where('email', $request->email)->first();
+            $passwordResetToken = PasswordResetToken::where('email', $email)
+                ->where('token', $token)
+                ->where('used', false)
+                ->where('expires_at', '>', now())
+                ->first();
 
-        if (!$user) {
-            return response()->json(['message' => 'Email address not found.'], 404);
+            if ($passwordResetToken) {
+                return Response::json([
+                    'status' => 'success',
+                    'message' => 'Token is valid. You can proceed to reset your password.'
+                ]);
+            } else {
+                return Response::json([
+                    'status' => 'error',
+                    'message' => 'Invalid or expired token.'
+                ], 400);
+            }
+        } catch (\Exception $e) {
+            return Response::json([
+                'status' => 'error',
+                'message' => 'An error occurred while verifying the token.'
+            ], 500);
         }
-
-        $token = Str::random(60);
-        $expiresAt = now()->addHours(2); // Set token expiration time as needed
-
-        PasswordResetToken::create([
-            'email' => $user->email,
-            'token' => $token,
-            'created_at' => now(),
-            'expires_at' => $expiresAt,
-            'used' => false,
-            'user_id' => $user->id,
-        ]);
-
-        $user->notify(new ResetPasswordNotification($token));
-
-        return response()->json(['message' => 'Password reset instructions have been sent to your email.']);
     }
 
-    // ... (other methods)
+    // ... (rest of the code in the controller)
 }
