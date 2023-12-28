@@ -17,6 +17,8 @@ class Request extends Model
         'hair_concerns',
         'status',
         'user_id',
+        // Assuming there are new columns to be added, they should be listed here.
+        // 'new_column_name', // Add new column names to the $fillable array
     ];
 
     protected $hidden = [
@@ -26,6 +28,8 @@ class Request extends Model
     protected $casts = [
         'created_at' => 'datetime',
         'updated_at' => 'datetime',
+        // Assuming there are new columns with date/time to be cast, they should be listed here.
+        // 'new_date_column' => 'datetime', // Add new date/time columns to the $casts array
     ];
 
     public function user()
@@ -49,4 +53,13 @@ class Request extends Model
     {
         return $this->hasMany(RequestMenuSelection::class, 'request_id');
     }
+
+    // Assuming there are new relationships to be added, they should be defined here.
+    // For example, if there's a new one-to-many relationship with a new table 'request_details':
+    /*
+    public function requestDetails()
+    {
+        return $this->hasMany(RequestDetail::class, 'request_id');
+    }
+    */
 }
