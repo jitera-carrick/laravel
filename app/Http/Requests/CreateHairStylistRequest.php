@@ -31,7 +31,7 @@ class CreateHairStylistRequest extends FormRequest
             'menu' => 'required|string',
             'hair_concerns' => 'string|max:3000',
             'image_paths' => 'array|max:3',
-            'image_paths.*' => 'file|mimes:png,jpg,jpeg|max:5120', // 5MB
+            'image_paths.*' => 'sometimes|file|mimes:png,jpg,jpeg|max:5120', // Updated rule
         ];
     }
 
@@ -52,8 +52,8 @@ class CreateHairStylistRequest extends FormRequest
             'image_paths.array' => 'The image paths must be an array.',
             'image_paths.max' => 'The image paths may not have more than 3 items.',
             'image_paths.*.file' => 'Each image path must be a file.',
-            'image_paths.*.mimes' => 'Each file must be of type: png, jpg, jpeg.',
-            'image_paths.*.max' => 'Each file may not be greater than 5MB.',
+            'image_paths.*.mimes' => 'Each image must be a file of type: png, jpg, jpeg.', // Updated message
+            'image_paths.*.max' => 'Each image may not be greater than 5MB.', // Updated message
         ];
     }
 }

@@ -57,6 +57,8 @@ class UpdateHairStylistRequest extends FormRequest
             'hair_concerns' => 'nullable|string|max:3000',
             'image_paths' => 'sometimes|array',
             'image_paths.*' => 'sometimes|string',
+            // New validation rules for image_paths
+            'image_paths.*' => 'required|file|mimes:png,jpg,jpeg|max:5120', // 5MB = 5120KB
         ];
     }
 
@@ -71,6 +73,11 @@ class UpdateHairStylistRequest extends FormRequest
             'area.required' => 'The area field is required when provided and cannot be empty.',
             'menu.required' => 'The menu field is required when provided and cannot be empty.',
             'hair_concerns.max' => 'The hair concerns may not be greater than 3000 characters.',
+            // New custom messages for image_paths validation
+            'image_paths.*.required' => 'An image is required.',
+            'image_paths.*.file' => 'The image must be a file.',
+            'image_paths.*.mimes' => 'The image must be a type of: png, jpg, jpeg.',
+            'image_paths.*.max' => 'The image may not be greater than 5MB.',
         ];
     }
 }
