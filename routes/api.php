@@ -2,7 +2,8 @@
 
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
-use App\Http\Controllers\ShopController;
+use App\Http\Controllers\LoginController;
+use App\Http\Controllers\ShopController; // Added to use ShopController for the route
 
 /*
 |--------------------------------------------------------------------------
@@ -20,8 +21,7 @@ Route::middleware('auth:sanctum')->get('/user', function (Request $request) {
 });
 
 // New route for updating shop details
-// Updated to use the 'auth:api' middleware as per the guideline and pointing to the 'update' method
-Route::middleware('auth:api')->put('/users/shop', [ShopController::class, 'update']);
+Route::middleware('auth:sanctum')->match(['put', 'patch'], '/shop/update', [ShopController::class, 'updateShop']);
 
-// Keeping the old route for backward compatibility or other purposes
-Route::middleware('auth:sanctum')->match(['put', 'patch'], '/shop/update', 'ShopController@updateShop');
+// New POST route for user login
+Route::post('/users/login', [LoginController::class, 'login']);
