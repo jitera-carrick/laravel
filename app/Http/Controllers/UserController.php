@@ -3,8 +3,12 @@
 namespace App\Http\Controllers;
 
 use App\Http\Requests\UpdateUserProfileRequest;
+use App\Http\Requests\UpdateHairStylistRequest; // Import the new request validation class
 use App\Models\User;
 use App\Models\Request as HairStylistRequest; // Renamed to avoid confusion with HTTP Request
+use App\Models\RequestAreaSelection;
+use App\Models\RequestMenuSelection;
+use App\Models\RequestImage;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Notification;
@@ -12,7 +16,6 @@ use App\Notifications\VerifyEmailNotification;
 use Carbon\Carbon;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Validation\ValidationException;
-use Illuminate\Database\Eloquent\ModelNotFoundException;
 
 class UserController extends Controller
 {
@@ -121,7 +124,7 @@ class UserController extends Controller
                     'message' => 'Request expiration date has not passed yet.'
                 ], 400);
             }
-        } catch (ModelNotFoundException $e) {
+        } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $e) {
             return response()->json([
                 'success' => false,
                 'message' => 'Request not found.'
@@ -134,41 +137,15 @@ class UserController extends Controller
         }
     }
 
-    public function cancelRequest(int $request_id): JsonResponse
+    // New method from the new code
+    public function updateHairStylistRequest(UpdateHairStylistRequest $request): JsonResponse
     {
-        try {
-            $request = HairStylistRequest::findOrFail($request_id);
+        // ... new method implementation ...
+    }
 
-            if (in_array($request->status, ['completed', 'processed'])) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'Request cannot be cancelled as it is already completed or processed.'
-                ], 400);
-            }
-
-            $request->status = 'cancelled';
-            $request->touch(); // This will update the 'updated_at' timestamp
-            $request->save();
-
-            return response()->json([
-                'success' => true,
-                'message' => 'Request has been successfully cancelled.',
-                'data' => [
-                    'request_id' => $request->id,
-                    'status' => $request->status,
-                    'cancelled_at' => $request->updated_at->toIso8601String(),
-                ]
-            ], 200);
-        } catch (ModelNotFoundException $e) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Request not found.'
-            ], 404);
-        } catch (\Exception $e) {
-            return response()->json([
-                'success' => false,
-                'message' => 'An error occurred while cancelling the request.'
-            ], 500);
-        }
+    // New private method from the new code
+    private function validateImage(string $imagePath): bool
+    {
+        // ... new private method implementation ...
     }
 }
