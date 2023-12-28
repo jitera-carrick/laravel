@@ -4,6 +4,7 @@ namespace App\Http\Requests;
 
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Validation\Rule;
 
 class UpdateHairStylistRequest extends FormRequest
 {
@@ -47,11 +48,29 @@ class UpdateHairStylistRequest extends FormRequest
         return [
             'request_id' => 'required|integer|exists:requests,id',
             'user_id' => 'required|integer|exists:users,id',
-            'area' => 'sometimes|string',
-            'menu' => 'sometimes|string',
-            'hair_concerns' => 'sometimes|string|max:65535', // Text type can hold up to 65535 characters
+            'area' => ['nullable', 'string', Rule::requiredIf(function () {
+                return $this->area !== null && trim($this->area) === '';
+            })],
+            'menu' => ['nullable', 'string', Rule::requiredIf(function () {
+                return $this->menu !== null && trim($this->menu) === '';
+            })],
+            'hair_concerns' => 'nullable|string|max:3000',
             'image_paths' => 'sometimes|array',
-            'image_paths.*' => 'sometimes|string', // Validate each item in the array if image_paths is provided
+            'image_paths.*' => 'sometimes|string',
+        ];
+    }
+
+    /**
+     * Get the custom messages for validation errors.
+     *
+     * @return array
+     */
+    public function messages()
+    {
+        return [
+            'area.required' => 'The area field is required when provided and cannot be empty.',
+            'menu.required' => 'The menu field is required when provided and cannot be empty.',
+            'hair_concerns.max' => 'The hair concerns may not be greater than 3000 characters.',
         ];
     }
 }
