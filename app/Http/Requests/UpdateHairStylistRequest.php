@@ -17,7 +17,7 @@ class UpdateHairStylistRequest extends FormRequest
     {
         // Check if the user is logged in and the request_id belongs to the user
         $user = Auth::user();
-        if (!$user || !$this->requestBelongsToUser($user->id, $this->request_id)) {
+        if (!$user || !$this->requestBelongsToUser($user->id, $this->request('request_id'))) {
             return false;
         }
         return true;
@@ -34,7 +34,7 @@ class UpdateHairStylistRequest extends FormRequest
     {
         // Assuming RequestModel exists and has a relationship with User
         // Replace RequestModel with the actual model name
-        $request = RequestModel::find($requestId);
+        $request = \App\Models\Request::find($requestId); // Updated to use the correct Request model
         return $request && $request->user_id === $userId;
     }
 
@@ -47,16 +47,11 @@ class UpdateHairStylistRequest extends FormRequest
     {
         return [
             'request_id' => 'required|integer|exists:requests,id',
-            'user_id' => 'required|integer|exists:users,id',
-            'area' => ['nullable', 'string', Rule::requiredIf(function () {
-                return $this->area !== null && trim($this->area) === '';
-            })],
-            'menu' => ['nullable', 'string', Rule::requiredIf(function () {
-                return $this->menu !== null && trim($this->menu) === '';
-            })],
+            'area' => 'required|string', // Updated to be required and a string
+            'menu' => 'required|string', // Updated to be required and a string
             'hair_concerns' => 'nullable|string|max:3000',
-            'image_paths' => 'sometimes|array',
-            'image_paths.*' => 'sometimes|string',
+            'image_paths' => 'nullable|array', // Updated to be nullable
+            'image_paths.*' => 'nullable|file|mimes:png,jpg,jpeg|max:5120', // Updated to validate each file in the array
         ];
     }
 
@@ -68,9 +63,15 @@ class UpdateHairStylistRequest extends FormRequest
     public function messages()
     {
         return [
-            'area.required' => 'The area field is required when provided and cannot be empty.',
-            'menu.required' => 'The menu field is required when provided and cannot be empty.',
+            'request_id.required' => 'The request ID is required.',
+            'request_id.exists' => 'The selected request ID is invalid.',
+            'area.required' => 'The area field is required.',
+            'menu.required' => 'The menu field is required.',
             'hair_concerns.max' => 'The hair concerns may not be greater than 3000 characters.',
+            'image_paths.array' => 'The image paths must be an array.',
+            'image_paths.*.file' => 'Each image path must be a file.',
+            'image_paths.*.mimes' => 'Each file must be of type: png, jpg, jpeg.',
+            'image_paths.*.max' => 'Each file may not be greater than 5MB.',
         ];
     }
 }
