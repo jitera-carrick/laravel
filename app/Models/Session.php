@@ -26,7 +26,6 @@ class Session extends Model
         'expires_at',
         'is_active',
         'user_id',
-        'token', // New column added to fillable
     ];
 
     /**
@@ -37,7 +36,6 @@ class Session extends Model
     protected $hidden = [
         // Usually, session tokens are sensitive and should be hidden by default.
         'session_token',
-        'token', // New column added to hidden
     ];
 
     /**
@@ -48,7 +46,6 @@ class Session extends Model
     protected $casts = [
         'expires_at' => 'datetime',
         'is_active' => 'boolean',
-        // No need to add 'token' here as it's likely a string and doesn't require casting.
     ];
 
     /**

@@ -34,7 +34,7 @@ class LoginController extends Controller
             return response()->json(['error' => 'Email does not exist.'], 400);
         }
 
-        if (!Hash::check($password, $user's password)) {
+        if (!Hash::check($password, $user->password)) {
             return response()->json(['error' => 'Incorrect password.'], 401);
         }
 
@@ -67,49 +67,5 @@ class LoginController extends Controller
             // Return error response for unverified email
             return response()->json(['error' => 'Email has not been verified.'], 401);
         }
-    }
-
-    /**
-     * Handle the logout process.
-     *
-     * @param  \Illuminate\Http\Request  $request
-     * @return \Illuminate\Http\JsonResponse
-     */
-    public function logout(Request $request)
-    {
-        // Assuming the user is already authenticated and the route is protected with auth middleware
-        if (!auth()->check()) {
-            return response()->json(['error' => 'User is not authenticated.'], 401);
-        }
-
-        try {
-            auth()->logout();
-
-            // Return a JSON response indicating successful logout
-            return response()->json([
-                'status' => 200,
-                'message' => 'You have been successfully logged out.'
-            ]);
-        } catch (\Exception $e) {
-            return response()->json(['error' => 'An unexpected error occurred on the server.'], 500);
-        }
-    }
-
-    /**
-     * Cancel the logout process.
-     *
-     * @param  \Illuminate\Http\Request  $request
-     * @return \Illuminate\Http\JsonResponse
-     */
-    public function cancelLogout(Request $request)
-    {
-        // Retrieve the "session_token" from the cookies to identify the user's session.
-        $sessionToken = $request->cookie('session_token');
-
-        // No action is taken on the backend as the logout process is cancelled by the user.
-        // Return a message indicating the logout process has been cancelled and the user remains logged in.
-        return response()->json([
-            'message' => 'Logout process has been cancelled. You are still logged in.',
-        ]);
     }
 }
