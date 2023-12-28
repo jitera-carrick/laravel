@@ -10,7 +10,6 @@ use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Str;
 use App\Models\LoginAttempt;
 use App\Models\User;
-use App\Models\Session;
 use App\Services\RecaptchaService; // Import the RecaptchaService
 
 class LoginController extends Controller
@@ -72,37 +71,23 @@ class LoginController extends Controller
 
     public function logout(Request $request)
     {
-        $validator = Validator::make($request->all(), [
-            'user_id' => 'required|integer',
-            'session_token' => 'required|string',
-        ]);
+        try {
+            // Check if the user is authenticated
+            if (!Auth::check()) {
+                return response()->json(['error' => 'User is not authenticated or session has expired.'], 401);
+            }
 
-        if ($validator->fails()) {
-            return response()->json($validator->errors(), 422);
+            // Perform the logout operation
+            Auth::logout();
+
+            // Return a success response
+            return response()->json([
+                'status' => 200,
+                'message' => 'You have been successfully logged out.'
+            ], 200);
+        } catch (\Exception $e) {
+            // Return an error response if an exception occurs
+            return response()->json(['error' => 'An unexpected error occurred on the server.'], 500);
         }
-
-        $userId = $request->input('user_id');
-        $sessionToken = $request->input('session_token');
-
-        $session = Session::where('session_token', $sessionToken)->where('is_active', true)->first();
-
-        if (!$session || $session->user_id != $userId) {
-            return response()->json(['error' => 'Invalid session or user.'], 403);
-        }
-
-        $user = User::find($userId);
-        if ($user) {
-            $user->is_logged_in = false;
-            $user->save();
-        }
-
-        $session->is_active = false;
-        $session->save();
-
-        Auth::guard('web')->logout();
-
-        $cookie = cookie()->forget('session_name');
-
-        return response()->json(['message' => 'Successfully logged out.'])->withCookie($cookie);
     }
 }
