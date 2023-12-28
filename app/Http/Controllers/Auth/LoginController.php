@@ -4,15 +4,12 @@ namespace App\Http\Controllers\Auth;
 
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Str;
 use App\Models\LoginAttempt;
 use App\Models\User;
-use App\Models\Session; // Import the Session model
 use App\Services\RecaptchaService; // Import the RecaptchaService
-use Illuminate\Support\Facades\Cookie; // Import the Cookie facade
 
 class LoginController extends Controller
 {
@@ -71,30 +68,21 @@ class LoginController extends Controller
         }
     }
 
-    // New logout method
-    public function logout(Request $request)
+    /**
+     * Cancel the logout process.
+     *
+     * @param  \Illuminate\Http\Request  $request
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function cancelLogout(Request $request)
     {
-        try {
-            $sessionToken = $request->cookie('session_token'); // Retrieve the "session_token" from the cookies
-            $session = Session::where('token', $sessionToken)->where('is_active', true)->first(); // Query the "sessions" table
+        // Retrieve the "session_token" from the cookies to identify the user's session.
+        $sessionToken = $request->cookie('session_token');
 
-            if ($session) {
-                $user = $session->user; // Assuming the Session model has a 'user' relationship defined
-                $user->is_logged_in = false;
-                $user->save();
-
-                $session->is_active = false;
-                $session->save();
-
-                // Queue a cookie to remove the session_token
-                Cookie::queue(Cookie::forget('session_token'));
-
-                return response()->json(['message' => 'Successfully logged out'], 200);
-            }
-
-            return response()->json(['error' => 'No active session found'], 400);
-        } catch (\Exception $e) {
-            return response()->json(['error' => 'An error occurred while logging out'], 500);
-        }
+        // No action is taken on the backend as the logout process is cancelled by the user.
+        // Return a message indicating the logout process has been cancelled and the user remains logged in.
+        return response()->json([
+            'message' => 'Logout process has been cancelled. You are still logged in.',
+        ]);
     }
 }
