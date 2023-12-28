@@ -2,7 +2,6 @@
 
 namespace App\Models;
 
-// use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
@@ -40,6 +39,21 @@ class User extends Authenticatable
      */
     protected $casts = [
         'email_verified_at' => 'datetime',
-        'password' => 'hashed',
     ];
+
+    /**
+     * Get the password reset tokens for the user.
+     */
+    public function passwordResetTokens()
+    {
+        return $this->hasMany(PasswordResetToken::class);
+    }
+
+    /**
+     * Get the login attempts for the user.
+     */
+    public function loginAttempts()
+    {
+        return $this->hasMany(LoginAttempt::class);
+    }
 }
