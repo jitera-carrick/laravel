@@ -16,11 +16,11 @@ use App\Http\Controllers\Auth\RegisterController; // Import the RegisterControll
 */
 
 // Existing route for getting the authenticated user
-Route::middleware("auth:sanctum")->get('/user', function (Request $request) {
+Route::middleware('auth:sanctum')->get('/user', function (Request $request) {
     return $request->user();
 });
 
 // New route for resetting the user's password
-Route::post('/users/reset-password', [ResetPasswordController::class, 'resetPassword']);
+Route::post("/users/reset-password", [ResetPasswordController::class, 'resetPassword']);
 // New route for user registration with throttle middleware
-Route::post('/users/register', [RegisterController::class, 'register'])->middleware('throttle:api');
+Route::post("/users/register", [RegisterController::class, "register"])->middleware("throttle:api");
