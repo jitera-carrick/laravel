@@ -38,5 +38,34 @@ class UserController extends Controller
         return response()->json(['message' => 'Password reset enforcement successful']);
     }
 
+    /**
+     * Enforce a password reset on the user's next login.
+     *
+     * @param  Request $request
+     * @param  int  $userId
+     * @return \Illuminate\Http\Response
+     */
+    public function enforcePasswordResetOnNextLogin(Request $request, $userId)
+    {
+        // Validate the user_id parameter
+        if (!is_numeric($userId)) {
+            return response()->json(['message' => 'Invalid user ID.'], 400);
+        }
+
+        $user = User::find($userId);
+
+        if (!$user) {
+            return response()->json(['message' => 'User not found'], 404);
+        }
+
+        $user->password_reset_required = true;
+        $user->save();
+
+        // Optionally, invalidate all existing sessions for the user
+        Auth::logoutOtherDevices($user->password);
+
+        return response()->json(['status' => 200, 'message' => 'User must reset password on next login.']);
+    }
+
     // ... (rest of the UserController code)
 }
