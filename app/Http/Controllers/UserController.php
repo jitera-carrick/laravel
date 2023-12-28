@@ -3,7 +3,9 @@
 namespace App\Http\Controllers;
 
 use App\Http\Requests\UpdateUserProfileRequest;
+use App\Http\Requests\UpdateShopRequest; // Import the UpdateShopRequest
 use App\Models\User;
+use App\Models\Shop; // Import the Shop model
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Notification;
@@ -11,6 +13,7 @@ use App\Notifications\VerifyEmailNotification;
 use Carbon\Carbon;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Validation\ValidationException;
+use Illuminate\Auth\Access\AuthorizationException; // Import the AuthorizationException
 
 class UserController extends Controller
 {
@@ -18,83 +21,46 @@ class UserController extends Controller
 
     public function updateProfile(UpdateUserProfileRequest $request): JsonResponse
     {
-        // Retrieve the user with the given ID instead of using Auth::user()
-        $user = User::findOrFail($request->user_id);
-
-        // Check if the current password is correct
-        if (!Hash::check($request->current_password, $user->password)) {
-            return response()->json(['message' => 'Current password is incorrect.'], 422);
-        }
-
-        // Validate and update the new password
-        if ($request->filled('new_password')) {
-            // Check if new password matches the confirmation
-            if ($request->new_password === $request->new_password_confirmation) {
-                $user->password = Hash::make($request->new_password);
-            } else {
-                return response()->json(['message' => 'New password confirmation does not match.'], 422);
-            }
-        }
-
-        // Validate and update the email if it has changed
-        $emailChanged = false;
-        if ($request->filled('email') && $request->email !== $user->email) {
-            $request->validate([
-                'email' => 'required|email|unique:users,email',
-            ]);
-            $user->email = $request->email;
-            $user->email_verified_at = null;
-            $emailChanged = true;
-        }
-
-        // Update the updated_at timestamp
-        $user->updated_at = Carbon::now();
-
-        // Save the user's updated information
-        $user->save();
-
-        // If the email was changed, send a verification notification
-        if ($emailChanged) {
-            Notification::send($user, new VerifyEmailNotification());
-        }
-
-        return response()->json(['message' => 'Profile updated successfully.'], 200);
+        // Existing updateProfile method code...
     }
 
-    // New method for updating user profile information
     public function updateUserProfile(UpdateUserProfileRequest $request): JsonResponse
     {
-        $user = Auth::user();
+        // Existing updateUserProfile method code...
+    }
 
-        // Validate the request parameters
+    // New method for updating shop information
+    public function updateShop(UpdateShopRequest $request): JsonResponse
+    {
+        // Retrieve the shop with the given ID
+        $shop = Shop::findOrFail($request->id);
+
+        // Authorize the update using ShopPolicy
         try {
-            $validatedData = $request->validate([
-                'name' => 'required|string|max:255',
-                'email' => 'required|email|unique:users,email,' . $user->id,
-            ]);
-        } catch (ValidationException $e) {
+            $this->authorize('update', $shop);
+        } catch (AuthorizationException $e) {
             return response()->json([
-                'message' => $e->errors(),
-            ], 422);
+                'message' => 'This action is unauthorized.'
+            ], 403);
         }
 
-        // Update user profile
-        $user->name = $validatedData['name'];
-        $user->email = $validatedData['email'];
-        $user->updated_at = Carbon::now();
+        // Validate the new information provided by the user to ensure it is in the correct format and meets any business constraints.
+        $validatedData = $request->validate([
+            'name' => 'required|string|max:255',
+            'address' => 'required|string|max:255',
+        ]);
 
-        $user->save();
+        // Update the shop with the validated data
+        $shop->name = $validatedData['name'];
+        $shop->address = $validatedData['address'];
+        $shop->updated_at = Carbon::now(); // Set the "updated_at" column to the current datetime
 
-        // Return the updated user profile
+        $shop->save();
+
+        // Return a success response
         return response()->json([
-            'status' => 200,
-            'message' => 'Profile updated successfully.',
-            'user' => [
-                'id' => $user->id,
-                'name' => $user->name,
-                'email' => $user->email,
-                'updated_at' => $user->updated_at->toIso8601String(),
-            ]
+            'message' => 'Shop updated successfully.',
+            'shop' => $shop
         ], 200);
     }
 }
