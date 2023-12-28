@@ -3,9 +3,9 @@
 namespace App\Http\Controllers;
 
 use App\Http\Requests\UpdateUserProfileRequest;
-use App\Http\Requests\UpdateHairStylistRequest; // Import the new request validation class
 use App\Models\User;
-use App\Models\Request as HairStylistRequest; // Renamed to avoid confusion with HTTP Request
+use App\Models\Request;
+use App\Models\RequestImage;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Notification;
@@ -13,6 +13,7 @@ use App\Notifications\VerifyEmailNotification;
 use Carbon\Carbon;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Validation\ValidationException;
+use Illuminate\Database\Eloquent\ModelNotFoundException;
 
 class UserController extends Controller
 {
@@ -71,7 +72,7 @@ class UserController extends Controller
         try {
             $validatedData = $request->validate([
                 'name' => 'required|string|max:255',
-                // The email validation rule is updated to ignore the user's own email
+                // The unique validation rule should ignore the user's own email
                 'email' => 'required|email|unique:users,email,' . $user->id,
             ]);
         } catch (ValidationException $e) {
@@ -100,49 +101,35 @@ class UserController extends Controller
         ], 200);
     }
 
-    public function updateHairStylistRequest(UpdateHairStylistRequest $request): JsonResponse
+    public function deleteRequestImage($requestId, $imageId): JsonResponse
     {
-        // Validate that the "user_id" corresponds to a logged-in customer
-        if ($request->user_id !== Auth::id()) {
+        try {
+            // Validate that the request exists
+            $request = Request::findOrFail($requestId);
+
+            // Find the specific image associated with the request
+            $image = $request->requestImages()->findOrFail($imageId);
+
+            // Delete the image
+            $image->delete();
+
+            // Return a success response
+            return response()->json([
+                'success' => true,
+                'message' => 'Image has been successfully deleted.'
+            ], 200);
+        } catch (ModelNotFoundException $e) {
+            // Return a 404 response if the request or image is not found
             return response()->json([
                 'success' => false,
-                'message' => 'Unauthorized access.',
-            ], 403);
+                'message' => 'The specified request or image does not exist.'
+            ], 404);
+        } catch (\Exception $e) {
+            // Return a generic error message if any other exception occurs
+            return response()->json([
+                'success' => false,
+                'message' => 'An error occurred while deleting the image.'
+            ], 500);
         }
-
-        // Validate that the "request_id" exists and belongs to the user
-        $hairStylistRequest = HairStylistRequest::where('user_id', $request->user_id)
-            ->findOrFail($request->request_id);
-
-        // If the "area" field is provided, update the "area" field
-        if ($request->filled('area')) {
-            $hairStylistRequest->area = $request->area;
-        }
-
-        // If the "menu" field is provided, update the "menu" field
-        if ($request->filled('menu')) {
-            $hairStylistRequest->menu = $request->menu;
-        }
-
-        // If the "hair_concerns" field is provided, validate its length and update
-        if ($request->filled('hair_concerns')) {
-            $hairStylistRequest->hair_concerns = $request->hair_concerns;
-        }
-
-        // If the "image_paths" array is provided, validate and update the "request_images" table
-        if ($request->filled('image_paths')) {
-            // Assuming there is a method in HairStylistRequest model to handle image updates
-            $hairStylistRequest->updateImages($request->image_paths);
-        }
-
-        // Save the updated request
-        $hairStylistRequest->save();
-
-        // Return a success message
-        return response()->json([
-            'success' => true,
-            'request_id' => $hairStylistRequest->id,
-            'message' => 'Hair stylist request updated successfully.'
-        ], 200);
     }
 }
