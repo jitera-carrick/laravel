@@ -26,7 +26,8 @@ class Request extends Model
         'menu',
         'hair_concerns',
         'status',
-        'user_id', // Column added to fillable
+        'user_id', // Existing columns
+        // Add new columns to fillable here if any
     ];
 
     /**
@@ -35,7 +36,8 @@ class Request extends Model
      * @var array<int, string>
      */
     protected $hidden = [
-        // Usually, sensitive data like passwords are hidden. Adjust as needed.
+        // Existing hidden columns
+        // Add new columns to hidden here if any
     ];
 
     /**
@@ -46,7 +48,8 @@ class Request extends Model
     protected $casts = [
         'created_at' => 'datetime',
         'updated_at' => 'datetime',
-        // Add other casts if necessary, for example, if 'status' is a boolean, add 'status' => 'boolean',
+        // Existing casts
+        // Add new columns to casts here if any
     ];
 
     /**
@@ -64,4 +67,6 @@ class Request extends Model
     {
         return $this->hasMany(RequestImage::class, 'request_id');
     }
+
+    // Define other relationships here if any
 }
