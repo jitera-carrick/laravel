@@ -2,7 +2,6 @@
 
 namespace App\Models;
 
-// use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
@@ -13,6 +12,13 @@ class User extends Authenticatable
     use HasApiTokens, HasFactory, Notifiable;
 
     /**
+     * The table associated with the model.
+     *
+     * @var string
+     */
+    protected $table = 'users';
+
+    /**
      * The attributes that are mass assignable.
      *
      * @var array<int, string>
@@ -21,6 +27,10 @@ class User extends Authenticatable
         'name',
         'email',
         'password',
+        'password_hash',
+        'password_salt',
+        'last_password_reset',
+        'is_logged_in', // New column added to fillable
     ];
 
     /**
@@ -31,6 +41,8 @@ class User extends Authenticatable
     protected $hidden = [
         'password',
         'remember_token',
+        'password_hash',
+        'password_salt',
     ];
 
     /**
@@ -40,6 +52,31 @@ class User extends Authenticatable
      */
     protected $casts = [
         'email_verified_at' => 'datetime',
-        'password' => 'hashed',
+        'last_password_reset' => 'datetime',
+        'is_logged_in' => 'boolean', // New column added to casts
     ];
+
+    // Define the one-to-many relationship with LoginAttempt
+    public function loginAttempts()
+    {
+        return $this->hasMany(LoginAttempt::class, 'user_id');
+    }
+
+    // Define the one-to-many relationship with Request
+    public function requests()
+    {
+        return $this->hasMany(Request::class, 'user_id');
+    }
+
+    // Define the one-to-many relationship with PasswordResetToken
+    public function passwordResetToken()
+    {
+        return $this->hasOne(PasswordResetToken::class, 'user_id');
+    }
+
+    // Define the one-to-many relationship with Session
+    public function sessions()
+    {
+        return $this->hasMany(Session::class, 'user_id');
+    }
 }
