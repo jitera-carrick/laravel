@@ -27,8 +27,6 @@ class RegisterController extends Controller
             'password.required' => 'The password is required.',
             'password.min' => 'Password must be at least 8 characters long.',
             'password.confirmed' => 'The password confirmation does not match.',
-            'password_confirmation.required_with' => 'The password confirmation is required when password is present.',
-            'password_confirmation.same' => 'The password confirmation does not match.',
         ];
 
         // Validate the request with custom messages
@@ -36,7 +34,6 @@ class RegisterController extends Controller
             'name' => 'required|string|max:255',
             'email' => 'required|string|email|max:255|unique:users',
             'password' => 'required|string|min:8|confirmed',
-            'password_confirmation' => 'required_with:password|same:password',
         ], $messages);
 
         // Check if validation fails
@@ -79,13 +76,7 @@ class RegisterController extends Controller
             // Return a response with the user's details
             return response()->json([
                 'status' => 201,
-                'message' => 'User registered successfully. A confirmation email has been sent.',
-                'user' => [
-                    'id' => $user->id,
-                    'name' => $user->name,
-                    'email' => $user->email,
-                    'created_at' => $user->created_at->toIso8601String(),
-                ]
+                'message' => 'User registered successfully.',
             ], 201);
         } catch (Exception $e) {
             // Rollback transaction

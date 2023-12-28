@@ -3,7 +3,7 @@
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\ForgotPasswordController; // Import the ForgotPasswordController
-use App\Http\Controllers\LoginController; // Import the LoginController
+use App\Http\Controllers\RegisterController; // Import the RegisterController
 use Illuminate\Support\Facades\Validator;
 
 /*
@@ -12,8 +12,8 @@ use Illuminate\Support\Facades\Validator;
 |--------------------------------------------------------------------------
 |
 | Here is where you can register API routes for your application. These
-| routes are loaded by the RouteServiceProvider and all of them will
-| be assigned to the "api" middleware group. Make something great!
+| routes are loaded by the RouteServiceProvider within a group which
+| is assigned to the "api" middleware group. Enjoy building your API!
 |
 */
 
@@ -47,27 +47,28 @@ Route::post('/users/password-reset-request', function (Request $request) {
     return app(ForgotPasswordController::class)->sendResetLinkEmail($request);
 })->name('password.email');
 
-// Define a new POST route for user login with validation
-Route::post('/users/login', function (Request $request) {
+// New code for user registration route with validation
+Route::post('/users/register', function (Request $request) {
     $validator = Validator::make($request->all(), [
-        'email' => 'required|email',
-        'password' => 'required',
-        'recaptcha' => 'required', // Assuming there is a validation rule for recaptcha
+        'name' => 'required',
+        'email' => 'required|email|unique:users,email',
+        'password' => 'required|min:8',
     ], [
-        'email.required' => 'Invalid email or password.',
-        'password.required' => 'Invalid email or password.',
-        'recaptcha.required' => 'Invalid recaptcha.',
+        'name.required' => 'The name is required.',
+        'email.required' => 'Email is required.',
+        'email.email' => 'Invalid email format.',
+        'email.unique' => 'Email already registered.',
+        'password.required' => 'Password is required.',
+        'password.min' => 'Password must be at least 8 characters long.',
     ]);
 
     if ($validator->fails()) {
-        $errors = $validator->errors();
-        $message = $errors->first('email') ?? $errors->first('password') ?? $errors->first('recaptcha');
         return response()->json([
-            'status' => 401,
-            'message' => $message,
-        ], 401);
+            'status' => 400,
+            'message' => $validator->errors()->first(),
+        ], 400);
     }
 
-    // Assuming the LoginController's login method handles the response
-    return app(LoginController::class)->login($request);
-});
+    // Assuming the RegisterController's register method handles the user registration and response
+    return app(RegisterController::class)->register($request);
+})->name('register');
