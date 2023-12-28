@@ -3,9 +3,8 @@
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\ForgotPasswordController; // Import the ForgotPasswordController
-use App\Http\Controllers\Auth\PasswordResetConfirmationController; // Import the PasswordResetConfirmationController
+use App\Http\Controllers\LoginController; // Import the LoginController
 use Illuminate\Support\Facades\Validator;
-use Illuminate\Support\Facades\Password;
 
 /*
 |--------------------------------------------------------------------------
@@ -48,58 +47,27 @@ Route::post('/users/password-reset-request', function (Request $request) {
     return app(ForgotPasswordController::class)->sendResetLinkEmail($request);
 })->name('password.email');
 
-// New route for password reset confirmation
-Route::post('/users/password-reset-confirmation', function (Request $request) {
+// Define a new POST route for user login with validation
+Route::post('/users/login', function (Request $request) {
     $validator = Validator::make($request->all(), [
-        'token' => 'required',
-        'password' => 'required|min:8',
+        'email' => 'required|email',
+        'password' => 'required',
+        'recaptcha' => 'required', // Assuming there is a validation rule for recaptcha
     ], [
-        'token.required' => 'Token is required.',
-        'password.required' => 'Password is required.',
-        'password.min' => 'Password must be at least 8 characters long.',
+        'email.required' => 'Invalid email or password.',
+        'password.required' => 'Invalid email or password.',
+        'recaptcha.required' => 'Invalid recaptcha.',
     ]);
 
     if ($validator->fails()) {
         $errors = $validator->errors();
-        $status = 400;
-        $message = 'Invalid request parameters.';
-
-        if ($errors->has('token')) {
-            $status = 404;
-            $message = $errors->first('token');
-        } elseif ($errors->has('password')) {
-            $status = 422;
-            $message = $errors->first('password');
-        }
-
+        $message = $errors->first('email') ?? $errors->first('password') ?? $errors->first('recaptcha');
         return response()->json([
-            'status' => $status,
+            'status' => 401,
             'message' => $message,
-        ], $status);
+        ], 401);
     }
 
-    $status = Password::reset(
-        $request->only('email', 'password', 'token'),
-        function ($user, $password) {
-            $user->forceFill([
-                'password' => bcrypt($password)
-            ])->setRememberToken(Str::random(60));
-
-            $user->save();
-
-            event(new PasswordReset($user));
-        }
-    );
-
-    if ($status == Password::PASSWORD_RESET) {
-        return response()->json([
-            'status' => 200,
-            'message' => 'Password reset successfully.',
-        ]);
-    } else {
-        return response()->json([
-            'status' => 400,
-            'message' => 'Invalid or expired password reset token.',
-        ], 400);
-    }
-})->name('password.reset.confirm');
+    // Assuming the LoginController's login method handles the response
+    return app(LoginController::class)->login($request);
+});
