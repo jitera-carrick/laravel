@@ -4,8 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Http\Requests\UpdateUserProfileRequest;
 use App\Models\User;
-use App\Models\Request;
-use App\Models\RequestImage;
+use App\Models\Request as HairStylistRequest; // Renamed to avoid confusion with HTTP Request
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Notification;
@@ -13,7 +12,6 @@ use App\Notifications\VerifyEmailNotification;
 use Carbon\Carbon;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Validation\ValidationException;
-use Illuminate\Database\Eloquent\ModelNotFoundException;
 
 class UserController extends Controller
 {
@@ -72,7 +70,7 @@ class UserController extends Controller
         try {
             $validatedData = $request->validate([
                 'name' => 'required|string|max:255',
-                // The unique validation rule should ignore the user's own email
+                // The email validation rule is updated to ignore the user's own email
                 'email' => 'required|email|unique:users,email,' . $user->id,
             ]);
         } catch (ValidationException $e) {
@@ -101,34 +99,36 @@ class UserController extends Controller
         ], 200);
     }
 
-    public function deleteRequestImage($requestId, $imageId): JsonResponse
+    public function expireRequest(int $request_id): JsonResponse
     {
         try {
-            // Validate that the request exists
-            $request = Request::findOrFail($requestId);
+            $request = HairStylistRequest::findOrFail($request_id);
 
-            // Find the specific image associated with the request
-            $image = $request->requestImages()->findOrFail($imageId);
+            // Assuming there is a method to check if the treatment plan's date and time have passed
+            // This is a placeholder for the actual logic that would determine if the request is expired
+            if (Carbon::now()->greaterThan($request->created_at->addDays(30))) { // Example condition
+                $request->status = 'expired';
+                $request->save();
 
-            // Delete the image
-            $image->delete();
-
-            // Return a success response
-            return response()->json([
-                'success' => true,
-                'message' => 'Image has been successfully deleted.'
-            ], 200);
-        } catch (ModelNotFoundException $e) {
-            // Return a 404 response if the request or image is not found
+                return response()->json([
+                    'success' => true,
+                    'message' => 'Request has been successfully expired.'
+                ], 200);
+            } else {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Request expiration date has not passed yet.'
+                ], 400);
+            }
+        } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $e) {
             return response()->json([
                 'success' => false,
-                'message' => 'The specified request or image does not exist.'
+                'message' => 'Request not found.'
             ], 404);
         } catch (\Exception $e) {
-            // Return a generic error message if any other exception occurs
             return response()->json([
                 'success' => false,
-                'message' => 'An error occurred while deleting the image.'
+                'message' => 'An error occurred while expiring the request.'
             ], 500);
         }
     }
