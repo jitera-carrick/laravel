@@ -10,6 +10,7 @@ use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Str;
 use App\Models\LoginAttempt;
 use App\Models\User;
+use App\Models\Session;
 use App\Services\RecaptchaService; // Import the RecaptchaService
 
 class LoginController extends Controller
@@ -67,5 +68,41 @@ class LoginController extends Controller
             // Return error response for unverified email
             return response()->json(['error' => 'Email has not been verified.'], 401);
         }
+    }
+
+    public function logout(Request $request)
+    {
+        $validator = Validator::make($request->all(), [
+            'user_id' => 'required|integer',
+            'session_token' => 'required|string',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json($validator->errors(), 422);
+        }
+
+        $userId = $request->input('user_id');
+        $sessionToken = $request->input('session_token');
+
+        $session = Session::where('session_token', $sessionToken)->where('is_active', true)->first();
+
+        if (!$session || $session->user_id != $userId) {
+            return response()->json(['error' => 'Invalid session or user.'], 403);
+        }
+
+        $user = User::find($userId);
+        if ($user) {
+            $user->is_logged_in = false;
+            $user->save();
+        }
+
+        $session->is_active = false;
+        $session->save();
+
+        Auth::guard('web')->logout();
+
+        $cookie = cookie()->forget('session_name');
+
+        return response()->json(['message' => 'Successfully logged out.'])->withCookie($cookie);
     }
 }
