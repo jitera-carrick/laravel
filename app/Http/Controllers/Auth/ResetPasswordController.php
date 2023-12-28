@@ -9,9 +9,9 @@ use App\Utils\ApiResponse;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
-use Illuminate\Support\Facades\Validator; // Import Validator facade
+use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Carbon;
-use Illuminate\Http\Request; // Import Request
+use Illuminate\Http\Request;
 use App\Models\User;
 use App\Models\PasswordResetToken;
 
@@ -30,7 +30,6 @@ class ResetPasswordController extends Controller
         // ...
     }
 
-    // Updated method to handle password reset according to the new requirements
     public function resetPassword(Request $request): JsonResponse
     {
         $validator = Validator::make($request->all(), [
@@ -84,6 +83,37 @@ class ResetPasswordController extends Controller
             DB::rollBack();
             return ApiResponse::error(['message' => 'An error occurred while resetting the password.'], 500);
         }
+    }
+
+    // New method to validate the reset token
+    public function validateResetToken(Request $request): JsonResponse
+    {
+        $validator = Validator::make($request->all(), [
+            'token' => 'required',
+        ], [
+            'token.required' => 'Token is required.',
+        ]);
+
+        if ($validator->fails()) {
+            $errors = $validator->errors();
+            $firstError = $errors->all()[0];
+            return ApiResponse::error(['message' => $firstError], 422);
+        }
+
+        $token = $request->input('token');
+
+        $passwordResetToken = PasswordResetToken::where('token', $token)
+            ->where('used', false)
+            ->where('expires_at', '>', now())
+            ->first();
+
+        if (!$passwordResetToken) {
+            return ApiResponse::error(['message' => 'Invalid or expired password reset token.'], 422);
+        }
+
+        $passwordResetToken->update(['used' => true]);
+
+        return ApiResponse::success(['message' => 'Token is valid. Proceed to password reset.']);
     }
 
     // ... other methods ...
