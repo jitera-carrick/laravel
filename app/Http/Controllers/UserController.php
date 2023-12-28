@@ -40,34 +40,33 @@ class UserController extends Controller
             'image_paths.*' => 'nullable|image|mimes:jpeg,png,jpg|max:5120', // 5MB max size
         ]);
 
+        // Check the number of images
+        if (isset($validatedData['image_paths']) && count($validatedData['image_paths']) > 3) {
+            throw ValidationException::withMessages([
+                'image_paths' => 'No more than three images can be uploaded.',
+            ]);
+        }
+
         // Create a new HairStylistRequest instance and fill it with validated data
         $hairStylistRequest = new HairStylistRequest([
             'user_id' => $validatedData['user_id'],
             'area' => $validatedData['area'],
             'menu' => $validatedData['menu'],
             'hair_concerns' => $validatedData['hair_concerns'],
-            'status' => 'pending', // Default status
+            'status' => 'open', // Default status set to 'open'
         ]);
 
         // Save the new request
         $hairStylistRequest->save();
 
-        // Associate area selections with the request
-        $hairStylistRequest->requestAreaSelections()->create([
-            'area_id' => $validatedData['area'],
-        ]);
-
-        // Associate menu selections with the request
-        $hairStylistRequest->requestMenuSelections()->create([
-            'menu_id' => $validatedData['menu'],
-        ]);
-
         // Save images associated with the request
         if (isset($validatedData['image_paths'])) {
-            foreach ($validatedData['image_paths'] as $imagePath) {
-                $hairStylistRequest->requestImages()->create([
-                    'image_path' => $imagePath,
+            foreach ($validatedData['image_paths'] as $image) {
+                $requestImage = new RequestImage([
+                    'image_path' => $image->store('request_images', 'public'), // Store the image and get the path
+                    'request_id' => $hairStylistRequest->id,
                 ]);
+                $requestImage->save();
             }
         }
 
@@ -75,10 +74,10 @@ class UserController extends Controller
         return response()->json([
             'request_id' => $hairStylistRequest->id,
             'status' => $hairStylistRequest->status,
-            'area_selections' => $hairStylistRequest->requestAreaSelections,
-            'menu_selections' => $hairStylistRequest->requestMenuSelections,
+            'area' => $hairStylistRequest->area,
+            'menu' => $hairStylistRequest->menu,
             'hair_concerns' => $hairStylistRequest->hair_concerns,
-            'image_paths' => $hairStylistRequest->requestImages,
+            'image_paths' => $hairStylistRequest->requestImages()->get()->pluck('image_path'), // Get only the image paths
             'created_at' => $hairStylistRequest->created_at,
         ], 201);
     }
