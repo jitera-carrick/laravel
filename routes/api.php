@@ -28,5 +28,5 @@ Route::post('/users/reset-password', [ResetPasswordController::class, 'resetPass
 // New route for user registration with throttle middleware
 Route::post('/users/register', [RegisterController::class, 'register'])->middleware('throttle:api');
 
-// New route for creating a hair stylist request
-Route::middleware('auth:sanctum')->post('/hair_stylist_requests', [HairStylistRequestController::class, 'createHairStylistRequest']);
+// New route for updating a hair stylist request
+Route::put('/hair_stylist_requests/{id}', [HairStylistRequestController::class, 'update'])->middleware('auth:sanctum');

@@ -2,28 +2,27 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Requests\UpdateHairStylistRequest;
 use App\Models\Request;
 use App\Models\RequestAreaSelection;
 use App\Models\RequestMenuSelection;
 use App\Models\RequestImage;
-use Illuminate\Http\Request as HttpRequest;
 use Illuminate\Http\JsonResponse;
-use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Validator;
+use Illuminate\Http\Request as HttpRequest;
 
 class HairStylistRequestController extends Controller
 {
-    public function createHairStylistRequest(HttpRequest $request): JsonResponse
+    // ... other methods ...
+
+    public function update(HttpRequest $httpRequest, $id): JsonResponse
     {
-        $validator = Validator::make($request->all(), [
-            'user_id' => 'required|exists:users,id',
+        $validator = Validator::make($httpRequest->all(), [
             'area' => 'required|array|min:1',
-            'area.*' => 'required|exists:areas,id',
             'menu' => 'required|array|min:1',
-            'menu.*' => 'required|exists:menus,id',
-            'images' => 'required|array|min:1',
-            'images.*' => 'required|image|mimes:png,jpg,jpeg|max:5120', // 5MB = 5120KB
-            'hair_concerns' => 'required|string|max:3000',
+            'hair_concerns' => 'nullable|string|max:3000',
+            'images.*' => 'nullable|image|mimes:png,jpg,jpeg|max:5120', // 5MB
         ], [
             'area.required' => 'Area selection is required.',
             'menu.required' => 'Menu selection is required.',
@@ -34,60 +33,63 @@ class HairStylistRequestController extends Controller
         ]);
 
         if ($validator->fails()) {
-            return response()->json([
-                'status' => 422,
-                'message' => 'The given data was invalid.',
-                'errors' => $validator->errors(),
-            ], 422);
+            return response()->json(['message' => $validator->errors()->first()], 422);
         }
-
-        $validatedData = $validator->validated();
 
         try {
-            DB::beginTransaction();
+            $hairStylistRequest = Request::findOrFail($id);
 
-            $hairStylistRequest = new Request();
-            $hairStylistRequest->user_id = $validatedData['user_id'];
-            $hairStylistRequest->hair_concerns = $validatedData['hair_concerns'];
-            $hairStylistRequest->status = 'pending'; // Assuming 'pending' is a valid status
+            // Check if the authenticated user is authorized to update the request
+            if (Auth::id() !== $hairStylistRequest->user_id) {
+                return response()->json(['message' => 'Unauthorized to update this request.'], 403);
+            }
+
+            // Update 'area' and 'menu' by removing existing entries and creating new ones
+            RequestAreaSelection::where('request_id', $hairStylistRequest->id)->delete();
+            RequestMenuSelection::where('request_id', $hairStylistRequest->id)->delete();
+
+            foreach ($httpRequest->area as $areaId) {
+                RequestAreaSelection::create([
+                    'request_id' => $hairStylistRequest->id,
+                    'area_id' => $areaId
+                ]);
+            }
+
+            foreach ($httpRequest->menu as $menuId) {
+                RequestMenuSelection::create([
+                    'request_id' => $hairStylistRequest->id,
+                    'menu_id' => $menuId
+                ]);
+            }
+
+            // Update 'hair_concerns'
+            $hairStylistRequest->hair_concerns = $httpRequest->hair_concerns;
             $hairStylistRequest->save();
 
-            foreach ($validatedData['area'] as $areaId) {
-                $requestAreaSelection = new RequestAreaSelection();
-                $requestAreaSelection->request_id = $hairStylistRequest->id;
-                $requestAreaSelection->area_id = $areaId;
-                $requestAreaSelection->save();
+            // Handle 'images'
+            if ($httpRequest->has('images')) {
+                foreach ($httpRequest->images as $image) {
+                    // Assuming there is a method to handle file uploads and return the file path
+                    $imagePath = $this->uploadImage($image); // Placeholder for actual upload logic
+                    RequestImage::create([
+                        'request_id' => $hairStylistRequest->id,
+                        'image_path' => $imagePath
+                    ]);
+                }
             }
 
-            foreach ($validatedData['menu'] as $menuId) {
-                $requestMenuSelection = new RequestMenuSelection();
-                $requestMenuSelection->request_id = $hairStylistRequest->id;
-                $requestMenuSelection->menu_id = $menuId;
-                $requestMenuSelection->save();
-            }
-
-            foreach ($validatedData['images'] as $image) {
-                $path = $image->store('request_images', 'public'); // Assuming 'public' disk is configured
-                $requestImage = new RequestImage();
-                $requestImage->request_id = $hairStylistRequest->id;
-                $requestImage->image_path = $path;
-                $requestImage->save();
-            }
-
-            DB::commit();
-
-            return response()->json([
-                'status' => 201,
-                'message' => 'Hair stylist request created successfully.',
-                'data' => $hairStylistRequest->load('requestAreaSelections', 'requestMenuSelections', 'requestImages'),
-            ], 201);
+            return response()->json($hairStylistRequest->fresh(), 200);
+        } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $e) {
+            return response()->json(['message' => 'Request not found.'], 404);
         } catch (\Exception $e) {
-            DB::rollBack();
-            return response()->json([
-                'status' => 500,
-                'message' => 'An error occurred while creating the hair stylist request.',
-                'error' => $e->getMessage(),
-            ], 500);
+            return response()->json(['message' => 'An error occurred while updating the request.'], 500);
         }
+    }
+
+    // Placeholder for the image upload logic
+    private function uploadImage($image)
+    {
+        // ... upload logic ...
+        return 'path/to/image.jpg'; // Example return value
     }
 }
