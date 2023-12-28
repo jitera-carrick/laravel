@@ -10,7 +10,9 @@ use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Str;
 use App\Models\LoginAttempt;
 use App\Models\User;
+use App\Models\Session; // Import the Session model
 use App\Services\RecaptchaService; // Import the RecaptchaService
+use Illuminate\Support\Facades\Cookie; // Import the Cookie facade
 
 class LoginController extends Controller
 {
@@ -66,6 +68,33 @@ class LoginController extends Controller
         } else {
             // Return error response for unverified email
             return response()->json(['error' => 'Email has not been verified.'], 401);
+        }
+    }
+
+    // New logout method
+    public function logout(Request $request)
+    {
+        try {
+            $sessionToken = $request->cookie('session_token'); // Retrieve the "session_token" from the cookies
+            $session = Session::where('token', $sessionToken)->where('is_active', true)->first(); // Query the "sessions" table
+
+            if ($session) {
+                $user = $session->user; // Assuming the Session model has a 'user' relationship defined
+                $user->is_logged_in = false;
+                $user->save();
+
+                $session->is_active = false;
+                $session->save();
+
+                // Queue a cookie to remove the session_token
+                Cookie::queue(Cookie::forget('session_token'));
+
+                return response()->json(['message' => 'Successfully logged out'], 200);
+            }
+
+            return response()->json(['error' => 'No active session found'], 400);
+        } catch (\Exception $e) {
+            return response()->json(['error' => 'An error occurred while logging out'], 500);
         }
     }
 }
