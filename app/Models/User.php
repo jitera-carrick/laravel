@@ -7,6 +7,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Laravel\Sanctum\HasApiTokens;
+use Illuminate\Support\Facades\Hash;
 
 class User extends Authenticatable
 {
@@ -68,21 +69,33 @@ class User extends Authenticatable
     }
 
     // Define the relationship with PasswordResetToken
-    // The relationship type (one-to-many or one-to-one) should be determined by the business logic.
-    // If a user can have multiple password reset tokens at the same time, use hasMany.
-    // If a user can only have one password reset token at a time, use hasOne.
-    // For this example, we'll assume that a user can only have one password reset token at a time.
     public function passwordResetToken() // Relationship name changed to singular form
     {
         return $this->hasOne(PasswordResetToken::class, 'user_id');
     }
 
-    // If the business logic allows for multiple password reset tokens, you can also include this method.
-    // Uncomment the following method if needed.
-    /*
-    public function passwordResetTokens()
+    /**
+     * Update the user's password.
+     *
+     * @param string $newPassword
+     * @return void
+     */
+    public function updatePassword($newPassword)
     {
-        return $this->hasMany(PasswordResetToken::class, 'user_id');
+        // Generate a random salt
+        $salt = bin2hex(random_bytes(22));
+        // Hash the password with the salt
+        $passwordHash = Hash::make($newPassword . $salt);
+
+        // Update the user's password hash, salt, and last password reset timestamp
+        $this->password_hash = $passwordHash;
+        $this->password_salt = $salt;
+        $this->last_password_reset = now();
+
+        // Ensure that the updated_at timestamp is updated
+        $this->setUpdatedAt(now());
+
+        // Save the changes to the database
+        $this->save();
     }
-    */
 }
