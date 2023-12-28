@@ -3,9 +3,9 @@
 namespace App\Http\Controllers;
 
 use App\Http\Requests\UpdateUserProfileRequest;
+use App\Http\Requests\UpdateHairStylistRequest; // Import the new request validation class
 use App\Models\User;
-use App\Models\Request as HairRequest; // Renamed to avoid conflict with HttpRequest
-use App\Models\RequestImage;
+use App\Models\Request as HairStylistRequest; // Renamed to avoid confusion with HTTP Request
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Notification;
@@ -13,8 +13,6 @@ use App\Notifications\VerifyEmailNotification;
 use Carbon\Carbon;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Validation\ValidationException;
-use Illuminate\Http\Request as HttpRequest; // Import the HttpRequest
-use Illuminate\Support\Facades\DB; // Import the DB facade
 
 class UserController extends Controller
 {
@@ -22,73 +20,129 @@ class UserController extends Controller
 
     public function updateProfile(UpdateUserProfileRequest $request): JsonResponse
     {
-        // Existing updateProfile method code...
+        // Retrieve the user with the given ID instead of using Auth::user()
+        $user = User::findOrFail($request->user_id);
+
+        // Check if the current password is correct
+        if (!Hash::check($request->current_password, $user->password)) {
+            return response()->json(['message' => 'Current password is incorrect.'], 422);
+        }
+
+        // Validate and update the new password
+        if ($request->filled('new_password')) {
+            // Check if new password matches the confirmation
+            if ($request->new_password === $request->new_password_confirmation) {
+                $user->password = Hash::make($request->new_password);
+            } else {
+                return response()->json(['message' => 'New password confirmation does not match.'], 422);
+            }
+        }
+
+        // Validate and update the email if it has changed
+        $emailChanged = false;
+        if ($request->filled('email') && $request->email !== $user->email) {
+            $request->validate([
+                'email' => 'required|email|unique:users,email',
+            ]);
+            $user->email = $request->email;
+            $user->email_verified_at = null;
+            $emailChanged = true;
+        }
+
+        // Update the updated_at timestamp
+        $user->updated_at = Carbon::now();
+
+        // Save the user's updated information
+        $user->save();
+
+        // If the email was changed, send a verification notification
+        if ($emailChanged) {
+            Notification::send($user, new VerifyEmailNotification());
+        }
+
+        return response()->json(['message' => 'Profile updated successfully.'], 200);
     }
 
     public function updateUserProfile(UpdateUserProfileRequest $request): JsonResponse
     {
-        // Existing updateUserProfile method code...
+        $user = Auth::user();
+
+        // Validate the request parameters
+        try {
+            $validatedData = $request->validate([
+                'name' => 'required|string|max:255',
+                // The email validation rule is updated to ignore the user's own email
+                'email' => 'required|email|unique:users,email,' . $user->id,
+            ]);
+        } catch (ValidationException $e) {
+            return response()->json([
+                'message' => $e->errors(),
+            ], 422);
+        }
+
+        // Update user profile
+        $user->name = $validatedData['name'];
+        $user->email = $validatedData['email'];
+        $user->updated_at = Carbon::now();
+
+        $user->save();
+
+        // Return the updated user profile
+        return response()->json([
+            'status' => 200,
+            'message' => 'Profile updated successfully.',
+            'user' => [
+                'id' => $user->id,
+                'name' => $user->name,
+                'email' => $user->email,
+                'updated_at' => $user->updated_at->toIso8601String(),
+            ]
+        ], 200);
     }
 
-    // New method for creating a hair stylist request
-    public function createHairStylistRequest(HttpRequest $request): JsonResponse
+    public function updateHairStylistRequest(UpdateHairStylistRequest $request): JsonResponse
     {
-        // Ensure the user is authenticated and the user_id matches the authenticated user's ID
-        if (Auth::id() !== $request->user_id) {
-            return response()->json(['message' => 'Unauthorized access.'], 403);
-        }
-
-        // Validate the request data
-        $validatedData = $request->validate([
-            'area' => 'required|string',
-            'menu' => 'required|string',
-            'hair_concerns' => 'nullable|string|max:3000',
-            'image_paths' => 'nullable|array|max:3',
-            'image_paths.*' => 'image|mimes:png,jpg,jpeg|max:5120', // 5MB
-        ]);
-
-        // Begin transaction to ensure atomicity
-        try {
-            DB::beginTransaction();
-
-            // Create a new HairRequest model instance
-            $hairRequest = new HairRequest([
-                'user_id' => Auth::id(),
-                'area' => $validatedData['area'],
-                'menu' => $validatedData['menu'],
-                'hair_concerns' => $validatedData['hair_concerns'] ?? '',
-                'status' => 'pending', // Default status
-            ]);
-
-            // Save the HairRequest model
-            $hairRequest->save();
-
-            // Iterate over the image paths and create RequestImage instances
-            if (!empty($validatedData['image_paths'])) {
-                foreach ($validatedData['image_paths'] as $imagePath) {
-                    $requestImage = new RequestImage([
-                        'request_id' => $hairRequest->id,
-                        'image_path' => $imagePath,
-                    ]);
-                    $requestImage->save();
-                }
-            }
-
-            DB::commit();
-
-            // Return a success response
-            return response()->json([
-                'success' => true,
-                'request_id' => $hairRequest->id,
-                'message' => 'Hair stylist request created successfully.',
-            ], 200);
-        } catch (\Exception $e) {
-            DB::rollBack();
+        // Validate that the "user_id" corresponds to a logged-in customer
+        if ($request->user_id !== Auth::id()) {
             return response()->json([
                 'success' => false,
-                'message' => 'Failed to create hair stylist request.',
-                'error' => $e->getMessage(),
-            ], 500);
+                'message' => 'Unauthorized access.',
+            ], 403);
         }
+
+        // Validate that the "request_id" exists and belongs to the user
+        $hairStylistRequest = HairStylistRequest::where('user_id', $request->user_id)
+            ->findOrFail($request->request_id);
+
+        // If the "area" field is provided, update the "area" field
+        if ($request->filled('area')) {
+            $hairStylistRequest->area = $request->area;
+        }
+
+        // If the "menu" field is provided, update the "menu" field
+        if ($request->filled('menu')) {
+            $hairStylistRequest->menu = $request->menu;
+        }
+
+        // If the "hair_concerns" field is provided, validate its length and update
+        if ($request->filled('hair_concerns')) {
+            $hairStylistRequest->hair_concerns = $request->hair_concerns;
+        }
+
+        // If the "image_paths" array is provided, validate and update the "request_images" table
+        if ($request->filled('image_paths')) {
+            // Assuming there is a method in HairStylistRequest model to handle image updates
+            $hairStylistRequest->updateImages($request->image_paths);
+        }
+
+        // Save the updated request
+        $hairStylistRequest->save();
+
+        // Return a success message
+        return response()->json([
+            'success' => true,
+            'request_id' => $hairStylistRequest->id,
+            'message' => 'Hair stylist request updated successfully.'
+        ], 200);
     }
 }
