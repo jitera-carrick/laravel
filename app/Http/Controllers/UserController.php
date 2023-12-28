@@ -3,14 +3,13 @@
 namespace App\Http\Controllers;
 
 use App\Http\Requests\CreateHairStylistRequest; // Import the new form request validation class
-use App\Http\Requests\UpdateHairStylistRequest; // Import the UpdateHairStylistRequest form request validation class
 use App\Models\User;
 use App\Models\Request as HairStylistRequest; // Renamed to avoid confusion with HTTP Request
 use App\Models\RequestImage;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request as HttpRequest;
-use Illuminate\Support\Facades\Validator;
+use Illuminate\Support\Str;
 
 class UserController extends Controller
 {
@@ -44,12 +43,28 @@ class UserController extends Controller
         $hairStylistRequest->save();
 
         // Iterate over the "image_paths" array and create RequestImage instances
-        foreach ($validatedData['image_paths'] as $imagePath) {
-            $requestImage = new RequestImage([
-                'request_id' => $hairStylistRequest->id,
-                'image_path' => $imagePath,
-            ]);
-            $requestImage->save();
+        if (isset($validatedData['image_paths'])) {
+            foreach ($validatedData['image_paths'] as $imagePath) {
+                $requestImage = new RequestImage([
+                    'request_id' => $hairStylistRequest->id,
+                    'image_path' => $imagePath,
+                ]);
+                $requestImage->save();
+            }
+        }
+
+        // If images are provided, iterate over the 'images' array and create new instances of RequestImage
+        if (isset($validatedData['images'])) {
+            foreach ($validatedData['images'] as $image) {
+                // Store the image and create a RequestImage instance
+                $filename = Str::random(10) . '.' . $image->getClientOriginalExtension();
+                $path = $image->storeAs('request_images', $filename, 'public');
+                $requestImage = new RequestImage([
+                    'request_id' => $hairStylistRequest->id,
+                    'image_path' => $path,
+                ]);
+                $requestImage->save();
+            }
         }
 
         // Prepare the response data
@@ -96,46 +111,6 @@ class UserController extends Controller
             'status' => $hairStylistRequest->status,
             'message' => 'Hair stylist request registration has been successfully canceled.'
         ]);
-    }
-
-    /**
-     * Update an existing hair stylist request.
-     *
-     * @param UpdateHairStylistRequest $request
-     * @param HairStylistRequest $hairStylistRequest
-     * @return JsonResponse
-     */
-    public function updateHairStylistRequest(UpdateHairStylistRequest $request, HairStylistRequest $hairStylistRequest): JsonResponse
-    {
-        // The UpdateHairStylistRequest class handles the validation and authorization
-        $validatedData = $request->validated();
-
-        // Check if the authenticated user is the owner of the request
-        if ($hairStylistRequest->user_id != Auth::id()) {
-            return response()->json(['message' => 'Request not found or you do not have permission to edit this request.'], 403);
-        }
-
-        // Update the request with the validated data
-        $hairStylistRequest->fill([
-            'area' => $validatedData['area'],
-            'menu' => $validatedData['menu'],
-            'hair_concerns' => $validatedData['hair_concerns'],
-        ]);
-        $hairStylistRequest->save();
-
-        // Prepare the response data
-        $responseData = [
-            'id' => $hairStylistRequest->id,
-            'area' => $hairStylistRequest->area,
-            'menu' => $hairStylistRequest->menu,
-            'hair_concerns' => $hairStylistRequest->hair_concerns,
-            'status' => $hairStylistRequest->status,
-            'updated_at' => $hairStylistRequest->updated_at->toDateTimeString(),
-            'user_id' => $hairStylistRequest->user_id,
-        ];
-
-        // Return the response with the updated request details
-        return response()->json(['status' => 200, 'request' => $responseData]);
     }
 
     // ... other methods ...

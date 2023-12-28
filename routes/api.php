@@ -4,7 +4,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Auth\RegisterController; // Import the RegisterController
 use App\Http\Controllers\Auth\ResetPasswordController; // Import the ResetPasswordController
-use App\Http\Controllers\RequestController; // Import the RequestController
+use App\Http\Controllers\UserController; // Import the UserController
 
 /*
 |--------------------------------------------------------------------------
@@ -28,7 +28,5 @@ Route::post('/users/reset-password', [ResetPasswordController::class, 'resetPass
 // New route for user registration with throttle middleware
 Route::post('/users/register', [RegisterController::class, 'register'])->middleware('throttle:api');
 
-// Define a new route for the PUT request to update a request
-Route::middleware('auth:api')->group(function () {
-    Route::put('/requests/{id}', [RequestController::class, 'update']);
-});
+// New route for creating a request, only accessible to authenticated users
+Route::post('/requests', [UserController::class, 'createRequest'])->middleware('auth:sanctum');
