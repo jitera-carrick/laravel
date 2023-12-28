@@ -6,7 +6,6 @@ use App\Http\Controllers\Controller;
 use App\Models\User;
 use App\Models\PasswordResetToken;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Str;
 use App\Mail\PasswordResetMailable; // Assuming this Mailable exists
@@ -18,7 +17,7 @@ class ForgotPasswordController extends Controller
     {
         // Validate the email parameter
         $validator = Validator::make($request->all(), [
-            'email' => 'required|email'
+            'email' => 'required|regex:/^.+@.+$/i'
         ]);
 
         if ($validator->fails()) {
@@ -36,6 +35,7 @@ class ForgotPasswordController extends Controller
         $passwordResetToken = new PasswordResetToken([
             'email' => $user->email,
             'token' => $token,
+            'created_at' => now(),
             'expires_at' => now()->addHours(24),
             'used' => false,
             'user_id' => $user->id
