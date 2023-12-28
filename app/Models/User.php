@@ -21,6 +21,9 @@ class User extends Authenticatable
         'name',
         'email',
         'password',
+        'password_hash', // New column added to fillable
+        'password_salt', // New column added to fillable
+        'last_password_reset', // New column added to fillable
     ];
 
     /**
@@ -31,6 +34,8 @@ class User extends Authenticatable
     protected $hidden = [
         'password',
         'remember_token',
+        'password_hash', // New column added to hidden
+        'password_salt', // New column added to hidden
     ];
 
     /**
@@ -40,11 +45,18 @@ class User extends Authenticatable
      */
     protected $casts = [
         'email_verified_at' => 'datetime',
+        'last_password_reset' => 'datetime', // New column added to casts
     ];
 
     // Define the one-to-many relationship with LoginAttempt
     public function loginAttempts()
     {
         return $this->hasMany(LoginAttempt::class, 'user_id');
+    }
+
+    // Define the one-to-many relationship with PasswordResetToken
+    public function passwordResetTokens()
+    {
+        return $this->hasMany(PasswordResetToken::class, 'user_id');
     }
 }
