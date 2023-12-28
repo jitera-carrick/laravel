@@ -2,8 +2,6 @@
 
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
-use App\Http\Controllers\LoginController;
-use App\Http\Controllers\ShopController; // Added to use ShopController for the route
 
 /*
 |--------------------------------------------------------------------------
@@ -11,17 +9,18 @@ use App\Http\Controllers\ShopController; // Added to use ShopController for the 
 |--------------------------------------------------------------------------
 |
 | Here is where you can register API routes for your application. These
-| routes are loaded by the RouteServiceProvider and all of them will
-| be assigned to the "api" middleware group. Make something great!
+| routes are loaded by the RouteServiceProvider within a group which
+| is assigned to the "api" middleware group. Enjoy building your API!
 |
 */
 
+// Existing route to get user details
 Route::middleware('auth:sanctum')->get('/user', function (Request $request) {
     return $request->user();
 });
 
 // New route for updating shop details
-Route::middleware('auth:sanctum')->match(['put', 'patch'], '/shop/update', [ShopController::class, 'updateShop']);
+Route::middleware('auth:sanctum')->match(['put', 'patch'], '/shop/update', 'ShopController@updateShop');
 
-// New POST route for user login
-Route::post('/users/login', [LoginController::class, 'login']);
+// New route for email verification
+Route::get('/users/verify/{token}', 'Auth\VerificationController@verifyEmail')->name('verification.verify');
