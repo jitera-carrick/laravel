@@ -15,7 +15,11 @@ class ShopController extends Controller
     public function updateShop(UpdateShopRequest $request): JsonResponse
     {
         try {
-            $shop = Shop::findOrFail($request->input('shop_id'));
+            // Retrieve the authenticated user
+            $user = Auth::user();
+
+            // Retrieve the shop instance by the authenticated user's ID
+            $shop = Shop::where('user_id', $user->id)->firstOrFail();
 
             // Ensure the user has permission to update the shop
             $this->authorize('update', $shop);
@@ -24,12 +28,19 @@ class ShopController extends Controller
             $validatedData = $request->validated();
 
             // Update the shop's information
-            $shop->fill($validatedData);
+            $shop->fill([
+                'name' => $validatedData['shop_name'],
+                'description' => $validatedData['shop_description'],
+            ]);
             $shop->save();
 
             return response()->json([
-                'message' => 'Shop updated successfully.',
-                'shop' => $shop
+                'status' => 200,
+                'message' => 'Shop information updated successfully.',
+                'shop' => [
+                    'shop_name' => $shop->name,
+                    'shop_description' => $shop->description,
+                ]
             ]);
         } catch (ModelNotFoundException $e) {
             return response()->json([
