@@ -16,8 +16,6 @@ use Carbon\Carbon;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request as HttpRequest;
 use Illuminate\Validation\ValidationException;
-use Illuminate\Support\Facades\Storage;
-use Illuminate\Support\Facades\Validator;
 
 class UserController extends Controller
 {
@@ -42,13 +40,21 @@ class UserController extends Controller
             'image_paths.*' => 'nullable|image|mimes:jpeg,png,jpg|max:5120', // 5MB max size
         ]);
 
+        // Check the number of images
+        if (isset($validatedData['image_paths']) && count($validatedData['image_paths']) > 3) {
+            throw ValidationException::withMessages([
+                'image_paths' => 'No more than three images can be uploaded.',
+            ]);
+        }
+
         // Create a new HairStylistRequest instance and fill it with validated data
         $hairStylistRequest = new HairStylistRequest([
             'user_id' => $validatedData['user_id'],
             'area' => $validatedData['area'],
             'menu' => $validatedData['menu'],
             'hair_concerns' => $validatedData['hair_concerns'],
-            'status' => 'pending', // Default status
+            // Use 'pending' as default status if not specified in the new code
+            'status' => $validatedData['status'] ?? 'pending',
         ]);
 
         // Save the new request
@@ -66,7 +72,13 @@ class UserController extends Controller
 
         // Save images associated with the request
         if (isset($validatedData['image_paths'])) {
-            foreach ($validatedData['image_paths'] as $imagePath) {
+            foreach ($validatedData['image_paths'] as $image) {
+                // Check if the image is a file instance or a path
+                if ($image instanceof \Illuminate\Http\UploadedFile) {
+                    $imagePath = $image->store('request_images', 'public'); // Store the image and get the path
+                } else {
+                    $imagePath = $image; // Assume $image is a path
+                }
                 $hairStylistRequest->requestImages()->create([
                     'image_path' => $imagePath,
                 ]);
@@ -80,70 +92,23 @@ class UserController extends Controller
             'area_selections' => $hairStylistRequest->requestAreaSelections,
             'menu_selections' => $hairStylistRequest->requestMenuSelections,
             'hair_concerns' => $hairStylistRequest->hair_concerns,
-            'image_paths' => $hairStylistRequest->requestImages,
+            'image_paths' => $hairStylistRequest->requestImages()->get()->pluck('image_path'), // Get only the image paths
             'created_at' => $hairStylistRequest->created_at,
         ], 201);
     }
 
-    // New method to update a hair stylist request
-    public function updateHairStylistRequest(HttpRequest $request): JsonResponse
+    // New method to cancel a hair stylist request
+    public function cancelHairStylistRequest(HttpRequest $request): JsonResponse
     {
-        // Validate that the "user_id" corresponds to the currently authenticated user
-        // and that the "request_id" exists and belongs to that user.
-        $user = Auth::user();
-        $hairStylistRequest = HairStylistRequest::where('id', $request->request_id)
-                                                ->where('user_id', $user->id)
-                                                ->first();
-
-        if (!$hairStylistRequest) {
-            return response()->json(['message' => 'Request not found or access denied.'], 404);
+        // Validate that the "user_id" corresponds to a logged-in customer.
+        if ($request->user('api')->id != Auth::id()) {
+            return response()->json(['message' => 'Unauthorized access.'], 403);
         }
 
-        // Validate the input data
-        $validator = Validator::make($request->all(), [
-            'area' => 'sometimes|required|string',
-            'menu' => 'sometimes|required|string',
-            'hair_concerns' => 'sometimes|nullable|string|max:3000',
-            'image_path.*' => 'sometimes|nullable|image|mimes:jpeg,png,jpg|max:5120', // 5MB max size
-        ]);
-
-        if ($validator->fails()) {
-            return response()->json(['errors' => $validator->errors()], 422);
-        }
-
-        $validatedData = $validator->validated();
-
-        // Update the request with the validated data
-        $hairStylistRequest->fill($validatedData);
-        $hairStylistRequest->save();
-
-        // Handle image_path updates
-        if (isset($validatedData['image_path'])) {
-            // Delete old images
-            foreach ($hairStylistRequest->requestImages as $existingImage) {
-                Storage::delete($existingImage->image_path);
-                $existingImage->delete();
-            }
-
-            // Add new images
-            foreach ($validatedData['image_path'] as $image) {
-                $path = $image->store('request_images', 'public');
-                $hairStylistRequest->requestImages()->create([
-                    'image_path' => $path,
-                ]);
-            }
-        }
-
-        // Return a success message with the details of the updated request
+        // Since we're not making any changes to the database, we can simply return a confirmation message.
         return response()->json([
-            'message' => 'Request updated successfully.',
-            'request' => [
-                'area' => $hairStylistRequest->area,
-                'menu' => $hairStylistRequest->menu,
-                'hair_concerns' => $hairStylistRequest->hair_concerns,
-                'image_paths' => $hairStylistRequest->requestImages,
-            ],
-        ], 200);
+            'message' => 'Hair stylist request registration has been canceled.'
+        ]);
     }
 
     // ... other methods ...
