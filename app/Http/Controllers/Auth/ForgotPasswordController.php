@@ -17,18 +17,21 @@ class ForgotPasswordController extends Controller
     {
         // Validate the email parameter
         $validator = Validator::make($request->all(), [
-            'email' => 'required|regex:/^.+@.+$/i'
+            'email' => 'required|email|exists:users,email'
         ]);
 
         if ($validator->fails()) {
-            return response()->json(['message' => 'Invalid email format.'], 400);
+            $errors = $validator->errors();
+            if ($errors->has('email')) {
+                if ($errors->first('email') === 'The selected email is invalid.') {
+                    return response()->json(['message' => 'Email not found.'], 404);
+                }
+                return response()->json(['message' => $errors->first('email')], 400);
+            }
         }
 
         // Check if the user exists
         $user = User::where('email', $request->email)->first();
-        if (!$user) {
-            return response()->json(['message' => 'Email not found.'], 404);
-        }
 
         // Generate a password reset token and save it
         $token = Str::random(60);
