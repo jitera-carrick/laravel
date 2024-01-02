@@ -54,6 +54,17 @@ class Request extends Model
         return $this->hasMany(RequestMenuSelection::class, 'request_id');
     }
 
+    // New relationships as per the guideline
+    public function requestAreas()
+    {
+        return $this->hasMany(RequestArea::class, 'request_id');
+    }
+
+    public function requestMenus()
+    {
+        return $this->hasMany(RequestMenu::class, 'request_id');
+    }
+
     // Assuming there are new relationships to be added, they should be defined here.
     // For example, if there's a new one-to-many relationship with a new table 'request_details':
     /*

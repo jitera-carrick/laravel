@@ -3,15 +3,18 @@
 namespace App\Http\Controllers;
 
 use App\Http\Requests\UpdateHairStylistRequest;
+use App\Http\Requests\CreateHairStylistRequest;
 use App\Models\Request;
 use App\Models\RequestAreaSelection;
 use App\Models\RequestMenuSelection;
 use App\Models\RequestImage;
+use App\Models\Area;
+use App\Models\Menu;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Facades\Storage;
-use Illuminate\Database\Eloquent\ModelNotFoundException;
+use Illuminate\Support\Facades\DB;
 
 class RequestController extends Controller
 {
@@ -78,32 +81,76 @@ class RequestController extends Controller
         ]);
     }
 
-    // Method to delete a hair stylist request image
-    public function deleteRequestImage($request_id, $image_id): JsonResponse
+    // Method to create a hair stylist request
+    public function createHairStylistRequest(CreateHairStylistRequest $request): JsonResponse
     {
-        try {
-            $hairRequest = Request::findOrFail($request_id);
-            $requestImage = RequestImage::where('request_id', $request_id)
-                                        ->where('id', $image_id)
-                                        ->firstOrFail();
+        $validator = Validator::make($request->all(), [
+            'user_id' => 'required|exists:users,id',
+            'area_ids' => 'required|array|min:1|exists:areas,id',
+            'menu_ids' => 'required|array|min:1|exists:menus,id',
+            'hair_concerns' => 'required|string|max:3000',
+            'image_paths' => 'required|array|max:3',
+            'image_paths.*' => 'string|distinct|regex:/^(.*\.(?!(png|jpg|jpeg)$))?[^.]*$/i|max:5120', // Assuming the image paths are validated elsewhere
+        ]);
 
-            // Delete the image
-            Storage::disk('public')->delete($requestImage->image_path);
-            $requestImage->delete();
+        if ($validator->fails()) {
+            return response()->json(['message' => $validator->errors()->first()], 422);
+        }
+
+        try {
+            DB::beginTransaction();
+
+            $user = Auth::user();
+            if ($user->id != $request->user_id) {
+                return response()->json(['message' => 'Unauthorized.'], 401);
+            }
+
+            $hairRequest = new Request([
+                'hair_concerns' => $request->hair_concerns,
+                'user_id' => $user->id,
+                'status' => 'new', // Assuming 'new' is a valid status
+            ]);
+            $hairRequest->save();
+
+            foreach ($request->area_ids as $areaId) {
+                RequestAreaSelection::create([
+                    'request_id' => $hairRequest->id,
+                    'area_id' => $areaId,
+                ]);
+            }
+
+            foreach ($request->menu_ids as $menuId) {
+                RequestMenuSelection::create([
+                    'request_id' => $hairRequest->id,
+                    'menu_id' => $menuId,
+                ]);
+            }
+
+            foreach ($request->image_paths as $imagePath) {
+                // Store the image and get the path if it's a file instance
+                if ($imagePath instanceof \Illuminate\Http\UploadedFile) {
+                    $storedImagePath = Storage::disk('public')->put('request_images', $imagePath);
+                } else {
+                    $storedImagePath = $imagePath; // Assuming the image path is already a stored file path
+                }
+                RequestImage::create([
+                    'request_id' => $hairRequest->id,
+                    'image_path' => $storedImagePath,
+                ]);
+            }
+
+            DB::commit();
 
             return response()->json([
                 'status' => 200,
-                'message' => 'Image has been successfully deleted.'
+                'message' => 'Hair stylist request created successfully.',
+                'request_id' => $hairRequest->id,
             ]);
-        } catch (ModelNotFoundException $e) {
-            return response()->json([
-                'status' => 404,
-                'message' => 'Request or image not found.'
-            ], 404);
         } catch (\Exception $e) {
+            DB::rollBack();
             return response()->json([
                 'status' => 500,
-                'message' => 'An error occurred while deleting the image.'
+                'message' => 'An error occurred while creating the request: ' . $e->getMessage(),
             ], 500);
         }
     }
