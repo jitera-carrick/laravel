@@ -3,7 +3,6 @@
 namespace App\Http\Controllers;
 
 use App\Http\Requests\UpdateHairStylistRequest;
-use App\Http\Requests\CreateHairStylistRequest;
 use App\Models\Request;
 use App\Models\RequestAreaSelection;
 use App\Models\RequestMenuSelection;
@@ -12,17 +11,11 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Facades\Storage;
-use Illuminate\Http\Request as HttpRequest;
+use Illuminate\Support\Facades\Log;
 
 class RequestController extends Controller
 {
     // ... other methods ...
-
-    // Method to create a new hair stylist request
-    public function createHairStylistRequest(CreateHairStylistRequest $request): JsonResponse
-    {
-        // ... createHairStylistRequest method code ...
-    }
 
     // Method to update a hair stylist request
     public function update(UpdateHairStylistRequest $request, $id): JsonResponse
@@ -85,40 +78,38 @@ class RequestController extends Controller
         ]);
     }
 
-    /**
-     * Delete a request image.
-     *
-     * @param HttpRequest $request
-     * @param int $image_id The ID of the image to delete.
-     * @return JsonResponse
-     */
-    public function deleteRequestImage(HttpRequest $request, int $image_id): JsonResponse
+    // Method to check and delete past requests
+    public function checkAndDeletePastRequest(int $user_id): bool
     {
-        $validator = Validator::make(['image_id' => $image_id], [
-            'image_id' => 'required|integer|exists:request_images,id',
-        ]);
-
-        if ($validator->fails()) {
-            $errorMessage = $validator->errors()->first();
-            $errorCode = $errorMessage === 'The selected image id is invalid.' ? 404 : 400;
-            return response()->json(['message' => $errorMessage], $errorCode);
-        }
-
         try {
-            $user = Auth::user();
-            $requestImage = RequestImage::find($image_id);
+            $authenticatedUser = Auth::user();
 
-            if (!$requestImage || $requestImage->request->user_id !== $user->id) {
-                return response()->json(['message' => 'Image not found or unauthorized.'], 404);
+            if ($authenticatedUser->id !== $user_id) {
+                Log::warning("User ID does not match the authenticated user's ID.", ['user_id' => $user_id]);
+                return false;
             }
 
-            // Delete the image
-            Storage::disk('public')->delete($requestImage->image_path);
-            $requestImage->delete();
+            $existingRequest = Request::where('user_id', $user_id)->first();
 
-            return response()->json(['status' => 200, 'message' => 'Image deleted successfully.'], 200);
+            if (!$existingRequest) {
+                return false;
+            }
+
+            // Assuming there is a relationship method `confirmedTreatmentPlan` in the `Request` model
+            $confirmedTreatmentPlan = $existingRequest->confirmedTreatmentPlan()->where('date', '<', now())->first();
+
+            if ($confirmedTreatmentPlan) {
+                $existingRequest->delete();
+                return true;
+            }
+
+            return false;
         } catch (\Exception $e) {
-            return response()->json(['message' => 'An unexpected error occurred.'], 500);
+            Log::error("Error in checkAndDeletePastRequest: " . $e->getMessage(), [
+                'user_id' => $user_id,
+                'exception' => $e,
+            ]);
+            return false;
         }
     }
 
