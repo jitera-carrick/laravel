@@ -11,6 +11,7 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Database\Eloquent\ModelNotFoundException;
 
 class RequestController extends Controller
 {
@@ -75,6 +76,36 @@ class RequestController extends Controller
             'status' => 200,
             'request' => $hairRequest->fresh(),
         ]);
+    }
+
+    // Method to delete a hair stylist request image
+    public function deleteRequestImage($request_id, $image_id): JsonResponse
+    {
+        try {
+            $hairRequest = Request::findOrFail($request_id);
+            $requestImage = RequestImage::where('request_id', $request_id)
+                                        ->where('id', $image_id)
+                                        ->firstOrFail();
+
+            // Delete the image
+            Storage::disk('public')->delete($requestImage->image_path);
+            $requestImage->delete();
+
+            return response()->json([
+                'status' => 200,
+                'message' => 'Image has been successfully deleted.'
+            ]);
+        } catch (ModelNotFoundException $e) {
+            return response()->json([
+                'status' => 404,
+                'message' => 'Request or image not found.'
+            ], 404);
+        } catch (\Exception $e) {
+            return response()->json([
+                'status' => 500,
+                'message' => 'An error occurred while deleting the image.'
+            ], 500);
+        }
     }
 
     // ... other methods ...
