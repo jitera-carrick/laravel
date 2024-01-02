@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Http\Requests\UpdateHairStylistRequest;
+use App\Http\Requests\CreateHairStylistRequest; // Import the CreateHairStylistRequest form request class
 use App\Models\Request;
 use App\Models\RequestAreaSelection;
 use App\Models\RequestMenuSelection;
@@ -19,6 +20,12 @@ class RequestController extends Controller
 {
     // ... other methods ...
 
+    // Method to create a new hair stylist request
+    public function createHairStylistRequest(CreateHairStylistRequest $request): JsonResponse
+    {
+        // ... createHairStylistRequest method code ...
+    }
+
     // Method to update a hair stylist request
     public function update(UpdateHairStylistRequest $request, $id): JsonResponse
     {
@@ -34,7 +41,9 @@ class RequestController extends Controller
             'area_ids' => 'required|array|min:1|exists:areas,id',
             'menu_ids' => 'required|array|min:1|exists:menus,id',
             'hair_concerns' => 'required|string|max:3000',
-            'image_paths' => 'required|array|max:3',
+            'images' => 'sometimes|array|max:3',
+            'images.*' => 'image|mimes:png,jpg,jpeg|max:5120', // 5MB
+            'image_paths' => 'sometimes|array|max:3',
             'image_paths.*' => 'string', // Additional image format and file size validation can be added here
         ]);
 
@@ -42,75 +51,50 @@ class RequestController extends Controller
             return response()->json(['message' => $validator->errors()->first()], 422);
         }
 
-        // Update area selections
-        RequestAreaSelection::where('request_id', $id)->delete();
-        foreach ($request->area_ids as $areaId) {
-            RequestAreaSelection::create([
-                'request_id' => $id,
-                'area_id' => $areaId,
-            ]);
-        }
+        // Start a transaction in case any part of the request update fails
+        DB::beginTransaction();
+        try {
+            // Update area selections
+            $hairRequest->requestAreas()->sync($request->area_ids ?? []);
 
-        // Update menu selections
-        RequestMenuSelection::where('request_id', $id)->delete();
-        foreach ($request->menu_ids as $menuId) {
-            RequestMenuSelection::create([
-                'request_id' => $id,
-                'menu_id' => $menuId,
-            ]);
-        }
+            // Update menu selections
+            $hairRequest->requestMenus()->sync($request->menu_ids ?? []);
 
-        // Update hair concerns
-        $hairRequest->update(['hair_concerns' => $request->hair_concerns]);
+            // Update hair concerns
+            $hairRequest->update(['hair_concerns' => $request->hair_concerns]);
 
-        // Update images
-        RequestImage::where('request_id', $id)->delete();
-        foreach ($request->image_paths as $imagePath) {
-            // Validate the image format and size before storing
-            $image = Storage::disk('public')->get($imagePath); // Assuming the image already exists in storage
-            $imageSize = Storage::disk('public')->size($imagePath);
-            $imageExtension = strtolower(pathinfo($imagePath, PATHINFO_EXTENSION));
-            if (!in_array($imageExtension, ['png', 'jpg', 'jpeg']) || $imageSize > 5120 * 1024) {
-                return response()->json(['message' => 'Invalid image format or file size.'], 422);
+            // Update images if they are provided
+            if ($request->has('images')) {
+                RequestImage::where('request_id', $id)->delete();
+                foreach ($request->images as $image) {
+                    // Store the image and get the path
+                    $imagePath = Storage::disk('public')->put('request_images', $image);
+                    RequestImage::create([
+                        'request_id' => $id,
+                        'image_path' => $imagePath,
+                    ]);
+                }
+            } elseif ($request->has('image_paths')) {
+                RequestImage::where('request_id', $id)->delete();
+                foreach ($request->image_paths as $imagePath) {
+                    // Assuming the image already exists in storage
+                    RequestImage::create([
+                        'request_id' => $id,
+                        'image_path' => $imagePath,
+                    ]);
+                }
             }
 
-            RequestImage::create([
-                'request_id' => $id,
-                'image_path' => $imagePath,
+            DB::commit();
+
+            return response()->json([
+                'status' => 200,
+                'request' => $hairRequest->fresh('requestAreas', 'requestMenus', 'requestImages'),
             ]);
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return response()->json(['message' => 'Failed to update hair stylist request.'], 500);
         }
-
-        return response()->json([
-            'status' => 200,
-            'request' => $hairRequest->fresh(),
-        ]);
-    }
-
-    // New method to validate a hair stylist request
-    public function validateHairStylistRequest(Request $request): JsonResponse
-    {
-        $validator = Validator::make($request->all(), [
-            'area_ids' => 'required|array|min:1',
-            'menu_ids' => 'required|array|min:1',
-            'hair_concerns' => 'sometimes|string|max:3000',
-            'images' => 'sometimes|array|max:3',
-            'images.*' => 'file|mimes:png,jpg,jpeg|max:5120', // 5MB
-        ], [
-            'area_ids.required' => 'At least one area must be selected.',
-            'menu_ids.required' => 'At least one menu must be selected.',
-            'hair_concerns.max' => 'Hair concerns and requests must be less than 3000 characters.',
-            'images.*.mimes' => 'Invalid image format or size.',
-            'images.*.max' => 'Invalid image format or size.',
-        ]);
-
-        if ($validator->fails()) {
-            return response()->json(['message' => $validator->errors()->first()], 422);
-        }
-
-        return response()->json([
-            'status' => 200,
-            'message' => 'Input data is valid.'
-        ]);
     }
 
     // ... other methods ...
