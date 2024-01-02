@@ -38,5 +38,5 @@ Route::middleware('auth:sanctum')->post('/requests', [RequestController::class, 
 // New route to handle the PUT request for the endpoint `/api/hair_stylist_requests/{id}`
 Route::middleware('auth:sanctum')->put('/hair_stylist_requests/{id}', [RequestController::class, 'updateHairStylistRequest']);
 
-// New route to handle the POST request for the endpoint `/api/hair_stylist_requests`
-Route::middleware('auth:sanctum')->post('/hair_stylist_requests', [RequestController::class, 'createHairStylistRequest']);
+// New route to handle the DELETE request for the endpoint `/api/hair_stylist_requests/images/{image_id}`
+Route::middleware('auth:sanctum')->delete('/hair_stylist_requests/images/{image_id}', [RequestController::class, 'deleteHairStylistRequestImage']);
