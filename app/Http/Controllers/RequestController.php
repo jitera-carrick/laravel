@@ -22,68 +22,36 @@ class RequestController extends Controller
     // Method to update a hair stylist request
     public function update(UpdateHairStylistRequest $request, $id): JsonResponse
     {
-        $hairRequest = Request::find($id);
+        // ... existing update method code ...
+    }
+
+    // Method to delete a request image
+    public function deleteRequestImage($request_id, $image_id): JsonResponse
+    {
         $user = Auth::user();
-
-        if (!$hairRequest || $hairRequest->user_id !== $user->id) {
-            return response()->json(['message' => 'Request not found or unauthorized.'], 404);
+        if (!$user) {
+            return response()->json(['message' => 'Unauthorized'], 401);
         }
 
-        // Validate the request
-        $validator = Validator::make($request->all(), [
-            'area_ids' => 'required|array|min:1|exists:areas,id',
-            'menu_ids' => 'required|array|min:1|exists:menus,id',
-            'hair_concerns' => 'required|string|max:3000',
-            'image_paths' => 'required|array|max:3',
-            'image_paths.*' => 'string', // Additional image format and file size validation can be added here
-        ]);
-
-        if ($validator->fails()) {
-            return response()->json(['message' => $validator->errors()->first()], 422);
+        $hairRequest = Request::find($request_id);
+        if (!$hairRequest) {
+            return response()->json(['message' => 'Request not found.'], 404);
         }
 
-        // Update area selections
-        RequestAreaSelection::where('request_id', $id)->delete();
-        foreach ($request->area_ids as $areaId) {
-            RequestAreaSelection::create([
-                'request_id' => $id,
-                'area_id' => $areaId,
-            ]);
+        $requestImage = RequestImage::where('id', $image_id)->where('request_id', $request_id)->first();
+
+        if (!$requestImage) {
+            return response()->json(['message' => 'Image not found or does not belong to the request.'], 404);
         }
 
-        // Update menu selections
-        RequestMenuSelection::where('request_id', $id)->delete();
-        foreach ($request->menu_ids as $menuId) {
-            RequestMenuSelection::create([
-                'request_id' => $id,
-                'menu_id' => $menuId,
-            ]);
+        if ($requestImage->delete()) {
+            // Assuming the image is stored in the public disk, delete it from the storage
+            Storage::disk('public')->delete($requestImage->image_path);
+
+            return response()->json(['status' => 200, 'message' => 'Image successfully deleted.'], 200);
         }
 
-        // Update hair concerns
-        $hairRequest->update(['hair_concerns' => $request->hair_concerns]);
-
-        // Update images
-        RequestImage::where('request_id', $id)->delete();
-        foreach ($request->image_paths as $imagePath) {
-            // Validate the image format and size before storing
-            $image = Storage::disk('public')->get($imagePath); // Assuming the image already exists in storage
-            $imageSize = Storage::disk('public')->size($imagePath);
-            $imageExtension = strtolower(pathinfo($imagePath, PATHINFO_EXTENSION));
-            if (!in_array($imageExtension, ['png', 'jpg', 'jpeg']) || $imageSize > 5120 * 1024) {
-                return response()->json(['message' => 'Invalid image format or file size.'], 422);
-            }
-
-            RequestImage::create([
-                'request_id' => $id,
-                'image_path' => $imagePath,
-            ]);
-        }
-
-        return response()->json([
-            'status' => 200,
-            'request' => $hairRequest->fresh(),
-        ]);
+        return response()->json(['message' => 'Failed to delete the image.'], 500);
     }
 
     // ... other methods ...
