@@ -9,108 +9,18 @@ use App\Models\Request as HairStylistRequest; // Renamed to avoid confusion with
 use App\Models\RequestArea;
 use App\Models\RequestMenu;
 use App\Models\RequestImage;
-use App\Models\Area;
-use App\Models\Menu;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request as HttpRequest;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
 
 class UserController extends Controller
 {
     // ... other methods ...
 
     // Existing methods remain unchanged
-
-    // Method to create a hair stylist request
-    public function createHairStylistRequest(HttpRequest $request): JsonResponse
-    {
-        // Authenticate the user
-        if (!Auth::check()) {
-            return response()->json(['message' => 'Unauthorized.'], 401);
-        }
-
-        // Validate the incoming request
-        $validator = Validator::make($request->all(), [
-            'area' => 'required|array|min:1',
-            'menu' => 'required|array|min:1',
-            'hair_concerns' => 'required|max:3000',
-            'images' => 'required|array|min:1',
-            'images.*' => 'image|mimes:png,jpg,jpeg|max:5120',
-        ], [
-            'area.required' => 'Area selection is required.',
-            'menu.required' => 'Menu selection is required.',
-            'hair_concerns.max' => 'Hair concerns and requests must be less than 3000 characters.',
-            'images.required' => 'At least one image is required.',
-            'images.*.image' => 'Invalid image format or size.',
-        ]);
-
-        if ($validator->fails()) {
-            return response()->json(['message' => 'Validation failed.', 'errors' => $validator->errors()], 422);
-        }
-
-        // Create the hair stylist request
-        $hairStylistRequest = HairStylistRequest::create([
-            'user_id' => Auth::id(),
-            'hair_concerns' => $request->input('hair_concerns'),
-            'status' => 'pending',
-        ]);
-
-        // Handle area and menu selections
-        $areaNames = [];
-        foreach ($request->input('area') as $areaId) {
-            $area = Area::find($areaId);
-            if (!$area) {
-                continue; // Skip if area does not exist
-            }
-            RequestArea::create([
-                'request_id' => $hairStylistRequest->id,
-                'area_id' => $areaId,
-            ]);
-            $areaNames[] = $area->name;
-        }
-
-        $menuNames = [];
-        foreach ($request->input('menu') as $menuId) {
-            $menu = Menu::find($menuId);
-            if (!$menu) {
-                continue; // Skip if menu does not exist
-            }
-            RequestMenu::create([
-                'request_id' => $hairStylistRequest->id,
-                'menu_id' => $menuId,
-            ]);
-            $menuNames[] = $menu->name;
-        }
-
-        // Handle images
-        $imagePaths = [];
-        foreach ($request->file('images') as $image) {
-            // Save the image and create a RequestImage entry
-            $path = $image->store('request_images', 'public');
-            $imagePaths[] = $path;
-            RequestImage::create([
-                'request_id' => $hairStylistRequest->id,
-                'image_path' => $path,
-            ]);
-        }
-
-        // Prepare and return the response
-        return response()->json([
-            'status' => 201,
-            'request' => [
-                'id' => $hairStylistRequest->id,
-                'area' => $areaNames,
-                'menu' => $menuNames,
-                'hair_concerns' => $hairStylistRequest->hair_concerns,
-                'status' => $hairStylistRequest->status,
-                'created_at' => $hairStylistRequest->created_at->toIso8601String(),
-                'user_id' => $hairStylistRequest->user_id
-            ],
-            'message' => 'Hair stylist request has been successfully created.'
-        ], 201);
-    }
 
     // Method to create or update a hair stylist request
     public function createOrUpdateHairStylistRequest(HttpRequest $request): JsonResponse
@@ -126,20 +36,8 @@ class UserController extends Controller
         if ($request->isMethod('post')) {
             $validatedData = (new CreateHairStylistRequest())->validateResolved();
         } else {
-            // Validate "area" and "menu" selections are not empty
-            $validator = Validator::make($request->all(), [
-                'area' => 'required|array|min:1',
-                'menu' => 'required|array|min:1',
-                'hair_concerns' => 'required|max:3000',
-                'images' => 'required|array|min:1',
-                'images.*' => 'image|mimes:png,jpg,jpeg|max:5120',
-            ]);
-
-            if ($validator->fails()) {
-                return response()->json(['message' => 'Validation failed.', 'errors' => $validator->errors()], 422);
-            }
-
-            $validatedData = $validator->validated();
+            // Use the UpdateHairStylistRequest form request class if it's not a POST request
+            $validatedData = (new UpdateHairStylistRequest())->validateResolved();
         }
 
         // Check if the authenticated user has an existing valid request
@@ -150,16 +48,23 @@ class UserController extends Controller
         if ($existingRequest) {
             // Update the existing request with the new data
             $existingRequest->update([
+                'area' => $validatedData['area'],
+                'menu' => $validatedData['menu'],
                 'hair_concerns' => $validatedData['hair_concerns'],
             ]);
             $hairStylistRequest = $existingRequest;
         } else {
             // Create a new HairStylistRequest model instance
-            $hairStylistRequest = HairStylistRequest::create([
+            $hairStylistRequest = new HairStylistRequest([
                 'user_id' => $user->id,
+                'area' => $validatedData['area'],
+                'menu' => $validatedData['menu'],
                 'hair_concerns' => $validatedData['hair_concerns'],
                 'status' => 'pending', // Set the initial status to 'pending'
             ]);
+
+            // Save the new request to the database
+            $hairStylistRequest->save();
         }
 
         // Delete old images if updating an existing request
@@ -167,13 +72,11 @@ class UserController extends Controller
             $existingRequest->requestImages()->delete();
         }
 
-        // Iterate over the "images" array and create RequestImage instances
-        foreach ($validatedData['images'] as $image) {
-            // Save the image and create a RequestImage entry
-            $path = $image->store('request_images', 'public');
+        // Iterate over the "image_paths" array and create RequestImage instances
+        foreach ($validatedData['image_paths'] as $imagePath) {
             $requestImage = new RequestImage([
                 'request_id' => $hairStylistRequest->id,
-                'image_path' => $path,
+                'image_path' => $imagePath,
             ]);
             $requestImage->save();
         }
@@ -222,4 +125,76 @@ class UserController extends Controller
     }
 
     // ... other methods ...
+
+    // Method to update a hair stylist request
+    public function updateHairStylistRequest(HttpRequest $request, $id): JsonResponse
+    {
+        // Authenticate the user based on the "user_id"
+        $userId = Auth::id();
+        $hairStylistRequest = HairStylistRequest::find($id);
+
+        if (!$hairStylistRequest) {
+            return response()->json(['message' => 'Request not found.'], 404);
+        }
+
+        if ($hairStylistRequest->user_id != $userId) {
+            return response()->json(['message' => 'Unauthorized.'], 401);
+        }
+
+        // Use the UpdateHairStylistRequest form request class for validation
+        $validatedData = (new UpdateHairStylistRequest())->validateResolved();
+
+        // Update the 'hair_concerns' if provided
+        if (isset($validatedData['hair_concerns'])) {
+            $hairStylistRequest->hair_concerns = $validatedData['hair_concerns'];
+        }
+
+        // Update the related 'area' and 'menu' records
+        RequestArea::where('request_id', $hairStylistRequest->id)->delete();
+        RequestMenu::where('request_id', $hairStylistRequest->id)->delete();
+
+        foreach ($validatedData['area'] as $areaId) {
+            RequestArea::create([
+                'request_id' => $hairStylistRequest->id,
+                'area_id' => $areaId,
+            ]);
+        }
+
+        foreach ($validatedData['menu'] as $menuId) {
+            RequestMenu::create([
+                'request_id' => $hairStylistRequest->id,
+                'menu_id' => $menuId,
+            ]);
+        }
+
+        // Handle the 'images'
+        if (isset($validatedData['images'])) {
+            RequestImage::where('request_id', $hairStylistRequest->id)->delete();
+
+            foreach ($validatedData['images'] as $image) {
+                $path = $image->store('request_images', 'public');
+                RequestImage::create([
+                    'request_id' => $hairStylistRequest->id,
+                    'image_path' => $path,
+                ]);
+            }
+        }
+
+        // Save the updated request
+        $hairStylistRequest->save();
+
+        // Prepare the response data
+        $responseData = [
+            'request_id' => $hairStylistRequest->id,
+            'status' => $hairStylistRequest->status,
+            'area_selection' => RequestArea::where('request_id', $hairStylistRequest->id)->pluck('area_id'),
+            'menu_selection' => RequestMenu::where('request_id', $hairStylistRequest->id)->pluck('menu_id'),
+            'hair_concerns' => $hairStylistRequest->hair_concerns,
+            'image_paths' => RequestImage::where('request_id', $hairStylistRequest->id)->pluck('image_path'),
+            'message' => 'Hair stylist request has been successfully updated.'
+        ];
+
+        // Return the response with the updated request details
+        return response()->json($responseData, 200);
+    }
 }
