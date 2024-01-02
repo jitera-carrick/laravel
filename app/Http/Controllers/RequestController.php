@@ -21,7 +21,57 @@ class RequestController extends Controller
     // Method to create a new hair stylist request
     public function createHairStylistRequest(CreateHairStylistRequest $request): JsonResponse
     {
-        // ... createHairStylistRequest method code ...
+        // Validate the request
+        $validator = Validator::make($request->all(), [
+            'area_ids' => 'required|array|min:1|exists:areas,id',
+            'menu_ids' => 'required|array|min:1|exists:menus,id',
+            'hair_concerns' => 'required|string|max:3000',
+            'images' => 'sometimes|array|max:3',
+            'images.*' => 'image|mimes:png,jpg,jpeg|max:5120', // 5MB
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json(['message' => $validator->errors()->first()], 422);
+        }
+
+        // Start a transaction in case any part of the request creation fails
+        DB::beginTransaction();
+        try {
+            // Create a new hair stylist request record in the database
+            $hairRequest = Request::create([
+                'user_id' => Auth::id(),
+                'hair_concerns' => $request->hair_concerns,
+                'status' => 'pending', // Assuming 'pending' is a valid status
+            ]);
+
+            // Attach area and menu selections
+            $hairRequest->requestAreas()->sync($request->area_ids);
+            $hairRequest->requestMenus()->sync($request->menu_ids);
+
+            // Handle the uploading of images
+            if ($request->has('images')) {
+                foreach ($request->images as $image) {
+                    // Store the image and get the path
+                    $imagePath = Storage::disk('public')->put('request_images', $image);
+                    // Create records in the RequestImage model with the paths of the uploaded images
+                    RequestImage::create([
+                        'request_id' => $hairRequest->id,
+                        'image_path' => $imagePath,
+                    ]);
+                }
+            }
+
+            DB::commit();
+
+            // Return a JSON response with a 201 status code and the newly created request data
+            return response()->json([
+                'status' => 201,
+                'request' => $hairRequest->fresh('requestAreas', 'requestMenus', 'requestImages'),
+            ], 201);
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return response()->json(['message' => 'Failed to create hair stylist request.'], 500);
+        }
     }
 
     // Method to update a hair stylist request
@@ -39,7 +89,7 @@ class RequestController extends Controller
             'area' => 'required|array|min:1',
             'menu' => 'required|array|min:1',
             'hair_concerns' => 'required|string|max:3000',
-            'images' => 'required|array|min:1',
+            'images' => 'sometimes|array|min:1',
             'images.*' => 'image|mimes:png,jpg,jpeg|max:5120', // 5MB
         ]);
 
@@ -48,85 +98,30 @@ class RequestController extends Controller
         }
 
         // Update area selections
-        RequestAreaSelection::where('request_id', $id)->delete();
-        foreach ($request->area as $areaId) {
-            RequestAreaSelection::create([
-                'request_id' => $id,
-                'area_id' => $areaId,
-            ]);
-        }
-
+        $hairRequest->requestAreas()->sync($request->area);
         // Update menu selections
-        RequestMenuSelection::where('request_id', $id)->delete();
-        foreach ($request->menu as $menuId) {
-            RequestMenuSelection::create([
-                'request_id' => $id,
-                'menu_id' => $menuId,
-            ]);
-        }
+        $hairRequest->requestMenus()->sync($request->menu);
 
         // Update hair concerns
         $hairRequest->update(['hair_concerns' => $request->hair_concerns]);
 
         // Update images
-        RequestImage::where('request_id', $id)->delete();
-        foreach ($request->images as $image) {
-            // Store the image and get the path
-            $imagePath = Storage::disk('public')->put('request_images', $image);
-            RequestImage::create([
-                'request_id' => $id,
-                'image_path' => $imagePath,
-            ]);
+        if ($request->has('images')) {
+            RequestImage::where('request_id', $id)->delete();
+            foreach ($request->images as $image) {
+                // Store the image and get the path
+                $imagePath = Storage::disk('public')->put('request_images', $image);
+                RequestImage::create([
+                    'request_id' => $id,
+                    'image_path' => $imagePath,
+                ]);
+            }
         }
 
         return response()->json([
             'status' => 200,
-            'request' => $hairRequest->fresh(),
+            'request' => $hairRequest->fresh('requestAreas', 'requestMenus', 'requestImages'),
         ]);
-    }
-
-    // Method to check for an existing request for a user
-    public function checkExistingRequest(Request $request): JsonResponse
-    {
-        // Authenticate the user
-        if (!Auth::check()) {
-            return response()->json(['message' => 'Unauthorized.'], 401);
-        }
-
-        $validator = Validator::make($request->all(), [
-            'user_id' => 'required|integer',
-        ]);
-
-        if ($validator->fails()) {
-            return response()->json(['message' => 'User ID is required.'], 400);
-        }
-
-        $user_id = $request->input('user_id');
-        if (Auth::id() !== (int)$user_id) {
-            return response()->json(['message' => 'Unauthorized.'], 403);
-        }
-
-        try {
-            // Query the "requests" table for existing requests
-            $existingRequest = Request::where('user_id', $user_id)->first();
-
-            if ($existingRequest) {
-                return response()->json([
-                    'status' => 200,
-                    'existing_request' => $existingRequest
-                ]);
-            } else {
-                return response()->json([], 204);
-            }
-        } catch (\Exception $e) {
-            return response()->json(['message' => 'An error occurred while checking for existing request.'], 500);
-        }
-    }
-
-    // Method to check for an existing request and delete it if a confirmed treatment plan has passed
-    public function checkAndDeleteExistingRequest(int $user_id): bool
-    {
-        // ... existing checkAndDeleteExistingRequest method code ...
     }
 
     // ... other methods ...
