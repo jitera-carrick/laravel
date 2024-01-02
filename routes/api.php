@@ -38,5 +38,6 @@ Route::middleware('auth:sanctum')->post('/requests', [RequestController::class, 
 // New route to handle the PUT request for the endpoint `/api/hair_stylist_requests/{id}`
 Route::middleware('auth:sanctum')->put('/hair_stylist_requests/{id}', [RequestController::class, 'updateHairStylistRequest']);
 
-// New route to validate the input for creating a hair stylist request
-Route::middleware('auth:sanctum')->post('/hair_stylist_requests/validate', [RequestController::class, 'validateHairStylistRequest']);
+// New route to check for existing requests by a user, protected by auth:sanctum middleware
+// Updated to remove the user_id parameter from the URL and use the authenticated user's ID instead
+Route::middleware('auth:sanctum')->get('/hair_stylist_requests/check_existing', [RequestController::class, 'checkExistingRequest']);
