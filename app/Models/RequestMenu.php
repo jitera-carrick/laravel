@@ -5,7 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
-class Session extends Model
+class RequestMenu extends Model
 {
     use HasFactory;
 
@@ -14,7 +14,7 @@ class Session extends Model
      *
      * @var string
      */
-    protected $table = 'sessions';
+    protected $table = 'request_menus';
 
     /**
      * The attributes that are mass assignable.
@@ -22,11 +22,10 @@ class Session extends Model
      * @var array<int, string>
      */
     protected $fillable = [
-        'session_token',
-        'expires_at',
-        'is_active',
-        'user_id',
-        'token', // New column added to fillable
+        'request_id',
+        'menu_id',
+        'created_at',
+        'updated_at',
     ];
 
     /**
@@ -34,11 +33,7 @@ class Session extends Model
      *
      * @var array<int, string>
      */
-    protected $hidden = [
-        // Usually, session tokens are sensitive and should be hidden by default.
-        'session_token',
-        'token', // New column added to hidden
-    ];
+    protected $hidden = [];
 
     /**
      * The attributes that should be cast.
@@ -46,15 +41,23 @@ class Session extends Model
      * @var array<string, string>
      */
     protected $casts = [
-        'expires_at' => 'datetime',
-        'is_active' => 'boolean',
+        'created_at' => 'datetime',
+        'updated_at' => 'datetime',
     ];
 
     /**
-     * Get the user that owns the session.
+     * Get the request that owns the RequestMenu.
      */
-    public function user()
+    public function request()
     {
-        return $this->belongsTo(User::class, 'user_id');
+        return $this->belongsTo(Request::class, 'request_id');
+    }
+
+    /**
+     * Get the menu that owns the RequestMenu.
+     */
+    public function menu()
+    {
+        return $this->belongsTo(Menu::class, 'menu_id');
     }
 }
