@@ -95,41 +95,22 @@ class RequestController extends Controller
         }
     }
 
+    // ... other existing methods ...
+
     /**
-     * Check for an existing request for the given user and delete it if a confirmed treatment plan has passed.
+     * Validate the input fields for creating a hair stylist request.
      *
-     * @param int $user_id The ID of the user to check requests for.
-     * @return bool True if an existing request was found and deleted, false otherwise.
+     * @param CreateHairStylistRequest $request
+     * @return JsonResponse
      */
-    public function checkAndDeleteExistingRequest(int $user_id): bool
+    public function validateHairStylistRequest(CreateHairStylistRequest $request): JsonResponse
     {
-        // Authenticate the user
-        if (Auth::id() !== $user_id) {
-            return false;
-        }
-
-        // Start a transaction
-        DB::beginTransaction();
-        try {
-            // Query the "requests" table for existing requests
-            $existingRequest = Request::where('user_id', $user_id)->first();
-
-            // Check if there is a confirmed treatment plan associated with the request
-            // Assuming there is a relationship method `confirmedTreatmentPlan` in the `Request` model
-            if ($existingRequest && $existingRequest->confirmedTreatmentPlan && $existingRequest->confirmedTreatmentPlan->isPast()) {
-                // Delete the existing request
-                $existingRequest->delete();
-                DB::commit();
-                return true;
-            }
-
-            DB::commit();
-            return false;
-        } catch (\Exception $e) {
-            DB::rollBack();
-            // Log the exception or handle it as required
-            return false;
-        }
+        // Since the CreateHairStylistRequest is already validating the input,
+        // we can assume that reaching this point means validation has passed.
+        return response()->json([
+            'status' => 200,
+            'validation' => 'success'
+        ]);
     }
 
     // ... other methods ...
