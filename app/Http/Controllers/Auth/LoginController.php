@@ -10,7 +10,6 @@ use Illuminate\Support\Facades\Cookie;
 use Illuminate\Support\Str;
 use App\Models\LoginAttempt;
 use App\Models\User;
-
 use App\Models\Session;
 use App\Services\RecaptchaService; // Import the RecaptchaService
 
@@ -71,40 +70,50 @@ class LoginController extends Controller
         }
     }
 
-  public function logout(Request $request)
+    public function logout(Request $request)
     {
-        try {
-            $sessionToken = $request->cookie('session_token'); // Use the cookie method to retrieve the session token
-            $session = Session::where('session_token', $sessionToken)
-                              ->where('is_active', true)
-                              ->first();
+        $validator = Validator::make($request->all(), [
+            'session_token' => 'required|string',
+            'user_id' => 'required|integer',
+        ]);
 
-            if ($session) {
-                $user = $session->user;
-                $user->is_logged_in = false;
-                $user->save();
-
-                $session->is_active = false;
-                $session->save();
-
-                Cookie::queue(Cookie::forget('session_token'));
-
-                return response()->json([
-                    'status' => 200,
-                    'message' => 'Logout successful.'
-                ]);
-            }
-
-            return response()->json([
-                'status' => 400,
-                'message' => 'No active session found.'
-            ]);
-        } catch (\Exception $e) {
-            return response()->json([
-                'status' => 500,
-                'message' => 'An error occurred during logout.',
-                'error' => $e->getMessage()
-            ]);
+        if ($validator->fails()) {
+            return response()->json($validator->errors(), 422);
         }
+
+        $sessionToken = $request->input('session_token');
+        $userId = $request->input('user_id');
+
+        $session = Session::where('session_token', $sessionToken)
+                          ->where('user_id', $userId) // Ensure the session belongs to the user
+                          ->where('is_active', true)
+                          ->first();
+
+        if (!$session) {
+            return response()->json(['error' => 'Invalid or inactive session.'], 400);
+        }
+
+        $session->is_active = false;
+        $session->save();
+
+        $user = User::find($userId);
+        if ($user) {
+            $user->is_logged_in = false;
+            $user->session_token = null; // Remove the session_token from the user's record
+            $user->save();
+        }
+
+        // If applicable, clear the session information from the server-side session storage or cache.
+        // This part is dependent on the session management implementation which is not provided in the guideline.
+        // Assuming there is a method to clear the session, it would be something like this:
+        // SessionService::clearSession($sessionToken);
+
+        // Clear the session token cookie
+        Cookie::queue(Cookie::forget('session_token'));
+
+        return response()->json([
+            'status' => 200,
+            'message' => 'Logout successful.'
+        ]);
     }
 }
