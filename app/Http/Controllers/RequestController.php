@@ -11,7 +11,6 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Facades\Storage;
-use Illuminate\Support\Facades\Log;
 
 class RequestController extends Controller
 {
@@ -78,39 +77,45 @@ class RequestController extends Controller
         ]);
     }
 
-    // Method to check and delete past requests
-    public function checkAndDeletePastRequest(int $user_id): bool
+    /**
+     * Delete a specific image from a hair stylist request.
+     *
+     * @param int $request_id The ID of the request.
+     * @param string $image_path The path of the image to delete.
+     * @return JsonResponse
+     */
+    public function deleteImage($request_id, $image_path): JsonResponse
     {
-        try {
-            $authenticatedUser = Auth::user();
+        // Find the request by ID
+        $hairRequest = Request::find($request_id);
 
-            if ($authenticatedUser->id !== $user_id) {
-                Log::warning("User ID does not match the authenticated user's ID.", ['user_id' => $user_id]);
-                return false;
-            }
-
-            $existingRequest = Request::where('user_id', $user_id)->first();
-
-            if (!$existingRequest) {
-                return false;
-            }
-
-            // Assuming there is a relationship method `confirmedTreatmentPlan` in the `Request` model
-            $confirmedTreatmentPlan = $existingRequest->confirmedTreatmentPlan()->where('date', '<', now())->first();
-
-            if ($confirmedTreatmentPlan) {
-                $existingRequest->delete();
-                return true;
-            }
-
-            return false;
-        } catch (\Exception $e) {
-            Log::error("Error in checkAndDeletePastRequest: " . $e->getMessage(), [
-                'user_id' => $user_id,
-                'exception' => $e,
-            ]);
-            return false;
+        // If the request does not exist, return a 404 response
+        if (!$hairRequest) {
+            return response()->json(['message' => 'Request not found.'], 404);
         }
+
+        // Find the image by request ID and image path
+        $requestImage = RequestImage::where('request_id', $request_id)
+                                    ->where('image_path', $image_path)
+                                    ->first();
+
+        // If the image does not exist, return a 404 response
+        if (!$requestImage) {
+            return response()->json(['message' => 'Image not found.'], 404);
+        }
+
+        // Delete the image file from storage
+        if (Storage::disk('public')->exists($image_path)) {
+            Storage::disk('public')->delete($image_path);
+        }
+
+        // Delete the image entry from the database
+        $requestImage->delete();
+
+        // Return a 200 response indicating the image was deleted successfully
+        return response()->json([
+            'message' => 'Image deleted successfully.',
+        ], 200);
     }
 
     // ... other methods ...
