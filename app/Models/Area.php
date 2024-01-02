@@ -14,7 +14,7 @@ class Area extends Model
      *
      * @var string
      */
-    protected $table = 'areas'; // Table name defined
+    protected $table = 'areas';
 
     /**
      * The attributes that are mass assignable.
@@ -22,7 +22,9 @@ class Area extends Model
      * @var array<int, string>
      */
     protected $fillable = [
-        'name', // Fillable field added
+        'name',
+        'created_at', // Added from new code
+        'updated_at', // Added from new code
     ];
 
     /**
@@ -32,6 +34,7 @@ class Area extends Model
      */
     protected $hidden = [
         // Usually, we don't hide any fields in the areas table, but if needed, add them here.
+        // No changes needed here as there is no conflict.
     ];
 
     /**
@@ -40,12 +43,23 @@ class Area extends Model
      * @var array<string, string>
      */
     protected $casts = [
-        'created_at' => 'datetime', // Cast the created_at field
-        'updated_at' => 'datetime', // Cast the updated_at field
+        'created_at' => 'datetime',
+        'updated_at' => 'datetime',
     ];
 
     /**
+     * Get the request areas associated with the area.
+     * This method is from the new code and has a different name and potentially a different related model.
+     * We need to keep both relationships if they are different.
+     */
+    public function requestAreas()
+    {
+        return $this->hasMany(RequestArea::class, 'area_id');
+    }
+
+    /**
      * Define the one-to-many relationship with RequestAreaSelection.
+     * This method is from the existing code and should be kept as it is.
      *
      * @return \Illuminate\Database\Eloquent\Relations\HasMany
      */
