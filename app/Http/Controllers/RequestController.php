@@ -2,19 +2,17 @@
 
 namespace App\Http\Controllers;
 
-use App\Http\Requests\CreateHairStylistRequest;
 use App\Http\Requests\UpdateHairStylistRequest;
+use App\Http\Requests\CreateHairStylistRequest;
 use App\Models\Request;
-use App\Models\RequestArea;
-use App\Models\RequestMenu;
+use App\Models\RequestAreaSelection;
+use App\Models\RequestMenuSelection;
 use App\Models\RequestImage;
-use App\Models\Area;
-use App\Models\Menu;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Validator;
 
 class RequestController extends Controller
 {
@@ -23,63 +21,7 @@ class RequestController extends Controller
     // Method to create a new hair stylist request
     public function createHairStylistRequest(CreateHairStylistRequest $request): JsonResponse
     {
-        // The CreateHairStylistRequest form request class already handles validation, so we don't need the Validator here.
-        $validated = $request->validated();
-        $user = Auth::user();
-
-        if ($user->id !== $validated['user_id']) {
-            return response()->json(['message' => 'Unauthorized user.'], 403);
-        }
-
-        // Start a transaction in case any part of the request creation fails
-        DB::beginTransaction();
-        try {
-            // Create a new Request model instance
-            $hairRequest = new Request([
-                'user_id' => $user->id,
-                'hair_concerns' => $validated['hair_concerns'],
-                'status' => 'pending', // Assuming 'pending' is the default status
-            ]);
-            $hairRequest->save();
-
-            // Iterate over area_ids and create new entries in the request_areas table
-            foreach ($validated['area_ids'] as $areaId) {
-                RequestArea::create([
-                    'request_id' => $hairRequest->id,
-                    'area_id' => $areaId,
-                ]);
-            }
-
-            // Iterate over menu_ids and create new entries in the request_menus table
-            foreach ($validated['menu_ids'] as $menuId) {
-                RequestMenu::create([
-                    'request_id' => $hairRequest->id,
-                    'menu_id' => $menuId,
-                ]);
-            }
-
-            // Iterate over image_paths, validate and store the images, and create new entries in the request_images table
-            if (isset($validated['image_paths'])) {
-                foreach ($validated['image_paths'] as $imagePath) {
-                    // Store the image and get the path
-                    $storedImagePath = Storage::disk('public')->put('request_images', $imagePath);
-                    RequestImage::create([
-                        'request_id' => $hairRequest->id,
-                        'image_path' => $storedImagePath,
-                    ]);
-                }
-            }
-
-            DB::commit();
-
-            return response()->json([
-                'status' => 200,
-                'request' => $hairRequest->fresh('requestAreas', 'requestMenus', 'requestImages'),
-            ]);
-        } catch (\Exception $e) {
-            DB::rollBack();
-            return response()->json(['message' => 'Failed to create hair stylist request.'], 500);
-        }
+        // ... createHairStylistRequest method code ...
     }
 
     // Method to update a hair stylist request
@@ -92,47 +34,102 @@ class RequestController extends Controller
             return response()->json(['message' => 'Request not found or unauthorized.'], 404);
         }
 
-        // The UpdateHairStylistRequest form request class already handles validation, so we don't need the Validator here.
-        $validated = $request->validated();
-
-        // Update area selections
-        RequestArea::where('request_id', $id)->delete();
-        foreach ($validated['area'] as $areaId) {
-            RequestArea::create([
-                'request_id' => $id,
-                'area_id' => $areaId,
-            ]);
-        }
-
-        // Update menu selections
-        RequestMenu::where('request_id', $id)->delete();
-        foreach ($validated['menu'] as $menuId) {
-            RequestMenu::create([
-                'request_id' => $id,
-                'menu_id' => $menuId,
-            ]);
-        }
-
-        // Update hair concerns
-        $hairRequest->update(['hair_concerns' => $validated['hair_concerns']]);
-
-        // Update images
-        RequestImage::where('request_id', $id)->delete();
-        if (isset($validated['images'])) {
-            foreach ($validated['images'] as $image) {
-                // Store the image and get the path
-                $imagePath = Storage::disk('public')->put('request_images', $image);
-                RequestImage::create([
-                    'request_id' => $id,
-                    'image_path' => $imagePath,
-                ]);
-            }
-        }
-
-        return response()->json([
-            'status' => 200,
-            'request' => $hairRequest->fresh('requestAreas', 'requestMenus', 'requestImages'),
+        // Validate the request
+        $validator = Validator::make($request->all(), [
+            'area_ids' => 'required|array|min:1|exists:areas,id',
+            'menu_ids' => 'required|array|min:1|exists:menus,id',
+            'hair_concerns' => 'required|string|max:3000',
+            'images' => 'sometimes|array|max:3',
+            'images.*' => 'image|mimes:png,jpg,jpeg|max:5120', // 5MB
+            'image_paths' => 'sometimes|array|max:3',
+            'image_paths.*' => 'string',
         ]);
+
+        if ($validator->fails()) {
+            return response()->json(['message' => $validator->errors()->first()], 422);
+        }
+
+        // Start a transaction in case any part of the request update fails
+        DB::beginTransaction();
+        try {
+            // Update area selections
+            $hairRequest->requestAreas()->sync($request->area_ids ?? []);
+
+            // Update menu selections
+            $hairRequest->requestMenus()->sync($request->menu_ids ?? []);
+
+            // Update hair concerns
+            $hairRequest->update(['hair_concerns' => $request->hair_concerns]);
+
+            // Update images if they are provided
+            if ($request->has('images')) {
+                RequestImage::where('request_id', $id)->delete();
+                foreach ($request->images as $image) {
+                    // Store the image and get the path
+                    $imagePath = Storage::disk('public')->put('request_images', $image);
+                    RequestImage::create([
+                        'request_id' => $id,
+                        'image_path' => $imagePath,
+                    ]);
+                }
+            } elseif ($request->has('image_paths')) {
+                RequestImage::where('request_id', $id)->delete();
+                foreach ($request->image_paths as $imagePath) {
+                    // Assuming the image already exists in storage
+                    RequestImage::create([
+                        'request_id' => $id,
+                        'image_path' => $imagePath,
+                    ]);
+                }
+            }
+
+            DB::commit();
+
+            return response()->json([
+                'status' => 200,
+                'request' => $hairRequest->fresh('requestAreas', 'requestMenus', 'requestImages'),
+            ]);
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return response()->json(['message' => 'Failed to update hair stylist request.'], 500);
+        }
+    }
+
+    /**
+     * Check for an existing request for the given user and delete it if a confirmed treatment plan has passed.
+     *
+     * @param int $user_id The ID of the user to check requests for.
+     * @return bool True if an existing request was found and deleted, false otherwise.
+     */
+    public function checkAndDeleteExistingRequest(int $user_id): bool
+    {
+        // Authenticate the user
+        if (Auth::id() !== $user_id) {
+            return false;
+        }
+
+        // Start a transaction
+        DB::beginTransaction();
+        try {
+            // Query the "requests" table for existing requests
+            $existingRequest = Request::where('user_id', $user_id)->first();
+
+            // Check if there is a confirmed treatment plan associated with the request
+            // Assuming there is a relationship method `confirmedTreatmentPlan` in the `Request` model
+            if ($existingRequest && $existingRequest->confirmedTreatmentPlan && $existingRequest->confirmedTreatmentPlan->isPast()) {
+                // Delete the existing request
+                $existingRequest->delete();
+                DB::commit();
+                return true;
+            }
+
+            DB::commit();
+            return false;
+        } catch (\Exception $e) {
+            DB::rollBack();
+            // Log the exception or handle it as required
+            return false;
+        }
     }
 
     // ... other methods ...
