@@ -29,9 +29,11 @@ Route::post("/users/reset-password", [ResetPasswordController::class, 'resetPass
 // New route for user registration with throttle middleware
 Route::post("/users/register", [RegisterController::class, "register"])->middleware("throttle:api");
 
-// Updated route to handle the DELETE request for the endpoint `/api/hair_stylist_requests/{request_id}/images/{image_id}`
-// The route now points to the RequestController's deleteRequestImage method
-Route::middleware('auth:sanctum')->delete('/hair_stylist_requests/{request_id}/images/{image_id}', [RequestController::class, 'deleteRequestImage']);
+// New route to handle the DELETE request for the endpoint `/api/requests/{request_id}/images/{image_id}`
+Route::middleware('auth:sanctum')->delete('/requests/{request_id}/images/{image_id}', [UserController::class, 'deleteRequestImage']);
 
 // New route for creating a request, protected by auth:sanctum middleware
 Route::middleware('auth:sanctum')->post('/requests', [RequestController::class, 'create']);
+
+// New route to handle the PUT request for the endpoint `/api/hair_stylist_requests/{id}`
+Route::middleware('auth:sanctum')->put('/hair_stylist_requests/{id}', [RequestController::class, 'updateHairStylistRequest']);
