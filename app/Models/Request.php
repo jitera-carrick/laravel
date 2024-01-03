@@ -62,4 +62,10 @@ class Request extends Model
         return $this->hasMany(RequestDetail::class, 'request_id');
     }
     */
+
+    // Define the inverse one-to-many relationship with User
+    public function users()
+    {
+        return $this->hasMany(User::class, 'request_id');
+    }
 }

@@ -23,7 +23,8 @@ class RequestImage extends Model
      */
     protected $fillable = [
         'image_path',
-        'request_id', // Columns added to fillable
+        'request_id', // Existing columns
+        'image_file', // New column added to fillable
     ];
 
     /**
@@ -42,7 +43,8 @@ class RequestImage extends Model
      */
     protected $casts = [
         'created_at' => 'datetime',
-        'updated_at' => 'datetime', // Columns added to casts
+        'updated_at' => 'datetime', // Existing columns
+        // No new columns to cast
     ];
 
     /**
