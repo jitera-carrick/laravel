@@ -1,3 +1,4 @@
+
 <?php
 
 namespace App\Http\Controllers\Auth;
@@ -50,7 +51,7 @@ class ForgotPasswordController extends Controller
     public function sendResetLinkEmail(Request $request)
     {
         $validatedData = $request->validate([
-            'email' => 'required|email',
+            'email' => 'required|email|exists:users,email',
         ]);
 
         $user = User::where('email', $validatedData['email'])->first();
@@ -59,9 +60,9 @@ class ForgotPasswordController extends Controller
             $token = Str::random(60);
             $passwordResetToken = new PasswordResetToken([
                 'email' => $user->email,
-                'token' => $token,
+                'reset_token' => $token, // Changed from 'token' to 'reset_token'
                 'created_at' => now(),
-                'expires_at' => now()->addMinutes(Config::get('auth.passwords.users.expire')),
+                'expiration' => now()->addMinutes(Config::get('auth.passwords.users.expire')), // Changed from 'expires_at' to 'expiration'
                 'used' => false,
                 'user_id' => $user->id,
             ]);
@@ -71,8 +72,8 @@ class ForgotPasswordController extends Controller
             $user->password_reset_token_id = $passwordResetToken->id;
             $user->save();
 
-            // Send the password reset notification
-            $user->notify(new ResetPasswordNotification($token));
+            // Send the password reset email
+            Mail::to($user->email)->send(new \App\Mail\ResetPasswordMail($token)); // Changed from notification to direct mail
 
             return response()->json(['message' => 'Password reset link has been sent to your email.'], 200);
         }
