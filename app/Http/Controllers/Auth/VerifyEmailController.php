@@ -7,6 +7,7 @@ use App\Models\User;
 use App\Models\EmailVerificationToken;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 
 class VerifyEmailController extends Controller
@@ -38,27 +39,38 @@ class VerifyEmailController extends Controller
         $token = $request->input('token'); // Retrieve the token from the URL parameter
 
         if ($token) {
-            $verificationToken = EmailVerificationToken::where('token', $token)
-                                ->where('used', false)
-                                ->where('expires_at', '>', now())
-                                ->first();
+            DB::beginTransaction();
+            try {
+                $verificationToken = EmailVerificationToken::where('token', $token)
+                                    ->where('used', false)
+                                    ->where('expires_at', '>', now())
+                                    ->lockForUpdate() // Lock the row for the transaction
+                                    ->first();
 
-            if (!$verificationToken) {
-                return response()->json(['message' => 'Invalid or expired token.'], 400);
-            }
+                if (!$verificationToken) {
+                    DB::rollBack(); // Rollback the transaction if token is invalid or expired
+                    return response()->json(['message' => 'Invalid or expired token.'], 400);
+                }
 
-            $user = User::find($verificationToken->user_id);
-            if ($user) {
-                $user->email_verified_at = now();
-                $user->save();
+                $user = User::find($verificationToken->user_id);
+                if ($user) {
+                    $user->email_verified_at = now();
+                    $user->save();
 
-                $verificationToken->used = true;
-                $verificationToken->save();
+                    $verificationToken->used = true;
+                    $verificationToken->save();
 
-                return response()->json(['message' => 'Email verified successfully.'], 200);
-            } else {
-                // Handle the case where the user associated with the token cannot be found
-                return response()->json(['message' => 'User not found.'], 404);
+                    DB::commit(); // Commit the transaction
+
+                    return response()->json(['message' => 'Email verified successfully.'], 200);
+                } else {
+                    // Handle the case where the user associated with the token cannot be found
+                    DB::rollBack(); // Rollback the transaction
+                    return response()->json(['message' => 'User not found.'], 404);
+                }
+            } catch (\Exception $e) {
+                DB::rollBack(); // Rollback the transaction on any exception
+                return response()->json(['message' => 'An error occurred during verification.'], 500);
             }
         } else {
             // Handle the case where no token is provided in the request
