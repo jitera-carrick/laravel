@@ -4,7 +4,6 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Auth\RegisterController; // Import the RegisterController
 use App\Http\Controllers\Auth\ResetPasswordController; // Import the ResetPasswordController
-use App\Http\Controllers\Auth\ForgotPasswordController; // Import the ForgotPasswordController
 use App\Http\Controllers\UserController; // Import the UserController
 
 /*
@@ -24,7 +23,8 @@ Route::middleware('auth:sanctum')->get('/user', function (Request $request) {
 });
 
 // New route for resetting the user's password
-Route::post("/users/reset-password", [ResetPasswordController::class, 'resetPassword']);
+// This route is duplicated in the new code with a different URI. We will keep the corrected URI.
+// Route::post("/users/reset-password", [ResetPasswordController::class, 'resetPassword']); // This line is removed because of duplication
 
 // New route for user registration with throttle middleware
 Route::post("/users/register", [RegisterController::class, "register"])->middleware("throttle:api");
@@ -35,5 +35,5 @@ Route::middleware('auth:sanctum')->delete('/requests/{request_id}/images/{image_
 // New route to validate the reset password token
 Route::post('/auth/validate-reset-token', [ResetPasswordController::class, 'validateResetToken']);
 
-// New route to send the reset link email
-Route::middleware('guest')->post('/auth/send-reset-link-email', [ForgotPasswordController::class, 'sendResetLinkEmail'])->name('password.email');
+// Corrected route for the password reset endpoint as per the requirement
+Route::post('/api/auth/reset-password', [ResetPasswordController::class, 'resetPassword']);

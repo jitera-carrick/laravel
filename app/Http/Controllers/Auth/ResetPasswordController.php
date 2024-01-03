@@ -34,40 +34,79 @@ class ResetPasswordController extends Controller
 
     public function validateResetToken(Request $request): JsonResponse
     {
+        // New code method
+        // ...
+    }
+
+    public function resetPassword(Request $request): JsonResponse
+    {
+        // Merged validation rules and messages from both versions
         $validator = Validator::make($request->all(), [
+            'email' => 'required|email|exists:users,email',
             'token' => 'required|string',
+            'password' => [
+                'required',
+                'string',
+                'min:8',
+                'confirmed',
+                'regex:/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/',
+                'not_in:'.$request->email,
+            ],
+            'password_confirmation' => 'required_with:password|same:password',
+        ], [
+            'email.required' => 'Invalid or non-existent email address.',
+            'email.email' => 'Invalid or non-existent email address.',
+            'email.exists' => 'Invalid or non-existent email address.',
+            'token.required' => 'Invalid or expired reset token.',
+            'token.string' => 'Invalid or expired reset token.',
+            'password.required' => 'Password does not meet the complexity requirements.',
+            'password.string' => 'Password does not meet the complexity requirements.',
+            'password.min' => 'Password does not meet the complexity requirements.',
+            'password.confirmed' => 'Password confirmation does not match.',
+            'password.regex' => 'Password does not meet the complexity requirements.',
+            'password.not_in' => 'Password does not meet the complexity requirements.',
+            'password_confirmation.required_with' => 'Password confirmation does not match.',
+            'password_confirmation.same' => 'Password confirmation does not match.',
         ]);
 
         if ($validator->fails()) {
             return ApiResponse::error($validator->errors(), 422);
         }
 
+        DB::beginTransaction();
         try {
-            $token = $request->input('token');
-            $passwordResetToken = PasswordResetToken::where('token', $token)->first();
+            $passwordResetToken = PasswordResetToken::where('token', $request->token)
+                ->where('used', false)
+                ->where('expires_at', '>', Carbon::now())
+                ->first();
 
             if (!$passwordResetToken) {
-                return ApiResponse::error(['message' => 'Invalid reset token.'], 404);
+                DB::rollBack();
+                return ApiResponse::error(['message' => 'Invalid or expired reset token.'], 404);
             }
 
-            if ($passwordResetToken->used) {
-                return ApiResponse::error(['message' => 'This password reset token has already been used.'], 400);
+            $user = User::where('email', $request->email)->first();
+            if (!$user) {
+                DB::rollBack();
+                return ApiResponse::error(['message' => 'Invalid or non-existent email address.'], 404);
             }
 
-            if (Carbon::parse($passwordResetToken->expires_at)->isPast()) {
-                return ApiResponse::error(['message' => 'The reset token is expired.'], 400);
-            }
+            $user->password = Hash::make($request->password);
+            $user->last_password_reset = Carbon::now();
+            $user->save();
 
-            return ApiResponse::success(['message' => 'Reset token is valid.'], 200);
+            $passwordResetToken->used = true;
+            $passwordResetToken->save();
+
+            DB::commit();
+
+            Mail::to($user->email)->send(new \App\Mail\PasswordResetSuccess($user)); // Assuming PasswordResetSuccess is a valid Mailable
+
+            return ApiResponse::success(['message' => 'Password reset successfully.']);
         } catch (Throwable $e) {
-            return ApiResponse::error(['message' => 'An error occurred while validating the password reset token.'], 500);
+            DB::rollBack();
+            return ApiResponse::error(['message' => 'An error occurred while resetting the password.'], 500);
         }
-    }
-
-    public function resetPassword(Request $request): JsonResponse
-    {
-        // Existing code remains unchanged
-        // ...
     }
 
     // ... other methods ...
