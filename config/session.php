@@ -211,4 +211,17 @@ return [
 
     'partitioned' => false,
 
+    /*
+    |--------------------------------------------------------------------------
+    | Session Expiration Configuration
+    |--------------------------------------------------------------------------
+    |
+    | Here you may specify the default duration in minutes to extend the session
+    | when the "keep_session" flag is true. This is used to determine how long
+    | the session should be kept alive beyond the standard expiration.
+    |
+    */
+
+    'session_expiration' => env('SESSION_EXPIRATION', 43200), // Default to 30 days
+
 ];
