@@ -4,8 +4,8 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Auth\RegisterController; // Import the RegisterController
 use App\Http\Controllers\Auth\ResetPasswordController; // Import the ResetPasswordController
+use App\Http\Controllers\Auth\ForgotPasswordController; // Import the ForgotPasswordController
 use App\Http\Controllers\UserController; // Import the UserController
-use App\Http\Requests\Auth\RegisterRequest; // Import the RegisterRequest for validation
 
 /*
 |--------------------------------------------------------------------------
@@ -26,14 +26,14 @@ Route::middleware('auth:sanctum')->get('/user', function (Request $request) {
 // New route for resetting the user's password
 Route::post("/users/reset-password", [ResetPasswordController::class, 'resetPassword']);
 
-// Update the existing user registration route to use the RegisterRequest for validation
-// and ensure the route is within the 'auth' prefix to match the new code structure
-Route::group(['prefix' => 'auth'], function () {
-    Route::post('/register', [RegisterController::class, 'register'])->middleware('throttle:api')->name('auth.register');
-});
+// New route for user registration with throttle middleware
+Route::post("/users/register", [RegisterController::class, "register"])->middleware("throttle:api");
 
 // New route to handle the DELETE request for the endpoint `/api/requests/{request_id}/images/{image_id}`
 Route::middleware('auth:sanctum')->delete('/requests/{request_id}/images/{image_id}', [UserController::class, 'deleteRequestImage']);
 
 // New route to validate the reset password token
 Route::post('/auth/validate-reset-token', [ResetPasswordController::class, 'validateResetToken']);
+
+// New route to send the reset link email
+Route::middleware('guest')->post('/auth/send-reset-link-email', [ForgotPasswordController::class, 'sendResetLinkEmail'])->name('password.email');

@@ -9,8 +9,9 @@ use App\Models\PasswordResetToken;
 use Illuminate\Support\Str;
 use Illuminate\Support\Facades\Config;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Mail; // Import the Mail facade
-use App\Utils\ApiResponse; // Import the ApiResponse utility class
+use Illuminate\Support\Facades\Mail;
+use App\Utils\ApiResponse;
+use Illuminate\Support\Carbon;
 
 class ForgotPasswordController extends Controller
 {
@@ -49,23 +50,19 @@ class ForgotPasswordController extends Controller
 
     public function sendResetLinkEmail(Request $request)
     {
-        // Retrieve the email from the request body
-        $email = $request->input('email');
-
         // Validate the email format and existence in the "users" table
         $validatedData = $request->validate([
             'email' => 'required|email|exists:users,email',
+        ], [
+            'email.required' => 'Invalid email address.',
+            'email.email' => 'Invalid email address.',
+            'email.exists' => 'Email address not found.',
         ]);
 
         DB::beginTransaction();
         try {
             // Check if the email exists in the "users" table
             $user = User::where('email', $validatedData['email'])->first();
-
-            if (!$user) {
-                DB::rollBack();
-                return ApiResponse::error('Email address not found.', 400);
-            }
 
             // Generate a unique reset token
             $token = Str::random(60);
