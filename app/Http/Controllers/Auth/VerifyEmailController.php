@@ -35,7 +35,7 @@ class VerifyEmailController extends Controller
         }
 
         // New code for verifying via token
-        $token = $request->input('token'); // Retrieve the token from the URL parameter
+        $token = $request->input('token'); // Retrieve the token from the request body
 
         if ($token) {
             $verificationToken = EmailVerificationToken::where('token', $token)
@@ -47,7 +47,7 @@ class VerifyEmailController extends Controller
                 return response()->json(['message' => 'Invalid or expired token.'], 400);
             }
 
-            $user = User::find($verificationToken->user_id);
+            $user = $verificationToken->user; // Retrieve the associated user using the user relationship
             if ($user) {
                 $user->email_verified_at = now();
                 $user->save();
