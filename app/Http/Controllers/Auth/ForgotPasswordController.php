@@ -9,72 +9,63 @@ use App\Models\PasswordResetToken;
 use Illuminate\Support\Str;
 use Illuminate\Support\Facades\Config;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\Validator; // Import the Validator facade
 use App\Notifications\PasswordResetNotification; // Import the correct notification class
 
 class ForgotPasswordController extends Controller
 {
     // ... (other methods)
 
-    public function validateResetToken(Request $request)
+    public function requestPasswordReset(Request $request)
     {
-        $request->validate([
+        $validator = Validator::make($request->all(), [
             'email' => 'required|email',
-            'token' => 'required|string',
         ]);
 
-        try {
-            $tokenEntry = PasswordResetToken::where('email', $request->email)
-                ->where('token', $request->token)
-                ->where('used', false)
-                ->first();
-
-            if (!$tokenEntry) {
-                return response()->json(['error' => 'Token not found or already used'], 404);
+        if ($validator->fails()) {
+            $errors = $validator->errors();
+            $response = [];
+            if ($errors->has('email')) {
+                $response['errors']['email'] = $errors->first('email');
             }
-
-            $tokenLifetime = Config::get('auth.passwords.users.expire') * 60;
-            $tokenCreatedAt = Carbon::parse($tokenEntry->created_at);
-            $tokenExpired = $tokenCreatedAt->addSeconds($tokenLifetime)->isPast();
-
-            if ($tokenExpired) {
-                return response()->json(['error' => 'Token is expired'], 410);
-            }
-
-            return response()->json(['message' => 'Token is valid'], 200);
-        } catch (\Exception $e) {
-            return response()->json(['error' => 'An error occurred while validating the token'], 500);
+            return response()->json($response, 400);
         }
+
+        $user = User::where('email', $request->email)->first();
+
+        if (!$user) {
+            return response()->json(['message' => 'Email not found.'], 404);
+        }
+
+        $token = Str::random(60);
+        $expiration = now()->addMinutes(Config::get('auth.passwords.users.expire'));
+
+        $passwordResetToken = new PasswordResetToken([
+            'email' => $user->email,
+            'token' => $token,
+            'expires_at' => $expiration,
+            'used' => false,
+            'user_id' => $user->id,
+        ]);
+        $passwordResetToken->save();
+
+        $user->notify(new PasswordResetNotification($token));
+
+        return response()->json([
+            'status' => 200,
+            'message' => 'Password reset request sent successfully',
+            'reset_token' => $token
+        ], 200);
+    }
+
+    public function validateResetToken(Request $request)
+    {
+        // ... (existing code)
     }
 
     public function sendResetLinkEmail(Request $request)
     {
-        $validatedData = $request->validate([
-            'email' => 'required|email',
-        ]);
-
-        $user = User::where('email', $validatedData['email'])->first();
-
-        if ($user) {
-            $token = Str::random(60);
-            $expiration = now()->addMinutes(Config::get('auth.passwords.users.expire'));
-
-            // Create a new password reset token record
-            $passwordResetToken = new PasswordResetToken([
-                'email' => $user->email,
-                'token' => $token,
-                'expires_at' => $expiration,
-                'used' => false,
-                'user_id' => $user->id,
-            ]);
-            $passwordResetToken->save();
-
-            // Send the password reset notification
-            $user->notify(new PasswordResetNotification($token));
-
-            return response()->json(['reset_token' => $token], 200);
-        }
-
-        return response()->json(['message' => 'If your email address exists in our database, you will receive a password reset link at your email address in a few minutes.'], 200);
+        // ... (existing code)
     }
 
     // ... (other methods)
