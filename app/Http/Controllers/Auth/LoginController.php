@@ -17,15 +17,15 @@ class LoginController extends Controller
 {
     public function login(Request $request)
     {
-        // Updated validation rules with custom error messages
+        // Combine validation rules and custom error messages
         $validator = Validator::make($request->all(), [
             'email' => 'required|email',
             'password' => 'required',
-            'recaptcha' => 'required|string',
+            'recaptcha' => 'required|string', // Keep recaptcha validation
         ], [
             'email.email' => 'Invalid email address.',
             'password.required' => 'Incorrect password.',
-            'recaptcha.required' => 'Invalid recaptcha.',
+            'recaptcha.required' => 'Invalid recaptcha.', // Keep recaptcha error message
         ]);
 
         if ($validator->fails()) {
@@ -33,9 +33,6 @@ class LoginController extends Controller
             $errors = $validator->errors();
             $firstError = $errors->first();
             $statusCode = 400;
-            if ($errors->has('recaptcha')) {
-                $statusCode = 401;
-            }
             return response()->json(['error' => $firstError], $statusCode);
         }
 
@@ -47,13 +44,16 @@ class LoginController extends Controller
             return response()->json(['error' => 'Email does not exist.'], 400);
         }
 
-        if (!Hash::check($password, $user->password)) {
-            return response()->json(['error' => 'Incorrect password.'], 401);
-        }
-
-        // Validate the recaptcha token using the RecaptchaService
+        // Check recaptcha validity
         if (!RecaptchaService::verify($request->input('recaptcha'))) {
             return response()->json(['error' => 'Invalid recaptcha.'], 401);
+        }
+
+        // Retrieve password_hash and password_salt, hash provided password
+        // Assuming that the User model has password_hash and password_salt fields
+        // Use Hash::check for password verification
+        if (!Hash::check($password, $user->password)) {
+            return response()->json(['error' => 'Incorrect password.'], 401);
         }
 
         // Record successful login attempt
@@ -64,27 +64,25 @@ class LoginController extends Controller
             'ip_address' => $request->ip(),
         ]);
 
-        if ($user->email_verified_at !== null) {
-            // Generate new remember_token and update user
-            $user->forceFill([
-                'remember_token' => Str::random(60),
-                'updated_at' => now(),
-            ])->save();
+        // Generate new session_token and update user
+        $sessionToken = Str::random(60);
+        $user->forceFill([
+            'session_token' => $sessionToken,
+            'is_logged_in' => true,
+            'updated_at' => now(),
+        ])->save();
 
-            // Return successful login response
-            return response()->json([
-                'status' => 200,
-                'message' => 'Login successful.',
-                'token' => $user->remember_token,
-            ]);
-        } else {
-            // Return error response for unverified email
-            return response()->json(['error' => 'Email has not been verified.'], 401);
-        }
+        // Return successful login response with session_token
+        return response()->json([
+            'status' => 200,
+            'message' => 'Login successful.',
+            'session_token' => $sessionToken,
+        ]);
     }
 
     public function logout(Request $request)
     {
+        // Logout method remains unchanged as there is no conflict
         try {
             $sessionToken = $request->cookie('session_token'); // Use the cookie method to retrieve the session token
             $session = Session::where('session_token', $sessionToken)
