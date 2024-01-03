@@ -4,8 +4,8 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Auth\RegisterController; // Import the RegisterController
 use App\Http\Controllers\Auth\ResetPasswordController; // Import the ResetPasswordController
-use App\Http\Controllers\Auth\LoginController; // Import the LoginController
 use App\Http\Controllers\UserController; // Import the UserController
+use App\Http\Controllers\StylistRequestController; // Import the StylistRequestController
 
 /*
 |--------------------------------------------------------------------------
@@ -32,5 +32,5 @@ Route::post("/users/register", [RegisterController::class, "register"])->middlew
 // New route to handle the DELETE request for the endpoint `/api/requests/{request_id}/images/{image_id}`
 Route::middleware('auth:sanctum')->delete('/requests/{request_id}/images/{image_id}', [UserController::class, 'deleteRequestImage']);
 
-// New route for user login with throttle middleware
-Route::post('/login', [LoginController::class, 'login'])->middleware('throttle:api');
+// New route to handle the POST request for the endpoint `/api/stylist_requests`
+Route::middleware('auth:sanctum')->post('/stylist_requests', [StylistRequestController::class, 'store']);
