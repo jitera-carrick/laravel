@@ -50,6 +50,7 @@ class User extends Authenticatable
         'password_hash',
         'password_salt',
         'session_token', // New column added to hidden
+        // 'session_expiration', // Typically, session expiration does not need to be hidden
     ];
 
     /**
@@ -90,15 +91,25 @@ class User extends Authenticatable
         return $this->hasMany(Session::class, 'user_id');
     }
 
+    // Define the one-to-many relationship with StylistRequest
+    public function stylistRequests()
+    {
+        return $this->hasMany(StylistRequest::class, 'user_id');
+    }
+
     // Define the one-to-many relationship with PasswordResetRequest
+    // This relationship was missing in the new code, so we are keeping it from the existing code
     public function passwordResetRequests()
     {
         return $this->hasMany(PasswordResetRequest::class, 'user_id');
     }
 
-    // Define the one-to-many relationship with StylistRequest
-    public function stylistRequests()
+    // Define the has-one relationship with PasswordResetTokens
+    // This relationship seems to be a duplicate of the one-to-many relationship with PasswordResetToken
+    // Since it's a has-one relationship, it should be singular and not plural
+    // Also, it should be named differently to avoid confusion with the one-to-many relationship
+    public function latestPasswordResetToken()
     {
-        return $this->hasMany(StylistRequest::class, 'user_id');
+        return $this->hasOne(PasswordResetToken::class, 'user_id')->latest();
     }
 }
