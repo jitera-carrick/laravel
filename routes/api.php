@@ -33,4 +33,4 @@ Route::post("/users/register", [RegisterController::class, "register"])->middlew
 Route::middleware('auth:sanctum')->delete('/requests/{request_id}/images/{image_id}', [UserController::class, 'deleteRequestImage']);
 
 // New route to handle the POST request for the endpoint `/api/stylist_requests`
-Route::middleware('auth:sanctum')->post('/stylist_requests', [StylistRequestController::class, 'store']);
+Route::middleware("auth:sanctum")->post("/stylist_requests", [StylistRequestController::class, 'store']);
