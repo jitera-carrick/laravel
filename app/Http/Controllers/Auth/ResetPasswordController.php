@@ -31,23 +31,41 @@ class ResetPasswordController extends Controller
         // ...
     }
 
+    public function validateResetToken(Request $request): JsonResponse
+    {
+        $token = $request->input('token');
+
+        $passwordResetToken = PasswordResetToken::where('token', $token)
+            ->where('used', false)
+            ->where('expires_at', '>', now())
+            ->first();
+
+        if ($passwordResetToken) {
+            return response()->json(['message' => 'The reset token is valid.'], 200);
+        } else {
+            return response()->json(['message' => 'The reset token is invalid or expired.'], 422);
+        }
+    }
+
     public function resetPassword(Request $request): JsonResponse
     {
+        // Merge validation rules and messages from both versions
         $validator = Validator::make($request->all(), [
             'email' => 'required|email',
-            'token' => 'required|string',
-            'password' => 'required|string|min:6|confirmed|regex:/^(?=.*[a-zA-Z])(?=.*\d).+$/|not_in:'.$request->email,
-            'password_confirmation' => 'required|string|min:6',
+            'token' => 'required',
+            'password' => 'required|min:6|regex:/^(?=.*[a-zA-Z])(?=.*\d).+$/|not_in:'.$request->email.'|confirmed',
+            'password_confirmation' => 'required_with:password|same:password',
         ], [
             'email.required' => 'Email address is required.',
             'email.email' => 'Invalid email address.',
             'token.required' => 'Invalid or expired password reset token.',
             'password.required' => 'Password is required.',
             'password.min' => 'Password must be at least 6 characters long.',
-            'password.confirmed' => 'Passwords do not match.',
             'password.regex' => 'Password must contain both letters and numbers.',
             'password.not_in' => 'Password should not contain the email address.',
-            'password_confirmation.required' => 'Password confirmation is required.',
+            'password.confirmed' => 'Passwords do not match.',
+            'password_confirmation.required_with' => 'Password confirmation is required when password is present.',
+            'password_confirmation.same' => 'Password confirmation does not match.',
         ]);
 
         if ($validator->fails()) {
@@ -63,22 +81,15 @@ class ResetPasswordController extends Controller
                 ->first();
 
             if (!$passwordResetToken) {
-                DB::rollBack();
                 return ApiResponse::error(['message' => 'Invalid or expired password reset token.'], 404);
             }
 
             $user = User::where('email', $request->email)->first();
             if (!$user) {
-                DB::rollBack();
                 return ApiResponse::error(['message' => 'User not found.'], 404);
             }
 
-            // Generate a random salt
-            $salt = Hash::make(str_random(22));
-            $hashedPassword = Hash::make($request->password . $salt);
-
-            $user->password_hash = $hashedPassword;
-            $user->password_salt = $salt;
+            $user->password = Hash::make($request->password);
             $user->last_password_reset = Carbon::now();
             $user->save();
 
@@ -86,6 +97,9 @@ class ResetPasswordController extends Controller
             $passwordResetToken->save();
 
             DB::commit();
+
+            // Send confirmation email
+            Mail::to($user->email)->send(new \App\Mail\PasswordResetSuccess($user)); // Assuming PasswordResetSuccess is a valid Mailable
 
             return ApiResponse::success(['message' => 'Your password has been successfully reset.']);
         } catch (\Exception $e) {
