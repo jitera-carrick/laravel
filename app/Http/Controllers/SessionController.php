@@ -6,6 +6,8 @@ use App\Http\Requests\SessionRequest;
 use App\Services\SessionService;
 use App\Utils\ApiResponse;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Validator;
 
 class SessionController extends Controller
 {
@@ -41,6 +43,41 @@ class SessionController extends Controller
             ]);
         } catch (\Exception $e) {
             return ApiResponse::error(['message' => 'An error occurred while extending the session.'], 500);
+        }
+    }
+
+    // New method to maintain user session
+    public function maintainUserSession(Request $request, $userId): JsonResponse
+    {
+        $validator = Validator::make($request->all(), [
+            'user_id' => 'required|integer',
+            'keep_session' => 'required|boolean',
+        ]);
+
+        if ($validator->fails()) {
+            return ApiResponse::error(['message' => $validator->errors()->first()], 400);
+        }
+
+        try {
+            $keepSession = filter_var($request->input('keep_session'), FILTER_VALIDATE_BOOLEAN);
+            $userSession = $this->sessionService->findByUserId($userId);
+
+            if (!$userSession) {
+                return ApiResponse::error(['message' => 'User ID does not exist.'], 404);
+            }
+
+            if (!$request->user() || $request->user()->id != $userId) {
+                return ApiResponse::error(['message' => 'Unauthorized'], 401);
+            }
+
+            $updatedSession = $this->sessionService->maintainSession($userSession, $keepSession);
+
+            return ApiResponse::success([
+                'message' => 'Session preference updated successfully',
+                'session_expiration' => $updatedSession->session_expiration
+            ]);
+        } catch (\Exception $e) {
+            return ApiResponse::error(['message' => 'An error occurred while updating the session preference.'], 500);
         }
     }
 }
