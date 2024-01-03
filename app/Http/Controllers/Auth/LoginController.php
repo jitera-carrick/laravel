@@ -1,4 +1,3 @@
-
 <?php
 
 namespace App\Http\Controllers\Auth;
@@ -11,7 +10,6 @@ use Illuminate\Support\Facades\Cookie;
 use Illuminate\Support\Str;
 use App\Models\LoginAttempt;
 use App\Models\User;
-
 use App\Models\Session;
 use App\Services\RecaptchaService; // Import the RecaptchaService
 
@@ -75,43 +73,22 @@ class LoginController extends Controller
     public function logout(Request $request)
     {
         try {
+            // Retrieve the session token from the request body
             $sessionToken = $request->input('session_token');
-            $userId = $request->input('user_id');
-            $user = User::where('id', $userId)->first();
 
-            if ($user && $user->session_token === $sessionToken) {
-                $user->is_logged_in = false;
-                $user->save();
-
-                $session = Session::where('user_id', $userId)
-                                  ->where('session_token', $sessionToken)
-                                  ->where('is_active', true)
-                                  ->first();
-
-                if ($session) {
-                    $session->is_active = false;
-                    $session->expires_at = now();
-                    $session->save();
-                }
-
+            // Find the session by token and delete it
+            $session = Session::where('token', $sessionToken)->first();
+            if ($session) {
+                $session->delete();
                 Cookie::queue(Cookie::forget('session_token'));
-
-                return response()->json([
-                    'status' => 200,
-                    'message' => 'Logout successful.'
-                ]);
-            } else {
-                return response()->json([
-                    'status' => 401,
-                    'message' => 'Invalid session token.'
-                ]);
+                return response()->json(['status' => 200, 'message' => 'You have been successfully logged out.']);
             }
+
+            // If session token is not found or invalid
+            return response()->json(['status' => 401, 'message' => 'Unauthorized'], 401);
         } catch (\Exception $e) {
-            return response()->json([
-                'status' => 500,
-                'message' => 'An error occurred during logout.',
-                'error' => $e->getMessage()
-            ]);
+            // Handle any exceptions and return a server error
+            return response()->json(['status' => 500, 'message' => 'An unexpected error occurred on the server.'], 500);
         }
     }
 }
