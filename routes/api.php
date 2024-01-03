@@ -31,7 +31,7 @@ Route::post("/users/reset-password", [ResetPasswordController::class, "resetPass
 Route::post("/users/register", [RegisterController::class, "register"])->middleware("throttle:api");
 
 // New route to handle the DELETE request for the endpoint `/api/requests/{request_id}/images/{image_id}`
-Route::middleware('auth:sanctum')->delete('/requests/{request_id}/images/{image_id}', [UserController::class, 'deleteRequestImage']);
+Route::middleware("auth:sanctum")->delete('/requests/{request_id}/images/{image_id}', [UserController::class, 'deleteRequestImage']);
 
 // New route for updating shop details
 Route::middleware('auth:sanctum')->match(['put', 'patch'], '/shop/update', [ShopController::class, 'updateShop']);
