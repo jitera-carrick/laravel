@@ -9,7 +9,6 @@ use App\Models\PasswordResetToken;
 use Illuminate\Support\Str;
 use Illuminate\Support\Facades\Config;
 use Illuminate\Support\Carbon;
-use App\Notifications\ResetPasswordNotification;
 use Illuminate\Support\Facades\Mail; // Import the Mail facade
 
 class ForgotPasswordController extends Controller
@@ -49,17 +48,25 @@ class ForgotPasswordController extends Controller
 
     public function sendResetLinkEmail(Request $request)
     {
+        // Retrieve the email from the request body
+        $email = $request->input('email');
+
+        // Validate the email format
         $validatedData = $request->validate([
             'email' => 'required|email|exists:users,email',
         ]);
 
+        // Check if the email exists in the "users" table
         $user = User::where('email', $validatedData['email'])->first();
 
         if (!$user) {
             return response()->json(['error' => 'Email address not found.'], 400);
         }
 
+        // Generate a unique reset token
         $token = Str::random(60);
+
+        // Store the reset token in the "password_reset_tokens" table
         $passwordResetToken = new PasswordResetToken([
             'email' => $user->email,
             'token' => $token,
@@ -70,12 +77,13 @@ class ForgotPasswordController extends Controller
         ]);
         $passwordResetToken->save();
 
-        // Send the password reset email
+        // Send an email to the user with the reset token link
         Mail::send('emails.password_reset', ['token' => $token], function ($message) use ($user) {
             $message->to($user->email);
             $message->subject('Password Reset Link');
         });
 
+        // Return a success response
         return response()->json(['message' => 'Reset link sent to your email address.'], 200);
     }
 
