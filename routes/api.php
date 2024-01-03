@@ -4,8 +4,8 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Auth\RegisterController; // Import the RegisterController
 use App\Http\Controllers\Auth\ResetPasswordController; // Import the ResetPasswordController
+use App\Http\Controllers\Auth\LoginController; // Import the LoginController
 use App\Http\Controllers\UserController; // Import the UserController
-use App\Http\Controllers\Auth\EmailVerificationController; // Import the EmailVerificationController
 
 /*
 |--------------------------------------------------------------------------
@@ -35,5 +35,5 @@ Route::middleware('auth:sanctum')->delete('/requests/{request_id}/images/{image_
 // New route to validate the reset password token
 Route::post('/auth/validate-reset-token', [ResetPasswordController::class, 'validateResetToken']);
 
-// New route to handle the email verification request
-Route::post('/auth/verify/{token}', [EmailVerificationController::class, 'verifyEmail']);
+// New route to handle the POST request for the login endpoint
+Route::post('/auth/login', [LoginController::class, 'login']);
