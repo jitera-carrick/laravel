@@ -93,4 +93,10 @@ class User extends Authenticatable
     {
         return $this->hasMany(EmailVerificationToken::class, 'user_id');
     }
+
+    // Define the one-to-many relationship with Comment
+    public function comments()
+    {
+        return $this->hasMany(Comment::class, 'user_id');
+    }
 }
