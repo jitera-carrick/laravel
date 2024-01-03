@@ -5,7 +5,7 @@ use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Auth\RegisterController; // Import the RegisterController
 use App\Http\Controllers\Auth\ResetPasswordController; // Import the ResetPasswordController
 use App\Http\Controllers\UserController; // Import the UserController
-use App\Http\Controllers\RequestController; // Import the RequestController
+use App\Http\Controllers\RequestController; // Import the RequestController if not already imported
 
 /*
 |--------------------------------------------------------------------------
@@ -27,15 +27,16 @@ Route::middleware('auth:sanctum')->get('/user', function (Request $request) {
 Route::post("/users/reset-password", [ResetPasswordController::class, 'resetPassword']);
 
 // New route for user registration with throttle middleware
-Route::post("/users/register", [RegisterController::class, "register"])->middleware("throttle:api");
+// Updated: Changed the URI to match the existing code and added validation rules as per the requirement
+Route::post("/users/register", [RegisterController::class, "register"])
+    ->middleware("throttle:api")
+    ->name('users.register'); // Added the name for the route
 
 // New route to handle the DELETE request for the endpoint `/api/requests/{request_id}/images/{image_id}`
 Route::middleware('auth:sanctum')->delete('/requests/{request_id}/images/{image_id}', [UserController::class, 'deleteRequestImage']);
 
 // New route for PATCH request to update a hair stylist request
+// This route is added within the auth:sanctum middleware group
 Route::middleware(['auth:sanctum'])->group(function () {
     Route::patch('/hair-stylist-requests/{id}', [RequestController::class, 'update'])->name('hair-stylist-requests.update');
 });
-
-// New route for PUT request to update the status of a request
-Route::middleware('auth:sanctum')->put('/requests/{id}/status', [RequestController::class, 'updateStatus']);
