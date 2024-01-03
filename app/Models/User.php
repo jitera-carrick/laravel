@@ -11,97 +11,40 @@ class User extends Authenticatable
 {
     use HasApiTokens, HasFactory, Notifiable;
 
-    /**
-     * The table associated with the model.
-     *
-     * @var string
-     */
-    protected $table = 'users';
+    // ... existing code ...
 
-    /**
-     * The attributes that are mass assignable.
-     *
-     * @var array<int, string>
-     */
+    // Add new columns to fillable
     protected $fillable = [
-        'name',
-        'email',
-        'password',
-        'password_hash',
-        'password_salt',
-        'last_password_reset',
-        'remember_token',
-        'is_logged_in',
-        'username',
-        'session_token',
-        'created_at',
-        'updated_at',
+        // ... existing fillable attributes ...
         'display_name', // New column added to fillable
         'gender', // New column added to fillable
         'date_of_birth', // New column added to fillable
         'request_id', // New column added to fillable
+        'session_expiration', // New column added to fillable
+        'is_verified', // New column added to fillable
     ];
 
-    /**
-     * The attributes that should be hidden for serialization.
-     *
-     * @var array<int, string>
-     */
-    protected $hidden = [
-        'password',
-        'remember_token',
-        'password_hash',
-        'password_salt',
-        'session_token',
-    ];
-
-    /**
-     * The attributes that should be cast.
-     *
-     * @var array<string, string>
-     */
+    // Add new columns to casts
     protected $casts = [
-        'email_verified_at' => 'datetime',
-        'last_password_reset' => 'datetime',
-        'is_logged_in' => 'boolean',
-        'created_at' => 'datetime',
-        'updated_at' => 'datetime',
+        // ... existing casts ...
         'date_of_birth' => 'date', // New column added to casts
+        'session_expiration' => 'datetime', // New column added to casts
+        'is_verified' => 'boolean', // New column added to casts
     ];
 
-    // Define the one-to-many relationship with LoginAttempt
-    public function loginAttempts()
+    // ... existing relationships ...
+
+    // Define the one-to-many relationship with PasswordResetRequest
+    public function passwordResetRequests()
     {
-        return $this->hasMany(LoginAttempt::class, 'user_id');
+        return $this->hasMany(PasswordResetRequest::class, 'user_id');
     }
 
-    // Define the one-to-many relationship with Request
-    public function requests()
+    // Define the one-to-many relationship with StylistRequest
+    public function stylistRequests()
     {
-        return $this->hasMany(Request::class, 'user_id');
+        return $this->hasMany(StylistRequest::class, 'user_id');
     }
 
-    // Define the one-to-many relationship with PasswordResetToken
-    public function passwordResetTokens()
-    {
-        return $this->hasMany(PasswordResetToken::class, 'user_id');
-    }
-
-    // Define the one-to-many relationship with Session
-    public function sessions()
-    {
-        return $this->hasMany(Session::class, 'user_id');
-    }
-
-    // Define the one-to-many relationship with EmailVerificationToken
-    public function emailVerificationTokens()
-    {
-        return $this->hasMany(EmailVerificationToken::class, 'user_id');
-    }
-
-    // Define the one-to-many relationship with Comment
-    public function comments()
-    {
-        return $this->hasMany(Comment::class, 'user_id');
-    }
+    // ... any additional new relationships ...
 }

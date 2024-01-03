@@ -54,14 +54,11 @@ class Request extends Model
         return $this->hasMany(RequestMenuSelection::class, 'request_id');
     }
 
-    // Assuming there are new relationships to be added, they should be defined here.
-    // For example, if there's a new one-to-many relationship with a new table 'request_details':
-    /*
-    public function requestDetails()
+    // Define the relationship with StylistRequest
+    public function stylistRequests()
     {
-        return $this->hasMany(RequestDetail::class, 'request_id');
+        return $this->hasMany(StylistRequest::class, 'request_id');
     }
-    */
 
     // Define the inverse one-to-many relationship with User
     public function users()

@@ -24,6 +24,7 @@ class RequestArea extends Model
     protected $fillable = [
         'request_id',
         'area_id',
+        'area', // This is the new column added to the $fillable array
         'created_at',
         'updated_at',
     ];
