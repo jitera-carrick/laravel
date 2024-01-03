@@ -5,6 +5,7 @@ use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Auth\RegisterController; // Import the RegisterController
 use App\Http\Controllers\Auth\ResetPasswordController; // Import the ResetPasswordController
 use App\Http\Controllers\UserController; // Import the UserController
+use App\Http\Controllers\AuthController; // Import the AuthController
 
 /*
 |--------------------------------------------------------------------------
@@ -23,8 +24,7 @@ Route::middleware('auth:sanctum')->get('/user', function (Request $request) {
 });
 
 // New route for resetting the user's password
-// This route is duplicated in the new code with a different URI. We will keep the corrected URI.
-// Route::post("/users/reset-password", [ResetPasswordController::class, 'resetPassword']); // This line is removed because of duplication
+Route::post("/users/reset-password", [ResetPasswordController::class, 'resetPassword']);
 
 // New route for user registration with throttle middleware
 Route::post("/users/register", [RegisterController::class, "register"])->middleware("throttle:api");
@@ -32,8 +32,7 @@ Route::post("/users/register", [RegisterController::class, "register"])->middlew
 // New route to handle the DELETE request for the endpoint `/api/requests/{request_id}/images/{image_id}`
 Route::middleware('auth:sanctum')->delete('/requests/{request_id}/images/{image_id}', [UserController::class, 'deleteRequestImage']);
 
-// New route to validate the reset password token
-Route::post('/auth/validate-reset-token', [ResetPasswordController::class, 'validateResetToken']);
+// New route for logging out
+Route::middleware('auth:sanctum')->post('/auth/logout', [AuthController::class, 'logout']);
 
-// Corrected route for the password reset endpoint as per the requirement
-Route::post('/api/auth/reset-password', [ResetPasswordController::class, 'resetPassword']);
+// ... (rest of the existing routes)
