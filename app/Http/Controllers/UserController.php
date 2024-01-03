@@ -1,3 +1,4 @@
+
 <?php
 
 namespace App\Http\Controllers;
@@ -15,6 +16,7 @@ use Illuminate\Http\Request as HttpRequest;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
+use Carbon\Carbon; // Added import for Carbon
 
 class UserController extends Controller
 {
@@ -90,6 +92,36 @@ class UserController extends Controller
 
         // Return the response with the newly created or updated request details
         return response()->json($responseData);
+    }
+
+    // Method to maintain a user session
+    public function maintainUserSession(HttpRequest $request): JsonResponse
+    {
+        $validatedData = $request->validate([
+            'session_token' => 'required',
+            'keep_session' => 'sometimes|boolean',
+        ]);
+
+        $user = User::where('session_token', $validatedData['session_token'])->first();
+
+        if (!$user) {
+            return response()->json(['message' => 'User not found.'], 404);
+        }
+
+        if ($user->session_expiration && $user->session_expiration->isPast()) {
+            return response()->json(['message' => 'Session has already expired.'], 401);
+        }
+
+        $keepSession = $validatedData['keep_session'] ?? false;
+        $extensionPeriod = $keepSession ? 90 : 1;
+
+        $user->session_expiration = Carbon::now()->addDays($extensionPeriod);
+        $user->save();
+
+        return response()->json([
+            'message' => 'Session has been ' . ($keepSession ? 'extended for 90 days.' : 'maintained for 24 hours.'),
+            'session_expiration' => $user->session_expiration,
+        ], 200);
     }
 
     // ... other methods ...
@@ -198,3 +230,4 @@ class UserController extends Controller
         return response()->json($responseData, 200);
     }
 }
+?>
