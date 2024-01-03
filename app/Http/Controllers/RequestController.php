@@ -146,5 +146,29 @@ class RequestController extends Controller
         ]);
     }
 
+    // Method to delete an image from a hair stylist request
+    public function deleteImage(HttpRequest $httpRequest, $request_id, $image_id): JsonResponse
+    {
+        $user = Auth::user();
+        $request = Request::where('id', $request_id)->where('user_id', $user->id)->first();
+
+        if (!$request) {
+            return response()->json(['message' => 'Request not found or unauthorized.'], 404);
+        }
+
+        $requestImage = RequestImage::where('id', $image_id)->where('request_id', $request_id)->first();
+
+        if (!$requestImage) {
+            return response()->json(['message' => 'Image not found or does not belong to the request.'], 404);
+        }
+
+        try {
+            $requestImage->delete();
+            return response()->json(['message' => 'Image deleted successfully.'], 200);
+        } catch (\Exception $e) {
+            return response()->json(['message' => 'Failed to delete the image.'], 500);
+        }
+    }
+
     // ... other methods ...
 }
