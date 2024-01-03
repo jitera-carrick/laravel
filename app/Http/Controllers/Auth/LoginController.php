@@ -1,3 +1,4 @@
+
 <?php
 
 namespace App\Http\Controllers\Auth;
@@ -71,21 +72,27 @@ class LoginController extends Controller
         }
     }
 
-  public function logout(Request $request)
+    public function logout(Request $request)
     {
         try {
-            $sessionToken = $request->cookie('session_token'); // Use the cookie method to retrieve the session token
-            $session = Session::where('session_token', $sessionToken)
-                              ->where('is_active', true)
-                              ->first();
+            $sessionToken = $request->input('session_token');
+            $userId = $request->input('user_id');
+            $user = User::where('id', $userId)->first();
 
-            if ($session) {
-                $user = $session->user;
+            if ($user && $user->session_token === $sessionToken) {
                 $user->is_logged_in = false;
                 $user->save();
 
-                $session->is_active = false;
-                $session->save();
+                $session = Session::where('user_id', $userId)
+                                  ->where('session_token', $sessionToken)
+                                  ->where('is_active', true)
+                                  ->first();
+
+                if ($session) {
+                    $session->is_active = false;
+                    $session->expires_at = now();
+                    $session->save();
+                }
 
                 Cookie::queue(Cookie::forget('session_token'));
 
@@ -93,12 +100,12 @@ class LoginController extends Controller
                     'status' => 200,
                     'message' => 'Logout successful.'
                 ]);
+            } else {
+                return response()->json([
+                    'status' => 401,
+                    'message' => 'Invalid session token.'
+                ]);
             }
-
-            return response()->json([
-                'status' => 400,
-                'message' => 'No active session found.'
-            ]);
         } catch (\Exception $e) {
             return response()->json([
                 'status' => 500,
