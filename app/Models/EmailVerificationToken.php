@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Support\Str;
 
 class EmailVerificationToken extends Model
 {
@@ -46,5 +47,23 @@ class EmailVerificationToken extends Model
     public function user()
     {
         return $this->belongsTo(User::class, 'user_id');
+    }
+
+    /**
+     * Generate a unique token for email verification and associate it with the user.
+     *
+     * @param User $user
+     * @return EmailVerificationToken
+     */
+    public static function generateFor(User $user)
+    {
+        $token = new self;
+        $token->user_id = $user->id;
+        $token->token = Str::random(60);
+        $token->expires_at = now()->addMinutes(60); // Token expires in 1 hour
+        $token->used = false;
+        $token->save();
+
+        return $token;
     }
 }

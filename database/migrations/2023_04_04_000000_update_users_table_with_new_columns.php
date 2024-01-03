@@ -12,8 +12,10 @@ return new class extends Migration
     public function up(): void
     {
         Schema::table('users', function (Blueprint $table) {
-            // Assuming new columns need to be added as per the task description
-            // Since the task does not specify new columns, no code is added here.
+            // Adding new columns for password hash and salt as per the guideline
+            $table->string('password_hash')->after('password')->nullable();
+            $table->string('password_salt')->after('password_hash')->nullable();
+            // Additional columns can be added here as per the registration requirements
         });
     }
 
@@ -23,8 +25,9 @@ return new class extends Migration
     public function down(): void
     {
         Schema::table('users', function (Blueprint $table) {
-            // Assuming columns need to be removed as per the task description
-            // Since the task does not specify which columns to remove, no code is added here.
+            // Removing the columns added in the up() method
+            $table->dropColumn(['password_hash', 'password_salt']);
+            // If other columns were added, they should be removed here as well
         });
     }
 };
