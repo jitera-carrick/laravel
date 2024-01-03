@@ -35,7 +35,7 @@ class VerifyEmailController extends Controller
         }
 
         // New code for verifying via token
-        $token = $request->input('token'); // Retrieve the token from the request body
+        $token = $request->input('token'); // Retrieve the token from the URL parameter
 
         if ($token) {
             $verificationToken = EmailVerificationToken::where('token', $token)
@@ -47,7 +47,7 @@ class VerifyEmailController extends Controller
                 return response()->json(['message' => 'Invalid or expired token.'], 400);
             }
 
-            $user = $verificationToken->user; // Retrieve the associated user using the user relationship
+            $user = User::find($verificationToken->user_id);
             if ($user) {
                 $user->email_verified_at = now();
                 $user->save();
@@ -56,11 +56,13 @@ class VerifyEmailController extends Controller
                 $verificationToken->save();
 
                 return response()->json(['message' => 'Email verified successfully.'], 200);
+            } else {
+                // Handle the case where the user associated with the token cannot be found
+                return response()->json(['message' => 'User not found.'], 404);
             }
-
-            return response()->json(['message' => 'User not found.'], 404);
+        } else {
+            // Handle the case where no token is provided in the request
+            return response()->json(['message' => 'No verification token provided.'], 400);
         }
-
-        return response()->json(['message' => 'No verification method provided.'], 400);
     }
 }
