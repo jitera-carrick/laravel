@@ -6,13 +6,14 @@ use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Validator;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Cookie;
 use Illuminate\Support\Str;
 use App\Models\LoginAttempt;
 use App\Models\User;
-
 use App\Models\Session;
 use App\Services\RecaptchaService; // Import the RecaptchaService
+use Carbon\Carbon;
 
 class LoginController extends Controller
 {
@@ -22,6 +23,7 @@ class LoginController extends Controller
             'email' => 'required|email',
             'password' => 'required',
             'recaptcha' => 'required|string',
+            'keep_session' => 'sometimes|boolean' // Add validation for keep_session
         ]);
 
         if ($validator->fails()) {
@@ -30,6 +32,12 @@ class LoginController extends Controller
 
         $email = $request->input('email');
         $password = $request->input('password');
+        $keepSession = $request->input('keep_session', false); // Default to false if not provided
+
+        if (!RecaptchaService::verify($request->input('recaptcha'))) {
+            return response()->json(['error' => 'Invalid recaptcha.'], 401);
+        }
+
         $user = User::where('email', $email)->first();
 
         if (!$user) {
@@ -40,10 +48,6 @@ class LoginController extends Controller
             return response()->json(['error' => 'Incorrect password.'], 401);
         }
 
-        if (!RecaptchaService::verify($request->input('recaptcha'))) {
-            return response()->json(['error' => 'Invalid recaptcha.'], 401);
-        }
-
         // Record successful login attempt
         LoginAttempt::create([
             'user_id' => $user->id,
@@ -52,26 +56,28 @@ class LoginController extends Controller
             'ip_address' => $request->ip(),
         ]);
 
-        if ($user->email_verified_at !== null) {
-            // Generate new remember_token and update user
-            $user->forceFill([
-                'remember_token' => Str::random(60),
-                'updated_at' => now(),
-            ])->save();
+        // Generate new session token
+        $sessionToken = Str::random(60);
 
-            // Return successful login response
-            return response()->json([
-                'status' => 200,
-                'message' => 'Login successful.',
-                'token' => $user->remember_token,
-            ]);
-        } else {
-            // Return error response for unverified email
-            return response()->json(['error' => 'Email has not been verified.'], 401);
-        }
+        // Determine session expiration
+        $sessionExpiration = $keepSession ? Carbon::now()->addDays(90) : Carbon::now()->addHours(24);
+
+        // Update user's session token and expiration
+        $user->forceFill([
+            'session_token' => $sessionToken,
+            'session_expiration' => $sessionExpiration,
+            'updated_at' => now(),
+        ])->save();
+
+        // Return successful login response with session token
+        return response()->json([
+            'status' => 200,
+            'message' => 'Login successful.',
+            'session_token' => $sessionToken,
+        ]);
     }
 
-  public function logout(Request $request)
+    public function logout(Request $request)
     {
         try {
             $sessionToken = $request->cookie('session_token'); // Use the cookie method to retrieve the session token
