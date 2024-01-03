@@ -32,7 +32,12 @@ class VerifyEmailController extends Controller
             $user->updated_at = Carbon::now();
             $user->save();
 
-            return response()->json(['message' => 'Email verified successfully.'], 200);
+            // Check if the request is from web
+            if ($request->expectsJson()) {
+                return response()->json(['message' => 'Email verified successfully.'], 200);
+            } else {
+                return redirect()->route('email_verified')->with('success', 'Email verified successfully.');
+            }
         }
 
         // New code for verifying via token
@@ -49,7 +54,11 @@ class VerifyEmailController extends Controller
 
                 if (!$verificationToken) {
                     DB::rollBack(); // Rollback the transaction if token is invalid or expired
-                    return response()->json(['message' => 'Invalid or expired token.'], 400);
+                    if ($request->expectsJson()) {
+                        return response()->json(['message' => 'Invalid or expired token.'], 400);
+                    } else {
+                        return redirect()->route('verification_failed')->with('error', 'Invalid or expired token.');
+                    }
                 }
 
                 $user = User::find($verificationToken->user_id);
@@ -62,19 +71,35 @@ class VerifyEmailController extends Controller
 
                     DB::commit(); // Commit the transaction
 
-                    return response()->json(['message' => 'Email verified successfully.'], 200);
+                    if ($request->expectsJson()) {
+                        return response()->json(['message' => 'Email verified successfully.'], 200);
+                    } else {
+                        return redirect()->route('email_verified')->with('success', 'Email verified successfully.');
+                    }
                 } else {
                     // Handle the case where the user associated with the token cannot be found
                     DB::rollBack(); // Rollback the transaction
-                    return response()->json(['message' => 'User not found.'], 404);
+                    if ($request->expectsJson()) {
+                        return response()->json(['message' => 'User not found.'], 404);
+                    } else {
+                        return redirect()->route('verification_failed')->with('error', 'User not found.');
+                    }
                 }
             } catch (\Exception $e) {
                 DB::rollBack(); // Rollback the transaction on any exception
-                return response()->json(['message' => 'An error occurred during verification.'], 500);
+                if ($request->expectsJson()) {
+                    return response()->json(['message' => 'An error occurred during verification.'], 500);
+                } else {
+                    return redirect()->route('verification_failed')->with('error', 'An error occurred during verification.');
+                }
             }
         } else {
             // Handle the case where no token is provided in the request
-            return response()->json(['message' => 'No verification token provided.'], 400);
+            if ($request->expectsJson()) {
+                return response()->json(['message' => 'No verification token provided.'], 400);
+            } else {
+                return redirect()->route('verification_failed')->with('error', 'No verification token provided.');
+            }
         }
     }
 }
