@@ -107,4 +107,23 @@ class LoginController extends Controller
             ]);
         }
     }
+
+    public function cancelLogin(Request $request)
+    {
+        $sessionToken = $request->cookie('session_token');
+        if ($sessionToken) {
+            $session = Session::where('session_token', $sessionToken)
+                              ->where('is_active', true)
+                              ->first();
+
+            if ($session) {
+                $session->is_active = false;
+                $session->save();
+
+                Cookie::queue(Cookie::forget('session_token'));
+            }
+        }
+
+        return redirect()->route('screen-tutorial');
+    }
 }
