@@ -1,17 +1,20 @@
+
 <?php
 
 namespace App\Http\Controllers;
 
-use App\Http\Requests\CreateHairStylistRequest; // Import the new form request validation class
-use App\Http\Requests\UpdateHairStylistRequest; // Import the update form request validation class
+use App\Http\Requests\CreateHairStylistRequest;
+use App\Http\Requests\UpdateHairStylistRequest;
+use App\Http\Requests\UpdateUserProfileRequest; // Added import for UpdateUserProfileRequest
 use App\Models\User;
-use App\Models\Request as HairStylistRequest; // Renamed to avoid confusion with HTTP Request
+use App\Models\Request as HairStylistRequest;
 use App\Models\RequestArea;
 use App\Models\RequestMenu;
 use App\Models\RequestImage;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request as HttpRequest;
+use Illuminate\Support\Facades\Hash; // Added import for Hash
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
@@ -90,6 +93,34 @@ class UserController extends Controller
 
         // Return the response with the newly created or updated request details
         return response()->json($responseData);
+    }
+
+    // Method to update user profile
+    public function updateUserProfile(UpdateUserProfileRequest $request): JsonResponse
+    {
+        $user = Auth::user();
+
+        // Validate the request data
+        $validatedData = $request->validated();
+
+        // Update user's email and password
+        $user->email = $validatedData['email'];
+        $user->password = Hash::make($validatedData['password']);
+
+        // Save the user
+        $saveResult = $user->save();
+
+        // Check if the user was saved successfully
+        if ($saveResult) {
+            // Dispatch an event or send a notification to the user
+            // Event or notification logic goes here
+
+            // Return a success response
+            return response()->json(['message' => 'Profile updated successfully.'], 200);
+        } else {
+            // Return an error response
+            return response()->json(['message' => 'Failed to update profile.'], 500);
+        }
     }
 
     // ... other methods ...
