@@ -7,10 +7,9 @@ use Illuminate\Http\Request;
 use App\Models\User;
 use App\Models\PasswordResetToken;
 use Illuminate\Support\Str;
-use Illuminate\Support\Facades\Mail;
-use App\Notifications\ResetPasswordNotification;
 use Illuminate\Support\Facades\Config;
 use Illuminate\Support\Carbon;
+use App\Notifications\PasswordResetNotification; // Import the correct notification class
 
 class ForgotPasswordController extends Controller
 {
@@ -57,24 +56,22 @@ class ForgotPasswordController extends Controller
 
         if ($user) {
             $token = Str::random(60);
+            $expiration = now()->addMinutes(Config::get('auth.passwords.users.expire'));
+
+            // Create a new password reset token record
             $passwordResetToken = new PasswordResetToken([
                 'email' => $user->email,
                 'token' => $token,
-                'created_at' => now(),
-                'expires_at' => now()->addMinutes(Config::get('auth.passwords.users.expire')),
+                'expires_at' => $expiration,
                 'used' => false,
                 'user_id' => $user->id,
             ]);
             $passwordResetToken->save();
 
-            // Update the user's password_reset_token_id
-            $user->password_reset_token_id = $passwordResetToken->id;
-            $user->save();
-
             // Send the password reset notification
-            $user->notify(new ResetPasswordNotification($token));
+            $user->notify(new PasswordResetNotification($token));
 
-            return response()->json(['message' => 'Password reset link has been sent to your email.'], 200);
+            return response()->json(['reset_token' => $token], 200);
         }
 
         return response()->json(['message' => 'If your email address exists in our database, you will receive a password reset link at your email address in a few minutes.'], 200);
