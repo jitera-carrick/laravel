@@ -13,10 +13,18 @@ use App\Models\LoginAttempt;
 use App\Models\User;
 use App\Models\Session;
 use App\Services\RecaptchaService; // Import the RecaptchaService
+use App\Services\SessionService; // Import the SessionService
 use Carbon\Carbon;
 
 class LoginController extends Controller
 {
+    protected $sessionService;
+
+    public function __construct(SessionService $sessionService)
+    {
+        $this->sessionService = $sessionService;
+    }
+
     public function login(Request $request)
     {
         $validator = Validator::make($request->all(), [
@@ -27,7 +35,18 @@ class LoginController extends Controller
         ]);
 
         if ($validator->fails()) {
-            return response()->json($validator->errors(), 422);
+            $errors = $validator->errors();
+            $responseErrors = [];
+            if ($errors->has('email')) {
+                $responseErrors['email'] = $errors->first('email') === 'The email field is required.' ? 'Email is required.' : 'Invalid email format.';
+            }
+            if ($errors->has('password')) {
+                $responseErrors['password'] = 'Password is required.';
+            }
+            if ($errors->has('keep_session')) {
+                $responseErrors['keep_session'] = 'Keep session must be a boolean.';
+            }
+            return response()->json($responseErrors, 400);
         }
 
         $email = $request->input('email');
@@ -69,11 +88,12 @@ class LoginController extends Controller
             'updated_at' => now(),
         ])->save();
 
-        // Return successful login response with session token
+        // Return successful login response with session token and expiration
         return response()->json([
             'status' => 200,
             'message' => 'Login successful.',
             'session_token' => $sessionToken,
+            'session_expiration' => $sessionExpiration->toIso8601String(),
         ]);
     }
 

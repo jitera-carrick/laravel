@@ -4,9 +4,8 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Auth\RegisterController; // Import the RegisterController
 use App\Http\Controllers\Auth\ResetPasswordController; // Import the ResetPasswordController
-use App\Http\Controllers\Auth\ForgotPasswordController; // Import the ForgotPasswordController
+use App\Http\Controllers\Auth\LoginController; // Import the LoginController
 use App\Http\Controllers\UserController; // Import the UserController
-use Illuminate\Support\Facades\Validator; // Import the Validator facade
 
 /*
 |--------------------------------------------------------------------------
@@ -33,22 +32,5 @@ Route::post("/users/register", [RegisterController::class, "register"])->middlew
 // New route to handle the DELETE request for the endpoint `/api/requests/{request_id}/images/{image_id}`
 Route::middleware('auth:sanctum')->delete('/requests/{request_id}/images/{image_id}', [UserController::class, 'deleteRequestImage']);
 
-// New route to handle the POST request for the endpoint `/api/password_reset_requests`
-Route::middleware('api')->post('/password_reset_requests', function (Request $request) {
-    $validator = Validator::make($request->all(), [
-        'email' => 'required|email'
-    ]);
-
-    if ($validator->fails()) {
-        $errors = $validator->errors();
-        if ($errors->has('email')) {
-            return response()->json([
-                'status' => 400,
-                'message' => $errors->first('email')
-            ], 400);
-        }
-    }
-
-    // Assuming the ForgotPasswordController's sendResetLinkEmail method handles the response
-    return app(ForgotPasswordController::class)->sendResetLinkEmail($request);
-});
+// New route for user login with throttle middleware
+Route::post('/login', [LoginController::class, 'login'])->middleware('throttle:api');
