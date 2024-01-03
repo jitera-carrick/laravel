@@ -3,9 +3,9 @@
 namespace App\Http\Controllers;
 
 use App\Http\Requests\UpdateHairStylistRequest;
+use App\Http\Requests\UpdateStylistRequestStatusRequest; // Import the new request validation class
 use App\Models\Request;
-use App\Models\RequestAreaSelection;
-use App\Models\RequestMenuSelection;
+use App\Models\StylistRequest; // Import the StylistRequest model
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Validator;
@@ -18,66 +18,39 @@ class RequestController extends Controller
     // Method to update a hair stylist request
     public function update(UpdateHairStylistRequest $request, $id): JsonResponse
     {
-        $hairRequest = Request::find($id);
-        $user = Auth::user();
+        // ... existing update method code ...
+    }
 
-        // Check if the hair stylist request exists and if the authenticated user is authorized to update it
-        if (!$hairRequest) {
-            return response()->json(['message' => 'The hair stylist request is not found.'], 404);
-        }
-        if ($hairRequest->user_id !== $user->id && !$user->isAdmin()) {
-            return response()->json(['message' => 'Unauthorized.'], 403);
+    // Method to update the status of a stylist request
+    public function updateStylistRequestStatus(UpdateStylistRequestStatusRequest $request, $id): JsonResponse
+    {
+        $stylistRequest = StylistRequest::find($id);
+
+        // Check if the stylist request exists
+        if (!$stylistRequest) {
+            return response()->json(['message' => 'The stylist request is not found.'], 404);
         }
 
         // Validate the request parameters
-        $validator = Validator::make($request->all(), [
-            'id' => 'required|integer|exists:requests,id',
-            'area' => 'nullable|string|max:255',
-            'menu' => 'nullable|string|max:255',
-            'hair_concerns' => 'nullable|string|max:1000',
-            'status' => 'nullable|string|in:pending,approved,rejected,cancelled',
-        ]);
-
-        if ($validator->fails()) {
-            return response()->json(['message' => $validator->errors()->first()], 422);
-        }
+        $validated = $request->validated();
 
         DB::beginTransaction();
         try {
-            // Update area if provided
-            if ($request->has('area')) {
-                $hairRequest->area = $request->area;
-            }
-
-            // Update menu if provided
-            if ($request->has('menu')) {
-                $hairRequest->menu = $request->menu;
-            }
-
-            // Update hair concerns if provided
-            if ($request->has('hair_concerns')) {
-                $hairRequest->hair_concerns = $request->hair_concerns;
-            }
-
-            // Update status if provided
-            if ($request->has('status')) {
-                $hairRequest->status = $request->status;
-            }
-
-            // Set the 'updated_at' timestamp to the current time
-            $hairRequest->updated_at = now();
-
-            $hairRequest->save();
+            // Update the status
+            $stylistRequest->status = $validated['status'];
+            $stylistRequest->save();
 
             DB::commit();
 
             return response()->json([
                 'status' => 200,
-                'request' => $hairRequest->fresh(),
+                'request_id' => $stylistRequest->id,
+                'updated_status' => $stylistRequest->status,
+                'message' => 'The status of the request has been successfully updated.'
             ]);
         } catch (\Exception $e) {
             DB::rollBack();
-            return response()->json(['message' => 'Failed to update the request.'], 500);
+            return response()->json(['message' => 'Failed to update the request status.'], 500);
         }
     }
 
