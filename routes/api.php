@@ -1,4 +1,3 @@
-
 <?php
 
 use Illuminate\Http\Request;
@@ -35,3 +34,6 @@ Route::middleware('auth:sanctum')->delete('/requests/{request_id}/images/{image_
 
 // New route for updating shop details
 Route::middleware('auth:sanctum')->match(['put', 'patch'], '/shop/update', [ShopController::class, 'updateShop']);
+
+// New route to handle the GET request for the endpoint "/api/users/validate_password_reset_token/{token}"
+Route::get('/users/validate_password_reset_token/{token}', [ResetPasswordController::class, 'validateToken'])->where('token', '.*')->middleware('throttle:api');
