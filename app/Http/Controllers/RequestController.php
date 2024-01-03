@@ -22,25 +22,20 @@ class RequestController extends Controller
         $user = Auth::user();
 
         // Check if the hair stylist request exists and if the authenticated user is authorized to update it
-        if (!$hairRequest || $hairRequest->user_id !== $user->id) {
-            return response()->json(['message' => 'Request not found or unauthorized.'], 404);
+        if (!$hairRequest) {
+            return response()->json(['message' => 'The hair stylist request is not found.'], 404);
         }
-
-        // Validate the 'user_id' to ensure it matches the 'user_id' associated with the hair stylist request
-        if ($request->has('user_id') && $request->user_id != $hairRequest->user_id) {
-            return response()->json(['message' => 'The user_id does not match the request owner.'], 403);
+        if ($hairRequest->user_id !== $user->id && !$user->isAdmin()) {
+            return response()->json(['message' => 'Unauthorized.'], 403);
         }
 
         // Validate the request parameters
         $validator = Validator::make($request->all(), [
             'id' => 'required|integer|exists:requests,id',
-            'area' => 'nullable|array',
-            'area.*' => 'exists:request_areas,id', // Validate each area id in the array
-            'menu' => 'nullable|array',
-            'menu.*' => 'exists:request_menus,id', // Validate each menu id in the array
+            'area' => 'nullable|string|max:255',
+            'menu' => 'nullable|string|max:255',
             'hair_concerns' => 'nullable|string|max:1000',
-            'status' => 'nullable|string|in:pending,approved,rejected,cancelled', // Assuming these are the valid statuses
-            'user_id' => 'required|integer|exists:users,id' // Validate the user_id
+            'status' => 'nullable|string|in:pending,approved,rejected,cancelled',
         ]);
 
         if ($validator->fails()) {
@@ -49,26 +44,14 @@ class RequestController extends Controller
 
         DB::beginTransaction();
         try {
-            // Update area selections if provided
+            // Update area if provided
             if ($request->has('area')) {
-                RequestAreaSelection::where('request_id', $id)->delete();
-                foreach ($request->area as $areaId) {
-                    RequestAreaSelection::create([
-                        'request_id' => $id,
-                        'area_id' => $areaId,
-                    ]);
-                }
+                $hairRequest->area = $request->area;
             }
 
-            // Update menu selections if provided
+            // Update menu if provided
             if ($request->has('menu')) {
-                RequestMenuSelection::where('request_id', $id)->delete();
-                foreach ($request->menu as $menuId) {
-                    RequestMenuSelection::create([
-                        'request_id' => $id,
-                        'menu_id' => $menuId,
-                    ]);
-                }
+                $hairRequest->menu = $request->menu;
             }
 
             // Update hair concerns if provided
