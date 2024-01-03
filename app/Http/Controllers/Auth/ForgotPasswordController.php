@@ -9,8 +9,8 @@ use App\Models\PasswordResetToken;
 use Illuminate\Support\Str;
 use Illuminate\Support\Facades\Config;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Mail; // Import the Mail facade
+use App\Utils\ApiResponse; // Import the ApiResponse utility class
 
 class ForgotPasswordController extends Controller
 {
@@ -52,20 +52,21 @@ class ForgotPasswordController extends Controller
         // Retrieve the email from the request body
         $email = $request->input('email');
 
-        // Validate the email format
+        // Validate the email format and existence in the "users" table
         $validatedData = $request->validate([
             'email' => 'required|email|exists:users,email',
         ]);
 
-        // Check if the email exists in the "users" table
-        $user = User::where('email', $validatedData['email'])->first();
-
-        if (!$user) {
-            return response()->json(['error' => 'Email address not found.'], 400);
-        }
-
         DB::beginTransaction();
         try {
+            // Check if the email exists in the "users" table
+            $user = User::where('email', $validatedData['email'])->first();
+
+            if (!$user) {
+                DB::rollBack();
+                return ApiResponse::error('Email address not found.', 400);
+            }
+
             // Generate a unique reset token
             $token = Str::random(60);
 
@@ -88,11 +89,11 @@ class ForgotPasswordController extends Controller
 
             DB::commit();
 
-            // Return a success response
-            return response()->json(['message' => 'Reset link sent to your email address.'], 200);
+            // Return a success response using ApiResponse utility class
+            return ApiResponse::success('Reset link sent to your email address.', 200);
         } catch (\Exception $e) {
             DB::rollBack();
-            return response()->json(['error' => 'An error occurred while processing your request'], 500);
+            return ApiResponse::error('An error occurred while processing your request', 500);
         }
     }
 
