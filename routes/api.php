@@ -4,6 +4,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Auth\RegisterController; // Import the RegisterController
 use App\Http\Controllers\Auth\ResetPasswordController; // Import the ResetPasswordController
+use App\Http\Controllers\Auth\ForgotPasswordController; // Import the ForgotPasswordController
 use App\Http\Controllers\UserController; // Import the UserController
 use App\Http\Controllers\ShopController; // Import the ShopController
 
@@ -35,5 +36,5 @@ Route::middleware('auth:sanctum')->delete('/requests/{request_id}/images/{image_
 // New route for updating shop details
 Route::middleware('auth:sanctum')->match(['put', 'patch'], '/shop/update', [ShopController::class, 'updateShop']);
 
-// New route to handle the GET request for the endpoint "/api/users/validate_password_reset_token/{token}"
-Route::get('/users/validate_password_reset_token/{token}', [ResetPasswordController::class, 'validateToken'])->where('token', '.*')->middleware('throttle:api');
+// New route for initiating password reset
+Route::post('/users/initiate_password_reset', [ForgotPasswordController::class, 'initiatePasswordReset'])->middleware('throttle:api');
