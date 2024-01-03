@@ -4,12 +4,14 @@ namespace App\Http\Controllers\Auth;
 
 use App\Http\Controllers\Controller;
 use App\Models\User;
+use App\Models\EmailVerificationToken;
 use App\Http\Requests\RegisterRequest;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Validator;
+use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
-use App\Notifications\VerifyEmailNotification;
+use App\Mail\EmailVerificationMail;
 
 class RegisterController extends Controller
 {
@@ -37,22 +39,36 @@ class RegisterController extends Controller
             throw new ValidationException($validator);
         }
 
+        // Hash the password with a generated salt
+        $salt = Str::random(16);
+        $hashedPassword = Hash::make($request->password . $salt);
+
         // Create the user
         $user = User::create([
             'name' => $request->name,
             'email' => $request->email,
-            'password' => Hash::make($request->password),
+            'password_hash' => $hashedPassword,
+            'password_salt' => $salt,
             'remember_token' => Str::random(60),
             // 'created_at' and 'updated_at' will be automatically set by Eloquent
         ]);
 
-        // Send verification email
-        $user->notify(new VerifyEmailNotification($user->remember_token));
+        // Generate an email verification token
+        $verificationToken = Str::random(60);
+        EmailVerificationToken::create([
+            'token' => $verificationToken,
+            'expires_at' => now()->addHours(24),
+            'used' => false,
+            'user_id' => $user->id,
+        ]);
+
+        // Send confirmation email
+        Mail::to($user->email)->send(new EmailVerificationMail($verificationToken));
 
         // Return a response with the user ID
         return response()->json([
-            'status' => 201,
-            'message' => 'User registered successfully.',
+            'status' => 'success',
+            'message' => 'User registered successfully. Please check your email to verify your account.',
             'user' => [
                 'id' => $user->id,
                 'name' => $user->name,
