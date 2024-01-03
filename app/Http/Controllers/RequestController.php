@@ -28,6 +28,19 @@ class RequestController extends Controller
             return response()->json(['message' => 'Request not found or unauthorized.'], 404);
         }
 
+        // Validate the request parameters
+        $validator = Validator::make($request->all(), [
+            'id' => 'required|integer|exists:requests,id',
+            'area' => 'nullable|string|exists:request_areas,name',
+            'menu' => 'nullable|string|exists:request_menus,name',
+            'hair_concerns' => 'nullable|string|max:1000',
+            'status' => 'nullable|string|in:pending,approved,rejected,cancelled', // Assuming these are the valid statuses
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json(['message' => $validator->errors()->first()], 422);
+        }
+
         DB::beginTransaction();
         try {
             // Update area selections if provided
@@ -59,7 +72,6 @@ class RequestController extends Controller
 
             // Update status if provided
             if ($request->has('status')) {
-                // Assuming 'status' is a valid column in the 'requests' table and has predefined enum values
                 $hairRequest->status = $request->status;
             }
 

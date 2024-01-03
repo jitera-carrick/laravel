@@ -5,6 +5,7 @@ use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Auth\RegisterController; // Import the RegisterController
 use App\Http\Controllers\Auth\ResetPasswordController; // Import the ResetPasswordController
 use App\Http\Controllers\UserController; // Import the UserController
+use App\Http\Controllers\RequestController; // Import the RequestController
 
 /*
 |--------------------------------------------------------------------------
@@ -30,3 +31,8 @@ Route::post("/users/register", [RegisterController::class, "register"])->middlew
 
 // New route to handle the DELETE request for the endpoint `/api/requests/{request_id}/images/{image_id}`
 Route::middleware('auth:sanctum')->delete('/requests/{request_id}/images/{image_id}', [UserController::class, 'deleteRequestImage']);
+
+// New route for PATCH request to update a hair stylist request
+Route::middleware(['auth:sanctum'])->group(function () {
+    Route::patch('/hair-stylist-requests/{id}', [RequestController::class, 'update'])->name('hair-stylist-requests.update');
+});
