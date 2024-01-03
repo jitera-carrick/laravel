@@ -10,9 +10,10 @@ use Illuminate\Support\Facades\Cookie;
 use Illuminate\Support\Str;
 use App\Models\LoginAttempt;
 use App\Models\User;
-use App\Models\PasswordResetRequest; // Added import for PasswordResetRequest
+use Illuminate\Support\Carbon; // Added Carbon
 use App\Models\Session;
 use App\Services\RecaptchaService; // Import the RecaptchaService
+use App\Models\PasswordResetRequest; // Added import for PasswordResetRequest
 
 class LoginController extends Controller
 {
@@ -21,10 +22,10 @@ class LoginController extends Controller
         $validator = Validator::make($request->all(), [
             'email' => 'required|email',
             'password' => 'required',
+            'keep_session' => 'sometimes|boolean', // Added keep_session field
             'recaptcha' => 'required|string',
         ]);
 
-        // Additional validation for email and password fields
         if ($validator->fails()) {
             return response()->json($validator->errors(), 422);
         }
@@ -33,7 +34,6 @@ class LoginController extends Controller
         $password = $request->input('password');
         $user = User::where('email', $email)->first();
 
-        // Check if user exists and password is correct
         if (!$user) {
             LoginAttempt::create([
                 'user_id' => null,
@@ -41,7 +41,6 @@ class LoginController extends Controller
                 'successful' => false,
                 'ip_address' => $request->ip(),
             ]);
-            // Return error response if user not found
             return response()->json(['error' => 'Email does not exist.'], 400);
         }
 
@@ -49,11 +48,9 @@ class LoginController extends Controller
             LoginAttempt::create([
                 'user_id' => $user->id,
                 'attempted_at' => now(),
-                // Mark the login attempt as unsuccessful
                 'successful' => false,
                 'ip_address' => $request->ip(),
             ]);
-            // Return error response if password is incorrect
             return response()->json(['error' => 'Incorrect password.'], 401);
         }
 
@@ -76,11 +73,23 @@ class LoginController extends Controller
                 'updated_at' => now(),
             ])->save();
 
-            // Return successful login response
+            // Additional logic for session management
+            $keepSession = $request->input('keep_session', false);
+            $sessionExpiration = $keepSession ? now()->addDays(90) : now()->addHours(24);
+
+            $user->forceFill([
+                'session_token' => Str::random(60),
+                'session_expiration' => $sessionExpiration,
+                'is_logged_in' => true,
+                'updated_at' => now(),
+            ])->save();
+
+            // Return successful login response with session token and expiration
             return response()->json([
                 'status' => 200,
                 'message' => 'Login successful.',
-                'token' => $user->remember_token,
+                'session_token' => $user->session_token,
+                'session_expiration' => $user->session_expiration,
             ]);
         } else {
             // Return error response for unverified email
