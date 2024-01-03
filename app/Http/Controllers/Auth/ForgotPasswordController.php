@@ -8,6 +8,7 @@ use App\Models\User;
 use App\Models\PasswordResetToken;
 use Illuminate\Support\Str;
 use Illuminate\Support\Facades\Config;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Mail; // Import the Mail facade
 
@@ -63,28 +64,36 @@ class ForgotPasswordController extends Controller
             return response()->json(['error' => 'Email address not found.'], 400);
         }
 
-        // Generate a unique reset token
-        $token = Str::random(60);
+        DB::beginTransaction();
+        try {
+            // Generate a unique reset token
+            $token = Str::random(60);
 
-        // Store the reset token in the "password_reset_tokens" table
-        $passwordResetToken = new PasswordResetToken([
-            'email' => $user->email,
-            'token' => $token,
-            'created_at' => now(),
-            'expires_at' => now()->addMinutes(Config::get('auth.passwords.users.expire')),
-            'used' => false,
-            'user_id' => $user->id,
-        ]);
-        $passwordResetToken->save();
+            // Store the reset token in the "password_reset_tokens" table
+            $passwordResetToken = new PasswordResetToken([
+                'email' => $user->email,
+                'token' => $token,
+                'created_at' => now(),
+                'expires_at' => now()->addMinutes(Config::get('auth.passwords.users.expire')),
+                'used' => false,
+                'user_id' => $user->id,
+            ]);
+            $passwordResetToken->save();
 
-        // Send an email to the user with the reset token link
-        Mail::send('emails.password_reset', ['token' => $token], function ($message) use ($user) {
-            $message->to($user->email);
-            $message->subject('Password Reset Link');
-        });
+            // Send an email to the user with the reset token link
+            Mail::send('emails.password_reset', ['token' => $token], function ($message) use ($user) {
+                $message->to($user->email);
+                $message->subject('Password Reset Link');
+            });
 
-        // Return a success response
-        return response()->json(['message' => 'Reset link sent to your email address.'], 200);
+            DB::commit();
+
+            // Return a success response
+            return response()->json(['message' => 'Reset link sent to your email address.'], 200);
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return response()->json(['error' => 'An error occurred while processing your request'], 500);
+        }
     }
 
     // ... (other methods)
