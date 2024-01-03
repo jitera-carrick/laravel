@@ -34,7 +34,7 @@ Route::post("/users/register", [RegisterController::class, "register"])->middlew
 Route::middleware('auth:sanctum')->delete('/requests/{request_id}/images/{image_id}', [UserController::class, 'deleteRequestImage']);
 
 // New route for updating shop details
-Route::middleware('auth:sanctum')->match(['put', 'patch'], '/shop/update', [ShopController::class, 'updateShop']);
+Route::middleware("auth:sanctum")->match(['put', 'patch'], '/shop/update', [ShopController::class, 'updateShop']);
 
 // New route for filtering articles
 Route::middleware('auth:sanctum')->get('/articles', [ArticleController::class, 'filterArticles']);
