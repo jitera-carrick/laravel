@@ -14,8 +14,8 @@ class CreateHairStylistRequest extends FormRequest
      */
     public function authorize()
     {
-        // Check if the user is authenticated
-        return Auth::check();
+        // Allow all users to make this request
+        return true;
     }
 
     /**
@@ -26,17 +26,14 @@ class CreateHairStylistRequest extends FormRequest
     public function rules()
     {
         return [
-            'user_id' => 'required|integer|exists:users,id',
-            'area' => 'required|array',
-            'area.*' => 'integer|exists:request_areas,area_id',
-            'menu' => 'required|array',
-            'menu.*' => 'integer|exists:request_menus,menu_id',
-            'gender' => 'required|string|in:male,female,other',
-            'date_of_birth' => 'required|date|before:today',
+            'area' => 'required|string', // Updated to string as per requirement
+            'gender' => 'required|string|in:male,female,do_not_answer', // Updated enum values as per requirement
+            'birth_date' => 'required|date|before:today', // Renamed from date_of_birth to birth_date as per requirement
             'display_name' => 'required|string|max:20',
-            'hair_concerns' => 'nullable|string|max:2000',
-            'image_paths' => 'nullable|array|max:3',
-            'image_paths.*' => 'file|mimes:png,jpg,jpeg|max:5120', // 5MB
+            'menu' => 'required|string', // Updated to string as per requirement
+            'hair_concerns' => 'required|string|max:2000',
+            'images' => 'nullable|array|max:3', // Renamed from image_paths to images as per requirement
+            'images.*' => 'file|mimes:png,jpg,jpeg|max:5120', // Updated validation for images as per requirement
         ];
     }
 
@@ -48,30 +45,21 @@ class CreateHairStylistRequest extends FormRequest
     public function messages()
     {
         return [
-            'user_id.required' => 'The user id field is required.',
-            'user_id.integer' => 'The user id must be an integer.',
-            'user_id.exists' => 'The selected user id is invalid.',
-            'area.required' => 'The area field is required.',
-            'area.array' => 'The area must be an array.',
-            'area.*.integer' => 'Each area must be an integer.',
-            'area.*.exists' => 'The selected area is invalid.',
-            'menu.required' => 'The menu field is required.',
-            'menu.array' => 'The menu must be an array.',
-            'menu.*.integer' => 'Each menu must be an integer.',
-            'menu.*.exists' => 'The selected menu is invalid.',
-            'gender.required' => 'The gender field is required.',
+            'area.required' => 'Area selection is required.',
+            'gender.required' => 'Gender selection is required.',
             'gender.in' => 'The selected gender is invalid.',
-            'date_of_birth.required' => 'The date of birth field is required.',
-            'date_of_birth.date' => 'The date of birth is not a valid date.',
-            'date_of_birth.before' => 'The date of birth must be a date before today.',
+            'birth_date.required' => 'Birth date is required.',
+            'birth_date.date' => 'The birth date is not a valid date.',
+            'birth_date.before' => 'The birth date must be a date before today.',
             'display_name.required' => 'The display name field is required.',
-            'display_name.max' => 'The display name may not be greater than 20 characters.',
-            'hair_concerns.max' => 'The hair concerns may not be greater than 2000 characters.',
-            'image_paths.array' => 'The image paths must be an array.',
-            'image_paths.max' => 'The image paths may not have more than 3 items.',
-            'image_paths.*.file' => 'Each image path must be a file.',
-            'image_paths.*.mimes' => 'Each file must be of type: png, jpg, jpeg.',
-            'image_paths.*.max' => 'Each file may not be greater than 5MB.',
+            'display_name.max' => 'Display name cannot exceed 20 characters.',
+            'menu.required' => 'Menu selection is required.',
+            'hair_concerns.required' => 'Hair concerns cannot exceed 2000 characters.',
+            'images.array' => 'The images must be an array.',
+            'images.max' => 'The images may not have more than 3 items.',
+            'images.*.file' => 'Each image must be a file.',
+            'images.*.mimes' => 'Invalid image format or size.',
+            'images.*.max' => 'Each file may not be greater than 5MB.',
         ];
     }
 }
