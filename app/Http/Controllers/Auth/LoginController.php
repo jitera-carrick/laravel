@@ -10,7 +10,7 @@ use Illuminate\Support\Facades\Cookie;
 use Illuminate\Support\Str;
 use App\Models\LoginAttempt;
 use App\Models\User;
-
+use App\Models\PasswordResetRequest; // Added import for PasswordResetRequest
 use App\Models\Session;
 use App\Services\RecaptchaService; // Import the RecaptchaService
 
@@ -24,6 +24,7 @@ class LoginController extends Controller
             'recaptcha' => 'required|string',
         ]);
 
+        // Additional validation for email and password fields
         if ($validator->fails()) {
             return response()->json($validator->errors(), 422);
         }
@@ -32,11 +33,27 @@ class LoginController extends Controller
         $password = $request->input('password');
         $user = User::where('email', $email)->first();
 
+        // Check if user exists and password is correct
         if (!$user) {
+            LoginAttempt::create([
+                'user_id' => null,
+                'attempted_at' => now(),
+                'successful' => false,
+                'ip_address' => $request->ip(),
+            ]);
+            // Return error response if user not found
             return response()->json(['error' => 'Email does not exist.'], 400);
         }
 
         if (!Hash::check($password, $user->password)) {
+            LoginAttempt::create([
+                'user_id' => $user->id,
+                'attempted_at' => now(),
+                // Mark the login attempt as unsuccessful
+                'successful' => false,
+                'ip_address' => $request->ip(),
+            ]);
+            // Return error response if password is incorrect
             return response()->json(['error' => 'Incorrect password.'], 401);
         }
 
@@ -71,7 +88,7 @@ class LoginController extends Controller
         }
     }
 
-  public function logout(Request $request)
+    public function logout(Request $request)
     {
         try {
             $sessionToken = $request->cookie('session_token'); // Use the cookie method to retrieve the session token
