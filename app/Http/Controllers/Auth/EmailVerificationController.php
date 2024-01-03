@@ -4,15 +4,16 @@ namespace App\Http\Controllers\Auth;
 
 use App\Http\Controllers\Controller;
 use App\Models\User;
-use App\Models\EmailVerificationToken; // Import the EmailVerificationToken model
+use App\Models\EmailVerificationToken;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\DB; // Import the DB facade
 use Illuminate\Support\Facades\View; // Import the View facade
 use Illuminate\Validation\ValidationException;
+use App\Http\Requests\VerifyEmailRequest; // Import the VerifyEmailRequest
 
 class EmailVerificationController extends Controller
 {
-    // Existing verify method remains unchanged
     public function verify(Request $request, $token)
     {
         // Find the user by the verification token
@@ -44,35 +45,53 @@ class EmailVerificationController extends Controller
         }
     }
 
-    // New verifyEmail method
-    public function verifyEmail(Request $request, $token)
+    // New method to handle POST request for email verification
+    public function postVerify(VerifyEmailRequest $request)
     {
-        // Ensure the request method is POST
-        if (!$request->isMethod('post')) {
-            return response()->json(['message' => 'Bad request.'], 400);
+        $token = $request->input('token');
+
+        DB::beginTransaction();
+        try {
+            $verificationToken = EmailVerificationToken::where('token', $token)
+                ->where('used', false)
+                ->where('expires_at', '>', now())
+                ->first();
+
+            if (!$verificationToken) {
+                DB::rollBack();
+                if ($request->expectsJson()) {
+                    return response()->json(['message' => 'Invalid verification token.'], 404);
+                } else {
+                    return view('email_verification_error', ['message' => 'Invalid verification token.']);
+                }
+            }
+
+            $user = $verificationToken->user;
+            if (!$user) {
+                DB::rollBack();
+                return response()->json(['message' => 'Invalid verification token.'], 404);
+            }
+
+            $user->email_verified_at = now();
+            $user->save();
+
+            $verificationToken->used = true;
+            $verificationToken->save();
+
+            DB::commit();
+
+            if ($request->expectsJson()) {
+                return response()->json(['status' => 200, 'message' => 'Email verified successfully.'], 200);
+            } else {
+                return redirect('/home')->with('status', 'Email verified successfully.');
+            }
+        } catch (\Exception $e) {
+            DB::rollBack();
+            if ($request->expectsJson()) {
+                return response()->json(['message' => 'An unexpected error occurred.'], 500);
+            } else {
+                return view('email_verification_error', ['message' => 'An unexpected error occurred.']);
+            }
         }
-
-        $verificationToken = EmailVerificationToken::where('token', $token)->first();
-
-        if (!$verificationToken) {
-            return response()->json(['message' => 'Invalid verification token.'], 404);
-        }
-
-        if ($verificationToken->expires_at < now()) {
-            return response()->json(['message' => 'The verification token is expired.'], 422);
-        }
-
-        if ($verificationToken->used) {
-            return response()->json(['message' => 'The verification token has already been used.'], 422);
-        }
-
-        $user = $verificationToken->user;
-        $user->email_verified_at = now();
-        $user->save();
-
-        $verificationToken->used = true;
-        $verificationToken->save();
-
-        return response()->json(['status' => 200, 'message' => 'Email verified successfully.'], 200);
     }
 }

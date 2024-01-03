@@ -4,8 +4,8 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Auth\RegisterController; // Import the RegisterController
 use App\Http\Controllers\Auth\ResetPasswordController; // Import the ResetPasswordController
+use App\Http\Controllers\Auth\EmailVerificationController; // Import the EmailVerificationController
 use App\Http\Controllers\UserController; // Import the UserController
-use App\Http\Controllers\AuthController; // Import the AuthController
 
 /*
 |--------------------------------------------------------------------------
@@ -32,7 +32,8 @@ Route::post("/users/register", [RegisterController::class, "register"])->middlew
 // New route to handle the DELETE request for the endpoint `/api/requests/{request_id}/images/{image_id}`
 Route::middleware('auth:sanctum')->delete('/requests/{request_id}/images/{image_id}', [UserController::class, 'deleteRequestImage']);
 
-// New route for logging out
-Route::middleware('auth:sanctum')->post('/auth/logout', [AuthController::class, 'logout']);
+// New route to validate the reset password token
+Route::post('/auth/validate-reset-token', [ResetPasswordController::class, 'validateResetToken']);
 
-// ... (rest of the existing routes)
+// New route for email verification
+Route::post('/auth/verify-email', [EmailVerificationController::class, 'postVerify'])->middleware('throttle:api');
