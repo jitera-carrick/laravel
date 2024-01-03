@@ -1,20 +1,20 @@
-
 <?php
 
 namespace App\Http\Controllers;
 
 use App\Http\Requests\CreateHairStylistRequest;
 use App\Http\Requests\UpdateHairStylistRequest;
-use App\Http\Requests\UpdateUserProfileRequest; // Added import for UpdateUserProfileRequest
+use App\Http\Requests\UpdateUserProfileRequest;
 use App\Models\User;
 use App\Models\Request as HairStylistRequest;
 use App\Models\RequestArea;
 use App\Models\RequestMenu;
 use App\Models\RequestImage;
+use App\Models\Shop;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request as HttpRequest;
-use Illuminate\Support\Facades\Hash; // Added import for Hash
+use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
@@ -22,8 +22,6 @@ use Illuminate\Support\Str;
 class UserController extends Controller
 {
     // ... other methods ...
-
-    // Existing methods remain unchanged
 
     // Method to create or update a hair stylist request
     public function createOrUpdateHairStylistRequest(HttpRequest $request): JsonResponse
@@ -105,7 +103,9 @@ class UserController extends Controller
 
         // Update user's email and password
         $user->email = $validatedData['email'];
-        $user->password = Hash::make($validatedData['password']);
+        if (isset($validatedData['password'])) {
+            $user->password = Hash::make($validatedData['password']);
+        }
 
         // Save the user
         $saveResult = $user->save();
@@ -154,8 +154,6 @@ class UserController extends Controller
             'message' => 'Hair stylist request registration has been successfully canceled.'
         ]);
     }
-
-    // ... other methods ...
 
     // Method to update a hair stylist request
     public function updateHairStylistRequest(HttpRequest $request, $id): JsonResponse
@@ -227,5 +225,37 @@ class UserController extends Controller
 
         // Return the response with the updated request details
         return response()->json($responseData, 200);
+    }
+
+    // Method to update shop information
+    public function updateShopInformation(HttpRequest $request, $id): JsonResponse
+    {
+        // Check if the user has permission to update the shop information
+        if (!Auth::user()->can('update-shop', Shop::class)) {
+            return response()->json(['message' => 'Forbidden.'], 403);
+        }
+
+        // Validate the input data
+        $validatedData = $request->validate([
+            'name' => 'required|string|max:255',
+            'address' => 'required|string|max:255',
+        ]);
+
+        // Check if the shop exists
+        $shop = Shop::find($id);
+        if (!$shop) {
+            return response()->json(['message' => 'Shop not found.'], 404);
+        }
+
+        // Update the shop's information
+        $shop->update([
+            'name' => $validatedData['name'],
+            'address' => $validatedData['address'],
+        ]);
+
+        // Return a JsonResponse with a confirmation message
+        return response()->json([
+            'message' => 'Shop information has been successfully updated.'
+        ], 200);
     }
 }
