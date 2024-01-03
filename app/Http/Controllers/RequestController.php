@@ -7,7 +7,6 @@ use App\Models\Request;
 use App\Models\RequestAreaSelection;
 use App\Models\RequestMenuSelection;
 use App\Models\RequestImage;
-use App\Models\StylistRequest;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Validator;
@@ -22,74 +21,105 @@ class RequestController extends Controller
     // Method to create a new request
     public function create(HttpRequest $httpRequest): JsonResponse
     {
+        // ... existing code for create method ...
+    }
+
+    // Method to update a hair stylist request
+    public function update(UpdateHairStylistRequest $httpRequest, $id): JsonResponse
+    {
+        $hairRequest = Request::find($id);
+        $user = Auth::user();
+
+        if (!$hairRequest || $hairRequest->user_id !== $user->id) {
+            return response()->json(['message' => 'Request not found or unauthorized.'], 404);
+        }
+
+        // Validate the request
         $validator = Validator::make($httpRequest->all(), [
-            'area' => 'required|string|max:255',
-            'gender' => 'required|in:Male,Female,Do Not Answer',
-            'date_of_birth' => 'required|date',
-            'display_name' => 'required|string|max:20',
-            'menu' => 'required|string|max:255',
-            'hair_concerns' => 'required|string|max:2000',
-            'images' => 'sometimes|array|max:3',
-            'images.*' => 'image|mimes:png,jpg,jpeg|max:5120',
-        ], [
-            'area.required' => 'Area selection is required.',
-            'gender.required' => 'Gender selection is required.',
-            'gender.in' => 'Invalid gender selection.',
-            'date_of_birth.required' => 'Birth date is required.',
-            'display_name.required' => 'Display name is required.',
-            'display_name.max' => 'Display name cannot exceed 20 characters.',
-            'menu.required' => 'Menu selection is required.',
-            'hair_concerns.required' => 'Hair concerns is required.',
-            'hair_concerns.max' => 'Hair concerns cannot exceed 2000 characters.',
-            'images.*.image' => 'Invalid image format or size.',
-            'images.*.mimes' => 'Invalid image format or size.',
-            'images.*.max' => 'Invalid image format or size.',
+            'area' => 'required|array|min:1',
+            'menu' => 'required|array|min:1',
+            'hair_concerns' => 'required|string|max:3000',
+            'images' => 'required|array|min:1',
+            'images.*' => 'image|mimes:png,jpg,jpeg|max:5120', // 5MB
         ]);
 
         if ($validator->fails()) {
             return response()->json(['message' => $validator->errors()->first()], 422);
         }
 
-        DB::beginTransaction();
-        try {
-            $user = Auth::user();
-            $request = new Request();
-            $request->user_id = $user->id;
-            $request->area = $httpRequest->area;
-            $request->gender = $httpRequest->gender;
-            $request->date_of_birth = $httpRequest->date_of_birth;
-            $request->display_name = $httpRequest->display_name;
-            $request->menu = $httpRequest->menu;
-            $request->hair_concerns = $httpRequest->hair_concerns;
-            $request->status = 'pending'; // default status
-            $request->save();
-
-            // Handle images if provided
-            if ($httpRequest->has('images')) {
-                foreach ($httpRequest->images as $image) {
-                    $path = $image->store('request_images', 'public');
-                    $requestImage = new RequestImage();
-                    $requestImage->request_id = $request->id;
-                    $requestImage->image_path = $path;
-                    $requestImage->save();
-                }
-            }
-
-            // Update the StylistRequest status if needed
-            // Assuming there is a method in the StylistRequest model to update the status
-            StylistRequest::updateStatusForRequest($request->id, 'new_status');
-
-            DB::commit();
-
-            return response()->json([
-                'status' => 201,
-                'request' => $request->fresh(),
-                'message' => 'Request created successfully.',
-            ], 201);
-        } catch (\Exception $e) {
-            DB::rollBack();
-            return response()->json(['message' => 'Failed to create the request.'], 500);
+        // Update area selections
+        RequestAreaSelection::where('request_id', $id)->delete();
+        foreach ($httpRequest->area as $areaId) {
+            RequestAreaSelection::create([
+                'request_id' => $id,
+                'area_id' => $areaId,
+            ]);
         }
+
+        // Update menu selections
+        RequestMenuSelection::where('request_id', $id)->delete();
+        foreach ($httpRequest->menu as $menuId) {
+            RequestMenuSelection::create([
+                'request_id' => $id,
+                'menu_id' => $menuId,
+            ]);
+        }
+
+        // Update hair concerns
+        $hairRequest->update(['hair_concerns' => $httpRequest->hair_concerns]);
+
+        // Update images
+        RequestImage::where('request_id', $id)->delete();
+        foreach ($httpRequest->images as $image) {
+            // Store the image and get the path
+            $imagePath = Storage::disk('public')->put('request_images', $image);
+            RequestImage::create([
+                'request_id' => $id,
+                'image_path' => $imagePath,
+            ]);
+        }
+
+        return response()->json([
+            'status' => 200,
+            'request' => $hairRequest->fresh(),
+        ]);
+    }
+
+    // Method to update the status of a request
+    public function updateStatus(HttpRequest $httpRequest, $id): JsonResponse
+    {
+        $validator = Validator::make($httpRequest->all(), [
+            'status' => 'required|string|in:pending,accepted,rejected,sent_to_hairstylist', // Add all valid status strings
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json(['message' => $validator->errors()->first()], 422);
+        }
+
+        $request = Request::find($id);
+
+        if (!$request) {
+            return response()->json(['message' => 'Request not found.'], 404);
+        }
+
+        // Check if the status value is valid
+        $validStatuses = ['pending', 'accepted', 'rejected', 'sent_to_hairstylist']; // Define all valid statuses
+        if (!in_array($httpRequest->status, $validStatuses)) {
+            return response()->json(['message' => 'Invalid status value.'], 400);
+        }
+
+        // Update the status of the request
+        $request->status = $httpRequest->status;
+        $request->save();
+
+        return response()->json([
+            'status' => 200,
+            'request' => [
+                'id' => $request->id,
+                'status' => $request->status,
+                'updated_at' => $request->updated_at->toIso8601String(),
+            ],
+        ]);
     }
 
     // ... other methods ...

@@ -37,5 +37,5 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::patch('/hair-stylist-requests/{id}', [RequestController::class, 'update'])->name('hair-stylist-requests.update');
 });
 
-// New route to handle the POST request for creating a new hair treatment plan request
-Route::middleware('auth:sanctum')->post('/api/requests', [RequestController::class, 'store']);
+// New route for PUT request to update the status of a request
+Route::middleware('auth:sanctum')->put('/requests/{id}/status', [RequestController::class, 'updateStatus']);
