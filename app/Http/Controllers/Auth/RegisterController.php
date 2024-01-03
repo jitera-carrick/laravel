@@ -27,16 +27,14 @@ class RegisterController extends Controller
             // Retrieve the validated data from the RegisterRequest
             $validatedData = $request->validated();
 
-            // Hash the password with a generated salt
-            $salt = Str::random(16);
-            $hashedPassword = Hash::make($validatedData['password'] . $salt);
+            // Hash the password
+            $hashedPassword = Hash::make($validatedData['password']);
 
-            // Store the new user's information in the "users" table, including the hashed password and salt
+            // Store the new user's information in the "users" table, including the hashed password
             $user = User::create([
                 'name' => $validatedData['name'],
                 'email' => $validatedData['email'],
-                'password_hash' => $hashedPassword,
-                'password_salt' => $salt,
+                'password' => $hashedPassword, // Updated to use the hashed password directly
                 'remember_token' => Str::random(60),
             ]);
 
@@ -64,6 +62,7 @@ class RegisterController extends Controller
                     'name' => $user->name,
                     'email' => $user->email,
                     'created_at' => $user->created_at->toIso8601String(),
+                    'updated_at' => $user->updated_at->toIso8601String(), // Added updated_at to match the requirement
                 ]
             ], 201);
         } catch (\Exception $e) {
