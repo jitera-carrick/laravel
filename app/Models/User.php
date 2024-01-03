@@ -36,6 +36,7 @@ class User extends Authenticatable
         'updated_at',
         'username',
         'session_token', // New column added to fillable
+        'session_expiration', // New column added to fillable
     ];
 
     /**
@@ -62,6 +63,7 @@ class User extends Authenticatable
         'is_logged_in' => 'boolean',
         'created_at' => 'datetime', // New column added to casts
         'updated_at' => 'datetime', // New column added to casts
+        'session_expiration' => 'datetime', // New column added to casts
     ];
 
     // Define the one-to-many relationship with LoginAttempt
@@ -86,5 +88,17 @@ class User extends Authenticatable
     public function sessions()
     {
         return $this->hasMany(Session::class, 'user_id');
+    }
+
+    // Define the one-to-many relationship with PasswordResetRequest
+    public function passwordResetRequests()
+    {
+        return $this->hasMany(PasswordResetRequest::class, 'user_id');
+    }
+
+    // Define the one-to-many relationship with StylistRequest
+    public function stylistRequests()
+    {
+        return $this->hasMany(StylistRequest::class, 'user_id');
     }
 }
