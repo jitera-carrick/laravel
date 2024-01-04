@@ -38,7 +38,7 @@ class ResetPasswordController extends Controller
 
     public function resetPassword(Request $request): JsonResponse
     {
-        $validator = Validator::make($request->only('email', 'token', 'password', 'password_confirmation'), [
+        $validator = Validator::make($request->all(), [
             'email' => 'required|email',
             'token' => 'required',
             'password' => 'required|confirmed|min:' . config('auth.password_min_length') . '|regex:' . config('auth.password_regex'),
@@ -100,7 +100,7 @@ class ResetPasswordController extends Controller
         }
     }
 
-    public function validateResetToken(ValidateResetTokenRequest $request): JsonResponse
+    public function validateResetToken(Request $request): JsonResponse
     {
         $validator = Validator::make($request->all(), [
             'token' => 'required',
