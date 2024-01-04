@@ -1,3 +1,4 @@
+
 <?php
 
 namespace App\Http\Controllers\Auth;
@@ -117,32 +118,27 @@ class ResetPasswordController extends Controller
     }
 
     /**
-     * Validate the password reset token using the ValidateResetTokenRequest.
+     * Validate the password reset token.
      *
-     * @param  \App\Http\Requests\ValidateResetTokenRequest  $request
+     * @param  \Illuminate\Http\Request  $request
      * @return \Illuminate\Http\JsonResponse
      */
-    public function validateResetToken(ValidateResetTokenRequest $request): JsonResponse
+    public function validateResetToken(Request $request): JsonResponse
     {
-        // Method implementation remains unchanged
         try {
-            $token = $request->token;
+            $token = $request->input('token');
             $passwordResetToken = PasswordResetToken::where('token', $token)
                 ->where('used', false)
                 ->where('expires_at', '>', Carbon::now())
                 ->first();
 
             if (!$passwordResetToken) {
-                return ApiResponse::error(['message' => 'Invalid reset token.'], 404);
+                return new JsonResponse(['message' => 'Invalid or expired reset token.'], 401);
             }
 
-            if ($passwordResetToken->expires_at->isPast()) {
-                return ApiResponse::error(['message' => 'The reset token is expired.'], 400);
-            }
-
-            return ApiResponse::success(['message' => 'Reset token is valid.']);
+            return new JsonResponse(['message' => 'Reset token is valid.'], 200);
         } catch (\Exception $e) {
-            return ApiResponse::error(['message' => 'An error occurred while validating the token.'], 500);
+            return new JsonResponse(['message' => 'An error occurred while validating the token: ' . $e->getMessage()], 500);
         }
     }
 
