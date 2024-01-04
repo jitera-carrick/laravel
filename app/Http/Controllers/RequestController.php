@@ -1,3 +1,4 @@
+
 <?php
 
 namespace App\Http\Controllers;
@@ -11,6 +12,7 @@ use App\Models\RequestImage;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Validator;
+use Illuminate\Validation\Rule;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
@@ -33,6 +35,11 @@ class RequestController extends Controller
             'hair_concerns' => 'required|string|max:3000',
             'image_path' => 'required|array|max:3',
             'image_path.*' => 'file|image|mimes:png,jpg,jpeg|max:5120', // 5MB
+            // ... other validation rules ...
+        ]);
+        $validator->addRules([
+            'request_time' => 'required|date|after_or_equal:now',
+            'status' => ['required', Rule::in(['pending', 'confirmed', 'cancelled'])],
         ]);
 
         if ($validator->fails()) {
@@ -48,6 +55,9 @@ class RequestController extends Controller
             'user_id' => $httpRequest->user_id,
             'hair_concerns' => $httpRequest->hair_concerns,
             'status' => 'pending', // Assuming 'pending' is a valid status
+            // ... other fields ...
+            'request_time' => $httpRequest->request_time,
+            'status' => $httpRequest->status,
         ]);
 
         // Create area selections
@@ -75,11 +85,14 @@ class RequestController extends Controller
             ]);
         }
 
-        return response()->json([
+        $response = response()->json([
             'status' => 200,
             'request_id' => $hairRequest->id,
             'message' => 'Hair stylist request created successfully.',
         ]);
+
+        // ... other methods ...
+        return $response;
     }
 
     // Method to update a hair stylist request
