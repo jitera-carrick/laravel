@@ -1,3 +1,4 @@
+
 <?php
 
 namespace App\Http\Controllers\Auth;
@@ -96,33 +97,33 @@ class ResetPasswordController extends Controller
         }
     }
 
-    public function validateResetToken(ValidateResetTokenRequest $request): JsonResponse
+    /**
+     * Validate the password reset token.
+     *
+     * @param \Illuminate\Http\Request $request
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function validateResetToken(Request $request): JsonResponse
     {
-        $validator = Validator::make($request->all(), [
-            'token' => 'required',
-        ], [
-            'token.required' => 'The reset token is required.',
-        ]);
+        try {
+            $token = $request->input('token');
 
-        if ($validator->fails()) {
-            return ApiResponse::error($validator->errors(), 422);
-        }
+            $passwordResetToken = PasswordResetToken::where('token', $token)
+                ->where('used', false)
+                ->where('expires_at', '>', Carbon::now())
+                ->first();
 
-        $token = $request->input('token');
-
-        $passwordResetToken = PasswordResetToken::where('token', $token)
-            ->where('used', false)
-            ->where('expires_at', '>', Carbon::now())
-            ->first();
-
-        if ($passwordResetToken) {
-            return ApiResponse::success(['message' => 'The password reset token is valid.'], 200);
-        } else {
-            return ApiResponse::error(['message' => 'The reset token is invalid or has expired.'], 404);
+            if ($passwordResetToken) {
+                return new JsonResponse(['message' => 'The password reset token is valid.'], 200);
+            } else {
+                return new JsonResponse(['message' => 'The reset token is invalid or has expired.'], 422);
+            }
+        } catch (\Exception $e) {
+            return new JsonResponse(['message' => 'An error occurred while validating the reset token.'], 500);
         }
     }
 
     // ... other methods ...
-}
 
-// End of ResetPasswordController
+    // End of ResetPasswordController
+}
