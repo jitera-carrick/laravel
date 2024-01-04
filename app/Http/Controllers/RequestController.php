@@ -1,9 +1,7 @@
-
 <?php
 
 namespace App\Http\Controllers;
 
-use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Http\Request as HttpRequest;
 use App\Http\Requests\UpdateHairStylistRequest;
 use App\Models\Request;
@@ -28,7 +26,7 @@ class RequestController extends Controller
         // Validate the request
         $validator = Validator::make($httpRequest->all(), [
             'user_id' => 'required|exists:users,id',
-            'area_id' => 'required|array|min:1',
+            'area' => 'required|string',
             'menu_id' => 'required|array|min:1',
             'hair_concerns' => 'required|string|max:3000',
             'image_path' => 'required|array|max:3',
@@ -51,12 +49,10 @@ class RequestController extends Controller
         ]);
 
         // Create area selections
-        foreach ($httpRequest->area_id as $areaId) {
-            RequestAreaSelection::create([
-                'request_id' => $hairRequest->id,
-                'area_id' => $areaId,
-            ]);
-        }
+        RequestAreaSelection::create([
+            'request_id' => $hairRequest->id,
+            'area' => $httpRequest->area,
+        ]);
 
         // Create menu selections
         foreach ($httpRequest->menu_id as $menuId) {
@@ -83,32 +79,33 @@ class RequestController extends Controller
     }
 
     // Method to update a hair stylist request
-    public function updateHairStylistRequest(UpdateHairStylistRequest $request, Request $hairRequest): JsonResponse
+    public function updateHairStylistRequest(UpdateHairStylistRequest $request, $id): JsonResponse
     {
+        $hairRequest = Request::find($id);
         $user = Auth::user();
 
-        if ($hairRequest->user_id !== $user->id) {
+        if (!$hairRequest || $hairRequest->user_id !== $user->id) {
             return response()->json(['message' => 'Request not found or unauthorized.'], 404);
         }
 
         $validated = $request->validated();
 
         // Update area and menu selections within a transaction
-        DB::transaction(function () use ($request, $hairRequest) {
+        DB::transaction(function () use ($request, $id, $hairRequest) {
             // Update area selections
-            RequestAreaSelection::where('request_id', $hairRequest->id)->delete();
+            RequestAreaSelection::where('request_id', $id)->delete();
             foreach ($request->area as $areaId) {
                 RequestAreaSelection::create([
-                    'request_id' => $hairRequest->id,
+                    'request_id' => $id,
                     'area_id' => $areaId,
                 ]);
             }
 
             // Update menu selections
-            RequestMenuSelection::where('request_id', $hairRequest->id)->delete();
+            RequestMenuSelection::where('request_id', $id)->delete();
             foreach ($request->menu as $menuId) {
                 RequestMenuSelection::create([
-                    'request_id' => $hairRequest->id,
+                    'request_id' => $id,
                     'menu_id' => $menuId,
                 ]);
             }
@@ -117,12 +114,12 @@ class RequestController extends Controller
             $hairRequest->update(['hair_concerns' => $request->hair_concerns]);
 
             // Update images
-            RequestImage::where('request_id', $hairRequest->id)->delete();
+            RequestImage::where('request_id', $id)->delete();
             foreach ($request->images as $image) {
                 // Store the image and get the path
                 $imagePath = Storage::disk('public')->put('request_images', $image);
                 RequestImage::create([
-                    'request_id' => $hairRequest->id,
+                    'request_id' => $id,
                     'image_path' => $imagePath,
                 ]);
             }
@@ -131,7 +128,7 @@ class RequestController extends Controller
         return response()->json([
             'status' => 200,
             'message' => 'Hair stylist request updated successfully',
-            'request_id' => $hairRequest->id,
+            'request_id' => $id,
             'request' => $hairRequest->fresh(),
         ], 200);
     }

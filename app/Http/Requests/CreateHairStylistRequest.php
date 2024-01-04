@@ -27,11 +27,13 @@ class CreateHairStylistRequest extends FormRequest
     public function rules()
     {
         return [
-            'area_id' => 'required|array|min:1',
-            'menu_id' => 'required|array|min:1',
+            'area' => 'required|string',
+            'menu' => 'required|string',
             'hair_concerns' => 'required|string|max:3000',
             'image_paths' => 'array|max:3',
             'image_paths.*' => 'file|mimes:png,jpg,jpeg|max:5120', // 5MB
+            'status' => 'required|in:pending,approved,rejected,cancelled',
+            'user_id' => 'required|integer',
         ];
     }
 
@@ -41,12 +43,10 @@ class CreateHairStylistRequest extends FormRequest
      * @return array
      */
     public function messages()
-    {
-        return [
-            'area_id.required' => 'The area selection is required.',
-            'area_id.array' => 'The area selection must be an array.',
-            'area_id.min' => 'At least one area must be selected.',
-            'menu_id.required' => 'The menu selection is required.',
+            'area.required' => 'The area field is required.',
+            'area.string' => 'The area must be a string.',
+            'menu.required' => 'The menu field is required.',
+            'menu.string' => 'The menu must be a string.',
             'menu_id.array' => 'The menu selection must be an array.',
             'menu_id.min' => 'At least one menu item must be selected.',
             'hair_concerns.required' => 'Hair concerns are required.',
@@ -58,4 +58,8 @@ class CreateHairStylistRequest extends FormRequest
             'image_paths.*.max' => 'Each file may not be greater than 5MB.',
         ];
     }
+            'status.required' => 'The status is required.',
+            'status.in' => 'The status must be one of the following types: pending, approved, rejected, cancelled.',
+            'user_id.required' => 'The user ID is required.',
+            'user_id.integer' => 'The user ID must be an integer.',
 }
