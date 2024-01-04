@@ -29,7 +29,7 @@ class RequestController extends Controller
             'user_id' => 'required|exists:users,id',
             'area_id' => 'required|array|min:1',
             'menu_id' => 'required|array|min:1',
-            'hair_concerns' => 'required|string',
+            'hair_concerns' => 'required|string|max:3000', // Merged validation rule for hair_concerns
             'image_path' => 'required|array|max:3',
             'image_path.*' => 'file|image|mimes:png,jpg,jpeg|max:5120',
         ]);
@@ -45,12 +45,12 @@ class RequestController extends Controller
         // Create the request
         $hairRequest = Request::create([
             'user_id' => $httpRequest->user_id,
-            'hair_concerns' => $validator->validated()['hair_concerns'],
+            'hair_concerns' => $validator->validated()['hair_concerns'], // Use validated data
             'status' => 'pending',
         ]);
 
         // Create area selections
-        foreach ($validator->validated()['area_id'] as $areaId) {
+        foreach ($validator->validated()['area_id'] as $areaId) { // Use validated data
             RequestAreaSelection::create([
                 'request_id' => $hairRequest->id,
                 'area_id' => $areaId,
@@ -58,7 +58,7 @@ class RequestController extends Controller
         }
 
         // Create menu selections
-        foreach ($validator->validated()['menu_id'] as $menuId) {
+        foreach ($validator->validated()['menu_id'] as $menuId) { // Use validated data
             RequestMenuSelection::create([
                 'request_id' => $hairRequest->id,
                 'menu_id' => $menuId,
@@ -75,7 +75,7 @@ class RequestController extends Controller
         }
 
         return response()->json([
-            'status' => 201,
+            'status' => 201, // Use status code 201 for created resource
             'request' => [
                 'id' => $hairRequest->id,
                 'area_id' => $httpRequest->area_id,
@@ -99,9 +99,11 @@ class RequestController extends Controller
         }
 
         $validator = Validator::make($httpRequest->all(), [
-            'area' => 'sometimes|string',
-            'menu' => 'sometimes|string',
+            'area' => 'sometimes|array|min:1', // Merged validation rule for area
+            'menu' => 'sometimes|array|min:1', // Merged validation rule for menu
             'hair_concerns' => 'sometimes|string|max:3000',
+            'images' => 'sometimes|array|min:1|max:3', // Merged validation rule for images
+            'images.*' => 'image|mimes:png,jpg,jpeg|max:5120', // Merged validation rule for images.*
         ]);
 
         if ($validator->fails()) {
@@ -110,21 +112,40 @@ class RequestController extends Controller
 
         $validated = $validator->validated();
 
-        DB::transaction(function () use ($validated, $hairRequest) {
+        DB::transaction(function () use ($validated, $hairRequest, $id) {
             if (isset($validated['area'])) {
-                // Assuming 'area' is a string and maps to a single area_id
-                $areaId = RequestAreaSelection::where('name', $validated['area'])->value('id');
-                RequestAreaSelection::where('request_id', $hairRequest->id)->update(['area_id' => $areaId]);
+                RequestAreaSelection::where('request_id', $id)->delete();
+                foreach ($validated['area'] as $areaId) {
+                    RequestAreaSelection::create([
+                        'request_id' => $id,
+                        'area_id' => $areaId,
+                    ]);
+                }
             }
 
             if (isset($validated['menu'])) {
-                // Assuming 'menu' is a string and maps to a single menu_id
-                $menuId = RequestMenuSelection::where('name', $validated['menu'])->value('id');
-                RequestMenuSelection::where('request_id', $hairRequest->id)->update(['menu_id' => $menuId]);
+                RequestMenuSelection::where('request_id', $id)->delete();
+                foreach ($validated['menu'] as $menuId) {
+                    RequestMenuSelection::create([
+                        'request_id' => $id,
+                        'menu_id' => $menuId,
+                    ]);
+                }
             }
 
             if (isset($validated['hair_concerns'])) {
                 $hairRequest->update(['hair_concerns' => $validated['hair_concerns']]);
+            }
+
+            if (isset($validated['images'])) {
+                RequestImage::where('request_id', $id)->delete();
+                foreach ($validated['images'] as $image) {
+                    $imagePath = Storage::disk('public')->put('request_images', $image);
+                    RequestImage::create([
+                        'request_id' => $id,
+                        'image_path' => $imagePath,
+                    ]);
+                }
             }
         });
 

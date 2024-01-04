@@ -28,9 +28,8 @@ class UserController extends Controller
     public function createOrUpdateHairStylistRequest(HttpRequest $request): JsonResponse
     {
         // Authenticate the user based on the "user_id"
-        $userId = $request->input('user_id');
-        $user = User::find($userId);
-        if (!$user || $userId != Auth::id()) {
+        $user = Auth::user();
+        if (!$user || $request->input('user_id') != Auth::id()) {
             return response()->json(['message' => 'Unauthorized.'], 401);
         }
 
@@ -101,7 +100,7 @@ class UserController extends Controller
     {
         // Validate the request_id and check if it exists in the requests table
         $validatedData = $request->validate([
-            'request_id' => 'required|exists:requests,id',
+            'request_id' => 'required|integer|exists:requests,id',
         ]);
 
         // Retrieve the HairStylistRequest model instance using the request_id
@@ -133,15 +132,7 @@ class UserController extends Controller
     {
         // Authenticate the user based on the "user_id"
         $userId = Auth::id();
-        $hairStylistRequest = HairStylistRequest::find($id);
-
-        if (!$hairStylistRequest) {
-            return response()->json(['message' => 'Request not found.'], 404);
-        }
-
-        if ($hairStylistRequest->user_id != $userId) {
-            return response()->json(['message' => 'Unauthorized.'], 401);
-        }
+        $hairStylistRequest = HairStylistRequest::where('user_id', $userId)->findOrFail($id);
 
         // Use the UpdateHairStylistRequest form request class for validation
         $validatedData = (new UpdateHairStylistRequest())->validateResolved();
@@ -211,20 +202,24 @@ class UserController extends Controller
     {
         try {
             // Ensure the request exists
-            $hairStylistRequest = HairStylistRequest::findOrFail($request_id);
+            $hairStylistRequest = HairStylistRequest::where('user_id', Auth::id())->findOrFail($request_id);
 
             // Find the image associated with the request and image ID
             $requestImage = RequestImage::where('request_id', $hairStylistRequest->id)
                                         ->where('id', $image_id)
                                         ->firstOrFail();
 
-            // Delete the image
+            // Delete the image from storage and then from the database
+            Storage::delete($requestImage->image_path);
             $requestImage->delete();
+
+            // Update the 'updated_at' timestamp of the associated Request
+            $hairStylistRequest->touch();
 
             // Return a success response
             return response()->json(['message' => 'Image has been successfully deleted.']);
         } catch (ModelNotFoundException $e) {
-            // Return an error response if the request or image doesn't exist
+            // Return an error response if the request or image doesn't exist or doesn't belong to the user
             return response()->json(['message' => 'Request or image not found.'], 404);
         } catch (\Exception $e) {
             // Return a generic error response for any other exceptions
