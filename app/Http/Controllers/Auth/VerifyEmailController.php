@@ -14,6 +14,7 @@ use App\Http\Resources\SuccessResource;
 use App\Http\Resources\ErrorResource;
 use App\Exceptions\EmailVerificationFailedException;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Validator; // Import the Validator facade
 use Symfony\Component\HttpFoundation\Response;
 
 class VerifyEmailController extends Controller
@@ -24,8 +25,19 @@ class VerifyEmailController extends Controller
         // Keeping it for backward compatibility or in case it's used elsewhere
     }
 
-    public function verifyEmail(VerifyEmailRequest $request, $token)
+    public function verifyEmail(Request $request, $token = null) // Allow token to be passed or retrieved from the request
     {
+        $validator = Validator::make($request->all(), [
+            'token' => 'required|string',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json(['message' => $validator->errors()->first()], Response::HTTP_BAD_REQUEST);
+        }
+
+        // Use the token from the URL if it's provided, otherwise use the one from the request body
+        $token = $token ?: $request->input('token');
+
         try {
             return DB::transaction(function () use ($token) {
                 $tokenRepository = new EmailVerificationTokenRepository();
