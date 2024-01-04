@@ -1,3 +1,4 @@
+
 <?php
 
 namespace App\Http\Controllers;
@@ -91,7 +92,7 @@ class AuthController extends Controller
         }
 
         // Retrieve the session token from the request
-        $sessionToken = $request->input('session_token') ?: $request->header('session_token');
+        $sessionToken = $request->input('session_token');
 
         try {
             // Find the user by session token
@@ -99,7 +100,10 @@ class AuthController extends Controller
 
             // If user not found, return unauthorized response
             if (!$user) {
-                return response()->json(['message' => 'Invalid session token.'], 401);
+                $this->authService->logoutUser($user);
+
+                // Return successful logout response
+                return response()->json(['status' => 200, 'message' => 'You have been logged out successfully.'], 200);
             }
 
             // Invalidate the user session
