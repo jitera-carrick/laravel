@@ -1,3 +1,4 @@
+
 <?php
 
 namespace App\Http\Controllers\Auth;
@@ -5,6 +6,7 @@ namespace App\Http\Controllers\Auth;
 use App\Http\Controllers\Controller;
 use App\Models\User;
 use App\Http\Requests\RegisterRequest;
+use App\Models\EmailVerificationToken;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Str;
@@ -19,11 +21,12 @@ class RegisterController extends Controller
     {
         // Validate that all required fields are provided and not empty.
         $validator = Validator::make($request->all(), [
-            'name' => 'required|string|max:255',
+            'name' => 'required|string|max:255|unique:users,name',
             'email' => 'required|string|email|max:255|unique:users,email',
             'password' => 'required|string|min:8|confirmed',
         ], [
             'name.required' => 'The name is required.',
+            'name.unique' => 'The name is already taken.',
             'email.required' => 'The email field is required.',
             'email.email' => 'Invalid email format.',
             'email.max' => 'The email may not be greater than 255 characters.',
@@ -37,7 +40,7 @@ class RegisterController extends Controller
             throw new ValidationException($validator);
         }
 
-        // Create the user
+        // Create the user with password hash
         $user = User::create([
             'name' => $request->name,
             'email' => $request->email,
@@ -46,8 +49,16 @@ class RegisterController extends Controller
             // 'created_at' and 'updated_at' will be automatically set by Eloquent
         ]);
 
+        // Generate email verification token
+        $verificationToken = EmailVerificationToken::create([
+            'user_id' => $user->id,
+            'expires_at' => now()->addHours(24), // Assuming the token expires after 24 hours
+            'token' => Str::random(60),
+            'used' => false,
+        ])->token;
+
         // Send verification email
-        $user->notify(new VerifyEmailNotification($user->remember_token));
+        $user->notify(new VerifyEmailNotification($verificationToken));
 
         // Return a response with the user ID
         return response()->json([
