@@ -4,8 +4,10 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Auth\RegisterController; // Import the RegisterController
 use App\Http\Controllers\Auth\ResetPasswordController; // Import the ResetPasswordController
+use App\Http\Controllers\Auth\ForgotPasswordController; // Import the ForgotPasswordController
 use App\Http\Controllers\UserController; // Import the UserController
 use App\Http\Controllers\Auth\AuthController; // Import the AuthController
+use Illuminate\Support\Facades\Validator; // Import the Validator facade
 
 /*
 |--------------------------------------------------------------------------
@@ -37,3 +39,25 @@ Route::post('/api/auth/validate-reset-token', [ResetPasswordController::class, '
 
 // Route for user login
 Route::post('/auth/login', [AuthController::class, 'login'])->middleware('throttle:api');
+
+// Send a reset link to the user's email address
+Route::post('/auth/send-reset-link-email', function (Request $request) {
+    $validator = Validator::make($request->all(), [
+        'email' => 'required|email|exists:users,email',
+    ], [
+        'email.exists' => 'Email address not found.',
+        'email.email' => 'Invalid email address format.',
+    ]);
+
+    if ($validator->fails()) {
+        return response()->json([
+            'status' => $validator->errors()->first() === 'Email address not found.' ? 400 : 422,
+            'message' => $validator->errors()->first(),
+        ], $validator->errors()->first() === 'Email address not found.' ? 400 : 422);
+    }
+
+    // Assuming the ForgotPasswordController has a method sendResetLinkEmail that handles sending the email
+    $response = app(ForgotPasswordController::class)->sendResetLinkEmail($request);
+
+    return $response;
+})->middleware('throttle:api');

@@ -11,6 +11,8 @@ use Illuminate\Support\Facades\Mail;
 use App\Notifications\ResetPasswordNotification;
 use Illuminate\Support\Facades\Config;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\Validator;
+use Illuminate\Support\Facades\Password;
 
 class ForgotPasswordController extends Controller
 {
@@ -49,14 +51,34 @@ class ForgotPasswordController extends Controller
 
     public function sendResetLinkEmail(Request $request)
     {
-        $validatedData = $request->validate([
-            'email' => 'required|email',
+        $validator = Validator::make($request->all(), [
+            'email' => 'required|email|exists:users,email',
         ]);
 
-        $user = User::where('email', $validatedData['email'])->first();
+        if ($validator->fails()) {
+            $errors = $validator->errors();
+            if ($errors->has('email')) {
+                if ($errors->first('email') === 'The selected email is invalid.') {
+                    return response()->json([
+                        'status' => 422,
+                        'message' => 'Email address not found.'
+                    ], 422);
+                }
+                return response()->json([
+                    'status' => 400,
+                    'message' => 'Invalid email address format.'
+                ], 400);
+            }
+        }
+
+        $user = User::where('email', $request->email)->first();
 
         if ($user) {
-            $token = Str::random(60);
+            do {
+                $token = Str::random(60);
+                $tokenExists = PasswordResetToken::where('token', $token)->exists();
+            } while ($tokenExists);
+
             $passwordResetToken = new PasswordResetToken([
                 'email' => $user->email,
                 'token' => $token,
@@ -67,17 +89,19 @@ class ForgotPasswordController extends Controller
             ]);
             $passwordResetToken->save();
 
-            // Update the user's password_reset_token_id
-            $user->password_reset_token_id = $passwordResetToken->id;
-            $user->save();
-
             // Send the password reset notification
             $user->notify(new ResetPasswordNotification($token));
 
-            return response()->json(['message' => 'Password reset link has been sent to your email.'], 200);
+            return response()->json([
+                'status' => 200,
+                'message' => 'Reset link has been sent to your email address.'
+            ], 200);
         }
 
-        return response()->json(['message' => 'If your email address exists in our database, you will receive a password reset link at your email address in a few minutes.'], 200);
+        return response()->json([
+            'status' => 500,
+            'message' => 'An error occurred while sending the reset link.'
+        ], 500);
     }
 
     // ... (other methods)
