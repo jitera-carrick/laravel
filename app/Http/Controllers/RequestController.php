@@ -57,16 +57,34 @@ class RequestController extends Controller
         ]);
     }
 
-    // Method to update a hair stylist request (old method, keep for backward compatibility)
-    public function update(UpdateHairStylistRequest $request, $id): JsonResponse
-    {
-        // ... existing code for update method ...
-    }
-
     // Method to delete an image from a hair stylist request
-    public function deleteImage(HttpRequest $httpRequest, $request_id, $image_id): JsonResponse
+    public function deleteImage($request_id, $image_id): JsonResponse
     {
-        // ... existing code for deleteImage method ...
+        $user = Auth::user();
+        if (!$user) {
+            return response()->json(['message' => 'Unauthorized'], 401);
+        }
+
+        $request = Request::find($request_id);
+        if (!$request) {
+            return response()->json(['message' => 'Invalid request ID.'], 404);
+        }
+
+        $image = RequestImage::where('id', $image_id)->where('request_id', $request->id)->first();
+        if (!$image) {
+            return response()->json(['message' => 'Invalid image ID or image does not belong to the specified request.'], 404);
+        }
+
+        if ($user->id !== $request->user_id && !$user->isAdmin()) {
+            return response()->json(['message' => 'Forbidden'], 403);
+        }
+
+        try {
+            $image->delete();
+            return response()->json(['status' => 200, 'message' => 'Image has been successfully deleted.']);
+        } catch (\Exception $e) {
+            return response()->json(['message' => 'An unexpected error occurred on the server.'], 500);
+        }
     }
 
     // ... other methods ...

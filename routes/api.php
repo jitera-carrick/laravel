@@ -5,6 +5,7 @@ use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Auth\RegisterController; // Import the RegisterController
 use App\Http\Controllers\Auth\ResetPasswordController; // Import the ResetPasswordController
 use App\Http\Controllers\UserController; // Import the UserController
+use App\Http\Controllers\RequestController; // Import the RequestController
 
 /*
 |--------------------------------------------------------------------------
@@ -28,5 +29,8 @@ Route::post("/users/reset-password", [ResetPasswordController::class, "resetPass
 // New route for user registration with throttle middleware
 Route::post("/users/register", [RegisterController::class, "register"])->middleware("throttle:api");
 
-// New route to handle the DELETE request for the endpoint `/api/requests/{request_id}/images/{image_id}`
+// Existing route to handle the DELETE request for the endpoint `/api/requests/{request_id}/images/{image_id}`
 Route::middleware('auth:sanctum')->delete('/requests/{request_id}/images/{image_id}', [UserController::class, 'deleteRequestImage']);
+
+// New route to handle the DELETE request for the endpoint `/api/hair-stylist-requests/{request_id}/images/{image_id}`
+Route::middleware('auth:sanctum')->delete('/hair-stylist-requests/{request_id}/images/{image_id}', [RequestController::class, 'deleteHairStylistRequestImage']);
