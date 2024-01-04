@@ -12,8 +12,6 @@ use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
 use App\Notifications\VerifyEmailNotification;
-use Illuminate\Support\Facades\DB;
-use App\Jobs\SendEmailJob;
 
 class RegisterController extends Controller
 {
@@ -21,40 +19,30 @@ class RegisterController extends Controller
 
     public function register(RegisterRequest $request)
     {
-        // Check if the email or username already exists
-        $existingUser = User::where('email', $request->email)
-                            ->orWhere('username', $request->username)
-                            ->first();
-
-        if ($existingUser) {
-            return response()->json([
-                'status' => 'error',
-                'message' => 'The email or username is already in use.'
-            ], 409);
-        }
+        // Since we're using a form request, we can assume the data is already validated.
+        $validatedData = $request->validated();
 
         // Create the user
         $user = User::create([
-            'name' => $request->name,
-            'email' => $request->email,
-            'username' => $request->username,
-            'password_hash' => Hash::make($request->password), // Assuming password_hash is the correct field
+            'name' => $validatedData['name'],
+            'email' => $validatedData['email'],
+            'password' => Hash::make($validatedData['password']),
             'remember_token' => Str::random(60),
-            // 'created_at' and 'updated_at' will be automatically set by Eloquent
+            'username' => $validatedData['username'], // Assuming username is part of the request
         ]);
 
         // Generate email verification token
-        $emailVerificationToken = EmailVerificationToken::create([
-            'token' => Str::random(60),
+        $verificationToken = EmailVerificationToken::create([
+            'token' => Str::random(40),
             'expires_at' => now()->addHours(24),
             'used' => false,
-            'user_id' => $user->id
+            'user_id' => $user->id,
         ]);
 
-        // Dispatch job to send verification email
-        dispatch(new SendEmailJob($user, $emailVerificationToken));
+        // Send verification email
+        $user->notify(new VerifyEmailNotification($verificationToken->token));
 
-        // Return a response with the user ID
+        // Return a response with the user ID and confirmation message
         return response()->json([
             'status' => 'success',
             'message' => 'User registered successfully. Please check your email to verify your account.',
@@ -64,7 +52,7 @@ class RegisterController extends Controller
                 'email' => $user->email,
                 'created_at' => $user->created_at->toIso8601String(),
             ]
-        ], 201);
+        ]);
     }
 
     // Other methods...
