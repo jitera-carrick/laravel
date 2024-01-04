@@ -6,6 +6,7 @@ namespace App\Http\Controllers;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
 use App\Http\Requests\CreateHairStylistRequest; // Import the new form request validation class
 use App\Http\Requests\UpdateHairStylistRequest; // Import the update form request validation class
+use App\Http\Requests\ValidateStylistRequest; // Import the ValidateStylistRequest form request validation class
 use App\Models\User;
 use App\Models\Request as HairStylistRequest; // Renamed to avoid confusion with HTTP Request
 use App\Models\RequestArea;
@@ -16,7 +17,10 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request as HttpRequest;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\Response; // Import the Response facade
 use Illuminate\Support\Str;
+use App\Models\StylistRequest;
+use App\Events\StylistRequestSubmitted;
 
 class UserController extends Controller
 {
@@ -230,6 +234,32 @@ class UserController extends Controller
             // Return a generic error response for any other exceptions
             return response()->json(['message' => 'An error occurred while deleting the image.'], 500);
         }
+    }
+
+    /**
+     * Submit a stylist request.
+     *
+     * @param ValidateStylistRequest $request
+     * @return JsonResponse
+     */
+    public function submitStylistRequest(ValidateStylistRequest $request): JsonResponse
+    {
+        $validatedData = $request->validated();
+        $userId = $validatedData['user_id'];
+        $requestTime = now();
+
+        $stylistRequest = StylistRequest::create([
+            'user_id' => $userId,
+            'status' => 'pending',
+            'request_time' => $requestTime,
+        ]);
+
+        event(new StylistRequestSubmitted($stylistRequest));
+
+        return Response::json([
+            'request_id' => $stylistRequest->id,
+            'request_time' => $requestTime->toDateTimeString(),
+        ]);
     }
 
     // ... other methods ...
