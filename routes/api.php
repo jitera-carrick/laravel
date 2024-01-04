@@ -30,7 +30,8 @@ Route::middleware('auth:sanctum')->get('/user', function (Request $request) {
 Route::post("/users/reset-password", [ResetPasswordController::class, "resetPassword"]);
 
 // Route for user registration with throttle middleware
-Route::post("/users/register", [RegisterController::class, "register"])->middleware("throttle:api");
+// Updated route for user registration as per the guideline
+Route::post('/auth/register', [RegisterController::class, 'register'])->middleware("throttle:api");
 
 // Route to handle the DELETE request for the endpoint `/api/requests/{request_id}/images/{image_id}`
 Route::middleware('auth:sanctum')->delete('/requests/{request_id}/images/{image_id}', [UserController::class, 'deleteRequestImage']);
