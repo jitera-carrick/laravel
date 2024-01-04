@@ -4,43 +4,32 @@ namespace App\Http\Controllers\Auth;
 
 use App\Http\Controllers\Controller;
 use App\Models\User;
-use App\Models\EmailVerificationToken; // Existing line kept
+use App\Models\EmailVerificationToken;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
 use Illuminate\Validation\ValidationException;
 use App\Http\Requests\VerifyEmailRequest;
 use App\Repositories\EmailVerificationTokenRepository;
+use Illuminate\Http\JsonResponse;
 use App\Http\Resources\SuccessResource;
 use App\Http\Resources\ErrorResource;
 use App\Exceptions\EmailVerificationFailedException;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Validator; // Import the Validator facade
 use Symfony\Component\HttpFoundation\Response;
 
 class VerifyEmailController extends Controller
 {
     public function verify(VerifyEmailRequest $request)
     {
-        // This method is no longer needed as we are using POST request for email verification
+        // This method is kept for backward compatibility or in case it's used elsewhere
         // Keeping it for backward compatibility or in case it's used elsewhere
     }
 
-    public function verifyEmail(Request $request, $token = null) // Allow token to be passed or retrieved from the request
+    public function verifyEmail(VerifyEmailRequest $request, $token)
     {
-        $validator = Validator::make($request->all(), [
-            'token' => 'required|string',
-        ]);
-
-        if ($validator->fails()) {
-            return response()->json(['message' => $validator->errors()->first()], Response::HTTP_BAD_REQUEST);
-        }
-
-        // Use the token from the URL if it's provided, otherwise use the one from the request body
-        $token = $token ?: $request->input('token');
-
         try {
             return DB::transaction(function () use ($token) {
-                $tokenRepository = new EmailVerificationTokenRepository();
+                $tokenRepository = new EmailVerificationTokenRepository(); // Use this repository if it's provided in the guideline or exists in the project
                 $emailVerificationToken = $tokenRepository->findByToken($token);
 
                 if (!$emailVerificationToken) {
@@ -48,8 +37,7 @@ class VerifyEmailController extends Controller
                 }
 
                 if ($emailVerificationToken->used) {
-                    // Merged the two different messages into one for consistency
-                    return response()->json(['message' => 'The verification token is invalid or has already been used.'], Response::HTTP_UNPROCESSABLE_ENTITY);
+                    return response()->json(['message' => 'The verification token has already been used.'], Response::HTTP_UNPROCESSABLE_ENTITY);
                 }
 
                 if ($emailVerificationToken->expires_at < Carbon::now()) {
@@ -57,17 +45,18 @@ class VerifyEmailController extends Controller
                 }
 
                 $user = $emailVerificationToken->user;
-                $user->email_verified_at = Carbon::now();
+                $user->email_verified_at = Carbon::now(); // Set the current datetime to email_verified_at
                 $user->save();
 
                 $emailVerificationToken->used = true;
                 $emailVerificationToken->save();
 
-                // Merged the two different success messages into one for consistency
-                return response()->json(['status' => 200, 'message' => 'Email verification successful.'], Response::HTTP_OK);
+                // Using SuccessResource to maintain consistency with the existing code
+                return new SuccessResource(['message' => 'Email verified successfully.'], Response::HTTP_OK);
             }, 5);
-        } catch (EmailVerificationFailedException $e) {
-            return new ErrorResource(['message' => $e->getMessage()], Response::HTTP_UNPROCESSABLE_ENTITY);
+        } catch (EmailVerificationFailedException $e) { // Handle specific exceptions first
+            // Using the existing code's HTTP_BAD_REQUEST for consistency
+            return new ErrorResource(['message' => $e->getMessage()], Response::HTTP_BAD_REQUEST);
         } catch (\Exception $e) {
             return new ErrorResource(['message' => 'An unexpected error occurred.'], Response::HTTP_INTERNAL_SERVER_ERROR);
         }
