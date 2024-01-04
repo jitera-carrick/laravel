@@ -24,130 +24,99 @@ class RequestController extends Controller
     // ... other methods ...
 
     // Method to create a hair stylist request
-    public function createHairStylistRequest(HttpRequest $httpRequest): JsonResponse
+    public function createHairStylistRequest(CreateHairStylistRequest $httpRequest): JsonResponse
     {
         $user = Auth::user();
 
-        // Determine if the request is an instance of CreateHairStylistRequest
-        if ($httpRequest instanceof CreateHairStylistRequest) {
-            if ($httpRequest->user_id != $user->id) {
-                return response()->json(['message' => 'Unauthorized user.'], 401);
-            }
+        if ($httpRequest->user_id != $user->id) {
+            return response()->json(['message' => 'Unauthorized user.'], 401);
+        }
 
-            // Create the request
-            $hairRequest = new Request([
-                'user_id' => $httpRequest->user_id,
-                'hair_concerns' => $httpRequest->hair_concerns,
-                'status' => 'pending',
-            ]);
-            $hairRequest->save();
+        // Create the request
+        $hairRequest = new Request([
+            'user_id' => $httpRequest->user_id,
+            'hair_concerns' => $httpRequest->hair_concerns,
+            'status' => 'pending',
+        ]);
+        $hairRequest->save();
 
-            // Create area selections
-            foreach ($httpRequest->area_id as $areaId) {
-                $hairRequest->areas()->attach($areaId);
-            }
+        // Create area selections
+        foreach ($httpRequest->area_id as $areaId) {
+            $hairRequest->areas()->attach($areaId);
+        }
 
-            // Create menu selections
-            foreach ($httpRequest->menu_id as $menuId) {
-                RequestMenuSelection::create([
-                    'request_id' => $hairRequest->id,
-                    'menu_id' => $menuId,
-                ]);
-            }
-
-            // Create images
-            foreach ($httpRequest->image_path as $image) {
-                $imagePath = Storage::disk('public')->put('request_images', $image);
-                RequestImage::create([
-                    'request_id' => $hairRequest->id,
-                    'image_path' => $imagePath
-                ]);
-            }
-
-            return response()->json([
-                'status' => 201,
-                'request' => [
-                    'id' => $hairRequest->id,
-                    'user_id' => $hairRequest->user_id,
-                    'area' => $hairRequest->areas()->get(),
-                    'menu' => $hairRequest->menus()->get(),
-                    'hair_concerns' => $hairRequest->hair_concerns,
-                    'status' => $hairRequest->status,
-                    'created_at' => $hairRequest->created_at->toIso8601String(),
-                    'updated_at' => $hairRequest->updated_at->toIso8601String(),
-                ]
-            ], 201);
-        } else {
-            // Validate the request
-            $validator = Validator::make($httpRequest->all(), [
-                'user_id' => 'required|exists:users,id',
-                'area_id' => 'required|array|min:1',
-                'menu_id' => 'required|array|min:1',
-                'hair_concerns' => 'required|string|max:3000',
-                'image_path' => 'required|array|max:3',
-                'image_path.*' => 'file|image|mimes:png,jpg,jpeg|max:5120', // 5MB
-            ]);
-
-            if ($validator->fails()) {
-                return response()->json(['message' => $validator->errors()->first()], 422);
-            }
-
-            if ($httpRequest->user_id != $user->id) {
-                return response()->json(['message' => 'Unauthorized user.'], 401);
-            }
-
-            // Create the request
-            $hairRequest = Request::create([
-                'user_id' => $httpRequest->user_id,
-                'hair_concerns' => $httpRequest->hair_concerns,
-                'status' => 'pending', // Assuming 'pending' is a valid status
-            ]);
-
-            // Create area selections
-            foreach ($httpRequest->area_id as $areaId) {
-                RequestAreaSelection::create([
-                    'request_id' => $hairRequest->id,
-                    'area_id' => $areaId,
-                ]);
-            }
-
-            // Create menu selections
-            foreach ($httpRequest->menu_id as $menuId) {
-                RequestMenuSelection::create([
-                    'request_id' => $hairRequest->id,
-                    'menu_id' => $menuId,
-                ]);
-            }
-
-            // Create images
-            foreach ($httpRequest->image_path as $image) {
-                $imagePath = Storage::disk('public')->put('request_images', $image);
-                RequestImage::create([
-                    'request_id' => $hairRequest->id,
-                    'image_path' => $imagePath,
-                ]);
-            }
-
-            return response()->json([
-                'status' => 200,
+        // Create menu selections
+        foreach ($httpRequest->menu_id as $menuId) {
+            RequestMenuSelection::create([
                 'request_id' => $hairRequest->id,
-                'message' => 'Hair stylist request created successfully.',
+                'menu_id' => $menuId,
             ]);
         }
+
+        // Create images
+        foreach ($httpRequest->image_path as $image) {
+            $imagePath = Storage::disk('public')->put('request_images', $image);
+            RequestImage::create([
+                'request_id' => $hairRequest->id,
+                'image_path' => $imagePath
+            ]);
+        }
+
+        return response()->json([
+            'status' => 201,
+            'request' => [
+                'id' => $hairRequest->id,
+                'user_id' => $hairRequest->user_id,
+                'area' => $hairRequest->areas()->get(),
+                'menu' => $hairRequest->menus()->get(),
+                'hair_concerns' => $hairRequest->hair_concerns,
+                'status' => $hairRequest->status,
+                'created_at' => $hairRequest->created_at->toIso8601String(),
+                'updated_at' => $hairRequest->updated_at->toIso8601String(),
+            ]
+        ], 201);
     }
 
-    // ... existing methods ...
-
     // Method to update a hair stylist request
-    public function update(UpdateHairStylistRequest $request, $id): JsonResponse
+    public function updateHairStylistRequest(UpdateHairStylistRequest $request, $id): JsonResponse
     {
         // ... existing update method code ...
     }
 
     // Method to delete an image from a hair stylist request
-    public function deleteImage(HttpRequest $httpRequest, $request_id, $image_id): JsonResponse
+    public function deleteImage(DeleteImageRequest $httpRequest, $request_id, $image_id): JsonResponse
     {
-        // ... existing deleteImage method code ...
+        $user = Auth::user();
+        $request = Request::where('id', $request_id)->where('user_id', $user->id)->first();
+
+        if (!$request) {
+            return response()->json(['message' => 'Request not found.'], 404);
+        }
+
+        $requestImage = RequestImage::where('id', $image_id)->where('request_id', $request_id)->first();
+
+        if (!$requestImage) {
+            return response()->json(['message' => 'Image not found or does not belong to the specified request.'], 404);
+        }
+
+        // Check if the user is the owner of the request or an admin
+        if ($user->id !== $request->user_id && !$user->can('admin')) {
+            return response()->json(['message' => 'Unauthorized.'], 401);
+        }
+
+        try {
+            $requestImage->delete();
+            return response()->json([
+                'status' => 200,
+                'message' => 'Image has been successfully deleted.'
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'status' => 500,
+                'message' => 'Failed to delete the image.',
+                'error' => $e->getMessage(),
+            ], 500);
+        }
     }
 
     // ... other methods ...
