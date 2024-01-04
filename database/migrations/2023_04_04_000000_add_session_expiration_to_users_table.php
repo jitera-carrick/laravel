@@ -12,7 +12,7 @@ return new class extends Migration
     public function up(): void
     {
         Schema::table('users', function (Blueprint $table) {
-            // Add new column for session_expiration
+            // Add new column for session expiration
             $table->timestamp('session_expiration')->nullable()->after('session_token');
         });
     }
