@@ -55,29 +55,31 @@ class ForgotPasswordController extends Controller
 
         $user = User::where('email', $validatedData['email'])->first();
 
-        if ($user) {
-            $token = Str::random(60);
-            $passwordResetToken = new PasswordResetToken([
-                'email' => $user->email,
-                'token' => $token,
-                'created_at' => now(),
-                'expires_at' => now()->addMinutes(Config::get('auth.passwords.users.expire')),
-                'used' => false,
-                'user_id' => $user->id,
-            ]);
-            $passwordResetToken->save();
-
-            // Update the user's password_reset_token_id
-            $user->password_reset_token_id = $passwordResetToken->id;
-            $user->save();
-
-            // Send the password reset notification
-            $user->notify(new ResetPasswordNotification($token));
-
-            return response()->json(['message' => 'Password reset link has been sent to your email.'], 200);
+        if (!$user) {
+            return response()->json(['error' => 'The email address does not exist in our records.'], 404);
         }
 
-        return response()->json(['message' => 'If your email address exists in our database, you will receive a password reset link at your email address in a few minutes.'], 200);
+        $token = Str::random(60);
+        $passwordResetToken = new PasswordResetToken([
+            'email' => $user->email,
+            'token' => $token,
+            'created_at' => now(),
+            'expires_at' => now()->addMinutes(Config::get('auth.passwords.users.expire')),
+            'used' => false,
+            'user_id' => $user->id,
+        ]);
+        $passwordResetToken->save();
+
+        try {
+            Mail::send('emails.reset', ['token' => $token], function ($message) use ($user) {
+                $message->to($user->email);
+                $message->subject('Password Reset Link');
+            });
+        } catch (\Exception $e) {
+            return response()->json(['error' => 'Failed to send reset link email.'], 500);
+        }
+
+        return response()->json(['status' => 200, 'message' => 'Reset link has been sent to your email address.'], 200);
     }
 
     // ... (other methods)
