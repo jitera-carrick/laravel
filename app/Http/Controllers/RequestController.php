@@ -1,9 +1,9 @@
+
 <?php
 
 namespace App\Http\Controllers;
 
 use Illuminate\Http\Request as HttpRequest;
-use App\Http\Requests\CreateHairStylistRequest;
 use App\Http\Requests\UpdateHairStylistRequest;
 use App\Models\Request;
 use App\Models\RequestAreaSelection;
@@ -11,9 +11,10 @@ use App\Models\RequestMenuSelection;
 use App\Models\RequestImage;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Validator;
+use Illuminate\Validation\ValidationException;
 
 class RequestController extends Controller
 {
@@ -22,133 +23,196 @@ class RequestController extends Controller
     // Method to create a hair stylist request
     public function createHairStylistRequest(HttpRequest $httpRequest): JsonResponse
     {
+        $user = Auth::user();
+
+        // Validate the request
         $validator = Validator::make($httpRequest->all(), [
-            'area' => 'required|exists:request_areas,id',
-            'menu' => 'required|exists:request_menus,id',
-            'hair_concerns' => 'required|string',
-            'status' => 'required|in:pending,completed,cancelled', // Assuming these are the valid statuses
             'user_id' => 'required|exists:users,id',
-        ], [
-            'area.required' => 'Area is required and must be valid.',
-            'menu.required' => 'Menu is required and must be valid.',
-            'hair_concerns.required' => 'Hair concerns are required.',
-            'status.in' => 'Invalid status.',
-            'user_id.exists' => 'Invalid user ID.',
+            'area_id' => 'required|array|min:1',
+            'menu_id' => 'required|array|min:1',
+            'hair_concerns' => 'required|string|max:3000',
+            'image_path' => 'required|array|max:3',
+            'image_path.*' => 'file|image|mimes:png,jpg,jpeg|max:5120', // 5MB
         ]);
 
         if ($validator->fails()) {
             return response()->json(['message' => $validator->errors()->first()], 422);
         }
 
-        $user = Auth::user();
         if ($httpRequest->user_id != $user->id) {
             return response()->json(['message' => 'Unauthorized user.'], 401);
         }
 
         // Create the request
         $hairRequest = Request::create([
-            'user_id' => $user->id,
-            'area_id' => $httpRequest->area,
-            'menu_id' => $httpRequest->menu,
+            'user_id' => $httpRequest->user_id,
             'hair_concerns' => $httpRequest->hair_concerns,
-            'status' => $httpRequest->status,
+            'status' => 'pending', // Assuming 'pending' is a valid status
         ]);
 
-        // Assuming RequestAreaSelection and RequestMenuSelection are the correct models for area and menu selections
-        RequestAreaSelection::create([
-            'request_id' => $hairRequest->id,
-            'area_id' => $httpRequest->area,
-        ]);
+        // Create area selections
+        foreach ($httpRequest->area_id as $areaId) {
+            RequestAreaSelection::create([
+                'request_id' => $hairRequest->id,
+                'area_id' => $areaId,
+            ]);
+        }
 
-        RequestMenuSelection::create([
-            'request_id' => $hairRequest->id,
-            'menu_id' => $httpRequest->menu,
-        ]);
+        // Create menu selections
+        foreach ($httpRequest->menu_id as $menuId) {
+            RequestMenuSelection::create([
+                'request_id' => $hairRequest->id,
+                'menu_id' => $menuId,
+            ]);
+        }
 
-        // Assuming RequestImage is the correct model for images
-        if ($httpRequest->hasFile('image_path')) {
-            foreach ($httpRequest->image_path as $image) {
-                $imagePath = Storage::disk('public')->put('request_images', $image);
-                RequestImage::create([
-                    'request_id' => $hairRequest->id,
-                    'image_path' => $imagePath,
-                ]);
-            }
+        // Create images
+        foreach ($httpRequest->image_path as $image) {
+            $imagePath = Storage::disk('public')->put('request_images', $image);
+            RequestImage::create([
+                'request_id' => $hairRequest->id,
+                'image_path' => $imagePath,
+            ]);
         }
 
         return response()->json([
-            'status' => 201,
-            'request' => [
-                'id' => $hairRequest->id,
-                'area' => $hairRequest->area_id,
-                'menu' => $hairRequest->menu_id,
-                'hair_concerns' => $hairRequest->hair_concerns,
-                'status' => $hairRequest->status,
-                'created_at' => $hairRequest->created_at->toIso8601String(),
-                'user_id' => $hairRequest->user_id,
-            ]
-        ], 201);
+            'status' => 200,
+            'request_id' => $hairRequest->id,
+            'message' => 'Hair stylist request created successfully.',
+        ]);
     }
 
     // Method to update a hair stylist request
-    public function updateHairStylistRequest(UpdateHairStylistRequest $request, $id): JsonResponse
+    public function update(UpdateHairStylistRequest $request, $id): JsonResponse
     {
-        $hairStylistRequest = Request::findOrFail($id);
+        $hairRequest = Request::find($id);
+        $user = Auth::user();
 
-        // Authorization check
-        if ($hairStylistRequest->user_id !== Auth::id() && !Auth::user()->isAdmin()) {
-            return response()->json(['message' => 'Forbidden'], 403);
+        if (!$hairRequest || $hairRequest->user_id !== $user->id) {
+            return response()->json(['message' => 'Request not found or unauthorized.'], 404);
         }
 
         // Validate the request
         $validator = Validator::make($request->all(), [
-            'area' => 'sometimes|exists:request_areas,id',
-            'menu' => 'sometimes|exists:request_menus,id',
-            'status' => 'sometimes|in:pending,confirmed,cancelled', // Assuming these are the valid statuses
+            'area' => 'required|array|min:1',
+            'menu' => 'required|array|min:1',
+            'hair_concerns' => 'required|string|max:3000',
+            'images' => 'required|array|min:1|max:3',
+            'images.*' => 'image|mimes:png,jpg,jpeg|max:5120', // 5MB
         ]);
 
         if ($validator->fails()) {
             return response()->json(['message' => $validator->errors()->first()], 422);
         }
 
-        // Update the request with validated data
-        $hairStylistRequest->fill($request->validated());
-        $hairStylistRequest->save();
+        // Update area and menu selections within a transaction
+        DB::transaction(function () use ($request, $id, $hairRequest) {
+            // Update area selections
+            RequestAreaSelection::where('request_id', $id)->delete();
+            foreach ($request->area as $areaId) {
+                RequestAreaSelection::create([
+                    'request_id' => $id,
+                    'area_id' => $areaId,
+                ]);
+            }
 
-        // Return the updated request
+            // Update menu selections
+            RequestMenuSelection::where('request_id', $id)->delete();
+            foreach ($request->menu as $menuId) {
+                RequestMenuSelection::create([
+                    'request_id' => $id,
+                    'menu_id' => $menuId,
+                ]);
+            }
+
+            // Update hair concerns
+            $hairRequest->update(['hair_concerns' => $request->hair_concerns]);
+
+            // Update images
+            RequestImage::where('request_id', $id)->delete();
+            foreach ($request->images as $image) {
+                // Store the image and get the path
+                $imagePath = Storage::disk('public')->put('request_images', $image);
+                RequestImage::create([
+                    'request_id' => $id,
+                    'image_path' => $imagePath,
+                ]);
+            }
+        });
+
         return response()->json([
             'status' => 200,
-            'request' => $hairStylistRequest
+            'message' => 'Hair stylist request updated successfully',
+            'request_id' => $id,
+            'request' => $hairRequest->fresh(),
         ]);
     }
 
+    /**
+     * Delete an image from a hair stylist request.
+     *
+     * @param  int  $request_id
+     * @param  int  $image_id
+     * @return JsonResponse
+     */
+    public function deleteRequestImage(int $request_id, int $image_id): JsonResponse
+    {
+        try {
+            $validator = Validator::make(compact('request_id', 'image_id'), [
+                'request_id' => 'required|integer|exists:requests,id',
+                'image_id' => 'required|integer|exists:request_images,id',
+            ]);
+
+            if ($validator->fails()) {
+                throw new ValidationException($validator);
+            }
+
+            $requestImage = RequestImage::where('id', $image_id)
+                ->where('request_id', $request_id)
+                ->first();
+
+            if (!$requestImage) {
+                return response()->json([
+                    'message' => 'Image not found or does not belong to the request.'
+                ], 404);
+            }
+
+            $requestImage->delete();
+
+            return response()->json([
+                'message' => 'Image deleted successfully.',
+                'request_id' => $request_id,
+                'image_id' => $image_id
+            ], 200);
+        } catch (\Exception $e) {
+            return response()->json([
+                'message' => 'Failed to delete the image.',
+                'error' => $e->getMessage()
+            ], 500);
+        }
+    }
+
     // Method to delete an image from a hair stylist request
-    public function deleteImage($request_id, $image_id): JsonResponse
+    public function deleteImage(HttpRequest $httpRequest, $request_id, $image_id): JsonResponse
     {
         $user = Auth::user();
-        if (!$user) {
-            return response()->json(['message' => 'Unauthorized'], 401);
-        }
+        $request = Request::where('id', $request_id)->where('user_id', $user->id)->first();
 
-        $request = Request::find($request_id);
         if (!$request) {
-            return response()->json(['message' => 'Invalid request ID.'], 404);
+            return response()->json(['message' => 'Request not found or unauthorized.'], 404);
         }
 
-        $image = RequestImage::where('id', $image_id)->where('request_id', $request->id)->first();
-        if (!$image) {
-            return response()->json(['message' => 'Invalid image ID or image does not belong to the specified request.'], 404);
-        }
+        $requestImage = RequestImage::where('id', $image_id)->where('request_id', $request_id)->first();
 
-        if ($user->id !== $request->user_id && !$user->isAdmin()) {
-            return response()->json(['message' => 'Forbidden'], 403);
+        if (!$requestImage) {
+            return response()->json(['message' => 'Image not found or does not belong to the request.'], 404);
         }
 
         try {
-            $image->delete();
-            return response()->json(['status' => 200, 'message' => 'Image has been successfully deleted.']);
+            $requestImage->delete();
+            return response()->json(['message' => 'Image deleted successfully.'], 200);
         } catch (\Exception $e) {
-            return response()->json(['message' => 'An unexpected error occurred on the server.'], 500);
+            return response()->json(['message' => 'Failed to delete the image.'], 500);
         }
     }
 
