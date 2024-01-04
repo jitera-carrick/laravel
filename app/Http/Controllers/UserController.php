@@ -3,9 +3,11 @@
 
 namespace App\Http\Controllers;
 
+use Illuminate\Support\Facades\DB;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
 use App\Http\Requests\CreateHairStylistRequest; // Import the new form request validation class
 use App\Http\Requests\UpdateHairStylistRequest; // Import the update form request validation class
+use App\Http\Requests\ValidateStylistRequest; // Import the ValidateStylistRequest form request validation class
 use App\Models\User;
 use App\Models\Request as HairStylistRequest; // Renamed to avoid confusion with HTTP Request
 use App\Models\RequestArea;
@@ -16,7 +18,10 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request as HttpRequest;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\Response; // Import the Response facade
 use Illuminate\Support\Str;
+use App\Models\StylistRequest;
+use App\Events\StylistRequestSubmitted;
 
 class UserController extends Controller
 {
@@ -203,6 +208,7 @@ class UserController extends Controller
     /**
      * Delete a specific image from a hair stylist request.
      *
+     * @throws \Throwable
      * @param int $request_id The ID of the hair stylist request.
      * @param int $image_id The ID of the image to delete.
      * @return JsonResponse
@@ -211,18 +217,21 @@ class UserController extends Controller
     {
         try {
             // Ensure the request exists
-            $hairStylistRequest = HairStylistRequest::findOrFail($request_id);
+            $hairStylistRequest = StylistRequest::findOrFail($request_id);
 
-            // Find the image associated with the request and image ID
+            // Ensure the image is related to the request
             $requestImage = RequestImage::where('request_id', $hairStylistRequest->id)
                                         ->where('id', $image_id)
                                         ->firstOrFail();
 
-            // Delete the image
-            $requestImage->delete();
+            // Use transaction to ensure data integrity
+            DB::transaction(function () use ($requestImage) {
+                // Delete the image
+                $requestImage->delete();
+            });
 
             // Return a success response
-            return response()->json(['message' => 'Image has been successfully deleted.']);
+            return response()->json(['message' => 'Image has been successfully deleted.'], 200);
         } catch (ModelNotFoundException $e) {
             // Return an error response if the request or image doesn't exist
             return response()->json(['message' => 'Request or image not found.'], 404);
@@ -230,6 +239,32 @@ class UserController extends Controller
             // Return a generic error response for any other exceptions
             return response()->json(['message' => 'An error occurred while deleting the image.'], 500);
         }
+    }
+
+    /**
+     * Submit a stylist request.
+     *
+     * @param ValidateStylistRequest $request
+     * @return JsonResponse
+     */
+    public function submitStylistRequest(ValidateStylistRequest $request): JsonResponse
+    {
+        $validatedData = $request->validated();
+        $userId = $validatedData['user_id'];
+        $requestTime = now();
+
+        $stylistRequest = StylistRequest::create([
+            'user_id' => $userId,
+            'status' => 'pending',
+            'request_time' => $requestTime,
+        ]);
+
+        event(new StylistRequestSubmitted($stylistRequest));
+
+        return Response::json([
+            'request_id' => $stylistRequest->id,
+            'request_time' => $requestTime->toDateTimeString(),
+        ]);
     }
 
     // ... other methods ...

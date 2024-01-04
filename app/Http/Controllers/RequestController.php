@@ -1,4 +1,3 @@
-
 <?php
 
 namespace App\Http\Controllers;
@@ -12,7 +11,6 @@ use App\Models\RequestImage;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Validator;
-use Illuminate\Validation\Rule;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
@@ -35,11 +33,6 @@ class RequestController extends Controller
             'hair_concerns' => 'required|string|max:3000',
             'image_path' => 'required|array|max:3',
             'image_path.*' => 'file|image|mimes:png,jpg,jpeg|max:5120', // 5MB
-            // ... other validation rules ...
-        ]);
-        $validator->addRules([
-            'request_time' => 'required|date|after_or_equal:now',
-            'status' => ['required', Rule::in(['pending', 'confirmed', 'cancelled'])],
         ]);
 
         if ($validator->fails()) {
@@ -55,9 +48,6 @@ class RequestController extends Controller
             'user_id' => $httpRequest->user_id,
             'hair_concerns' => $httpRequest->hair_concerns,
             'status' => 'pending', // Assuming 'pending' is a valid status
-            // ... other fields ...
-            'request_time' => $httpRequest->request_time,
-            'status' => $httpRequest->status,
         ]);
 
         // Create area selections
@@ -85,14 +75,11 @@ class RequestController extends Controller
             ]);
         }
 
-        $response = response()->json([
+        return response()->json([
             'status' => 200,
             'request_id' => $hairRequest->id,
             'message' => 'Hair stylist request created successfully.',
         ]);
-
-        // ... other methods ...
-        return $response;
     }
 
     // Method to update a hair stylist request
@@ -155,7 +142,7 @@ class RequestController extends Controller
     // Method to delete an image from a hair stylist request
     public function deleteImage(HttpRequest $httpRequest, $request_id, $image_id): JsonResponse
     {
-        try {
+        // try { // Commented out to replace with updated method below
             $validator = Validator::make(compact('request_id', 'image_id'), [
                 'request_id' => 'required|integer|exists:requests,id',
                 'image_id' => 'required|integer|exists:request_images,id',
@@ -163,7 +150,7 @@ class RequestController extends Controller
 
             if ($validator->fails()) {
                 throw new ValidationException($validator);
-            }
+            } // Commented out to replace with updated method below
 
             $user = Auth::user();
             $request = Request::where('id', $request_id)->where('user_id', $user->id)->first();
@@ -172,7 +159,7 @@ class RequestController extends Controller
                 return response()->json(['message' => 'Request not found or unauthorized.'], 404);
             }
 
-            $requestImage = RequestImage::where('id', $image_id)->where('request_id', $request_id)->first();
+            // $requestImage = RequestImage::where('id', $image_id)->where('request_id', $request_id)->first(); // Commented out to replace with updated method below
 
             if (!$requestImage) {
                 return response()->json(['message' => 'Image not found or does not belong to the request.'], 404);
@@ -180,7 +167,7 @@ class RequestController extends Controller
 
             $requestImage->delete();
 
-            return response()->json([
+            // return response()->json([ // Commented out to replace with updated method below
                 'message' => 'Image deleted successfully.',
                 'request_id' => $request_id,
                 'image_id' => $image_id
@@ -188,7 +175,7 @@ class RequestController extends Controller
         } catch (\Exception $e) {
             return response()->json([
                 'message' => 'Failed to delete the image.',
-                'error' => $e->getMessage()
+                // 'error' => $e->getMessage() // Commented out to replace with updated method below
             ], 500);
         }
     }
