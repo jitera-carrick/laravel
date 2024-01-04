@@ -1,4 +1,3 @@
-
 <?php
 
 namespace App\Http\Controllers\Auth;
@@ -43,6 +42,41 @@ class SessionController extends Controller
         }
 
         return response()->json(['message' => 'Session has already expired.'], 401);
+    }
+
+    /**
+     * Update the user's session preference based on the provided user ID.
+     *
+     * @param SessionRequest $request
+     * @param int $id
+     * @return JsonResponse
+     */
+    public function updateSessionPreference(SessionRequest $request, $id): JsonResponse
+    {
+        if (!is_numeric($id)) {
+            return response()->json(['message' => 'Wrong format.'], 400);
+        }
+
+        $user = User::find($id);
+
+        if (!$user) {
+            return response()->json(['message' => 'User not found.'], 404);
+        }
+
+        if (!Auth::check() || Auth::id() !== (int) $id) {
+            return response()->json(['message' => 'Unauthorized.'], 401);
+        }
+
+        $keepSession = $request->input('keep_session', false);
+        $newExpiration = $keepSession ? Carbon::now()->addDays(90) : Carbon::now()->addDay();
+        $user->session_expiration = $newExpiration;
+        $user->save();
+
+        return response()->json([
+            'status' => 200,
+            'message' => 'Session preference updated successfully.',
+            'session_expiration' => $newExpiration->toDateTimeString(),
+        ]);
     }
 
     // ... other methods ...

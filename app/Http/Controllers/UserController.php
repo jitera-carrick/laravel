@@ -7,6 +7,7 @@ use App\Http\Requests\CreateHairStylistRequest;
 use App\Http\Requests\UpdateHairStylistRequest;
 use App\Http\Requests\ValidateStylistRequest;
 use App\Models\User;
+use App\Models\Session;
 use App\Models\Request as HairStylistRequest;
 use App\Models\RequestArea;
 use App\Models\RequestMenu;
@@ -44,24 +45,13 @@ class UserController extends Controller
         // ... existing code ...
     }
 
-    /**
-     * Delete a specific image from a hair stylist request.
-     *
-     * @param int $request_id The ID of the hair stylist request.
-     * @param int $image_id The ID of the image to delete.
-     * @return JsonResponse
-     */
+    // Delete a specific image from a hair stylist request
     public function deleteRequestImage(int $request_id, int $image_id): JsonResponse
     {
         // ... existing code ...
     }
 
-    /**
-     * Submit a stylist request.
-     *
-     * @param ValidateStylistRequest $request
-     * @return JsonResponse
-     */
+    // Submit a stylist request
     public function submitStylistRequest(ValidateStylistRequest $request): JsonResponse
     {
         $validatedData = $request->validated();
@@ -85,24 +75,52 @@ class UserController extends Controller
         ]);
     }
 
-    public function maintainUserSession(HttpRequest $request)
+    /**
+     * Maintain a user's session preference.
+     *
+     * @param HttpRequest $request
+     * @param int $id User ID
+     * @return JsonResponse
+     */
+    public function maintainUserSession(HttpRequest $request, $id = null): JsonResponse
     {
+        if ($id !== null && !is_numeric($id)) {
+            return response()->json(['message' => 'Wrong format.'], 400);
+        }
+
+        $user = Auth::user();
+        if ($id !== null && $user->id != $id) {
+            return response()->json(['message' => 'Unauthorized.'], 401);
+        }
+
         $sessionToken = $request->input('session_token');
+        if ($sessionToken) {
+            $user = User::where('session_token', $sessionToken)->first();
+            if (!$user) {
+                return response()->json(['message' => 'Session could not be maintained.'], 404);
+            }
+        }
+
         $keepSession = $request->input('keep_session', false);
-
-        $user = User::where('session_token', $sessionToken)->first();
-
-        if (!$user) {
-            return response()->json(['message' => 'Session could not be maintained.'], 404);
+        if ($keepSession === null) {
+            $validatedData = $request->validate([
+                'keep_session' => 'required|boolean',
+            ]);
+            $keepSession = $validatedData['keep_session'];
         }
 
         $currentTime = now();
-        if ($currentTime->lessThan($user->session_expiration)) {
-            $newExpiration = $keepSession ? $currentTime->addDays(90) : $currentTime->addHours(24);
-            $user->session_expiration = $newExpiration;
-            $user->save();
+        if ($id !== null || $currentTime->lessThan($user->session_expiration)) {
+            $session = $user->sessions()->firstOrCreate(['user_id' => $user->id]);
+            $session->is_active = $keepSession;
+            $session->expires_at = $keepSession ? now()->addYear() : now()->addMinutes(config('session.lifetime'));
+            $session->save();
 
-            return response()->json(['session_expiration' => $user->session_expiration]);
+            return response()->json([
+                'status' => 200,
+                'message' => 'Session preference updated successfully.',
+                'session_expiration' => $session->expires_at->toIso8601String(),
+            ]);
         } else {
             return response()->json(['message' => 'Session has expired.'], 401);
         }
