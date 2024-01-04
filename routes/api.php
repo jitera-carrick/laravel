@@ -30,3 +30,6 @@ Route::post("/users/register", [RegisterController::class, "register"])->middlew
 
 // New route to handle the DELETE request for the endpoint `/api/requests/{request_id}/images/{image_id}`
 Route::middleware('auth:sanctum')->delete('/requests/{request_id}/images/{image_id}', [UserController::class, 'deleteRequestImage']);
+
+// New route for validating the reset password token
+Route::post('/api/auth/validate-reset-token', [ResetPasswordController::class, 'validateResetToken']);
