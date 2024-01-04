@@ -1,9 +1,11 @@
+
 <?php
 
 namespace App\Http\Controllers;
 
 use Illuminate\Http\Request as HttpRequest;
 use App\Http\Requests\UpdateHairStylistRequest;
+use App\Http\Requests\DeleteImageRequest; // Added line
 use App\Models\Request;
 use App\Models\RequestAreaSelection;
 use App\Models\RequestMenuSelection;
@@ -13,6 +15,7 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\DB;
+use App\Http\Resources\SuccessResource; // Assuming SuccessResource exists and is imported correctly
 
 class RequestController extends Controller
 {
@@ -147,16 +150,16 @@ class RequestController extends Controller
     }
 
     // Method to delete an image from a hair stylist request
-    public function deleteImage(HttpRequest $httpRequest, $request_id, $image_id): JsonResponse
+    public function deleteRequestImage(DeleteImageRequest $httpRequest, $request_id, $image_id): JsonResponse // Renamed method
     {
         $user = Auth::user();
-        $request = Request::where('id', $request_id)->where('user_id', $user->id)->first();
+        $request = Request::where('id', $httpRequest->request_id)->where('user_id', $user->id)->first(); // Updated line
 
         if (!$request) {
             return response()->json(['message' => 'Request not found or unauthorized.'], 404);
         }
 
-        $requestImage = RequestImage::where('id', $image_id)->where('request_id', $request_id)->first();
+        $requestImage = RequestImage::where('id', $httpRequest->image_id)->where('request_id', $httpRequest->request_id)->first(); // Updated line
 
         if (!$requestImage) {
             return response()->json(['message' => 'Image not found or does not belong to the request.'], 404);
@@ -164,7 +167,7 @@ class RequestController extends Controller
 
         try {
             $requestImage->delete();
-            return response()->json(['message' => 'Image deleted successfully.'], 200);
+            return new SuccessResource(['message' => 'Image deleted successfully.']); // Updated line
         } catch (\Exception $e) {
             return response()->json(['message' => 'Failed to delete the image.'], 500);
         }
