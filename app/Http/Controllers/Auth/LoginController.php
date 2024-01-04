@@ -1,3 +1,4 @@
+
 <?php
 
 namespace App\Http\Controllers\Auth;
@@ -7,10 +8,10 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Facades\Cookie;
-use Illuminate\Support\Facades\Auth; // Added Auth facade
 use Illuminate\Support\Str;
 use App\Models\LoginAttempt;
 use App\Models\User;
+
 use App\Models\Session;
 use App\Services\RecaptchaService; // Import the RecaptchaService
 
@@ -30,15 +31,16 @@ class LoginController extends Controller
 
         $email = $request->input('email');
         $password = $request->input('password');
-
-        // Use Auth facade to attempt login
-        if (!Auth::attempt(['email' => $email, 'password' => $password])) {
-            return response()->json(['error' => 'These credentials do not match our records.'], 401);
-        }
-
         $user = User::where('email', $email)->first();
 
-        // Verify recaptcha
+        if (!$user) {
+            return response()->json(['error' => 'Email does not exist.'], 400);
+        }
+
+        if (!Hash::check($password, $user->password)) {
+            return response()->json(['error' => 'Incorrect password.'], 401);
+        }
+
         if (!RecaptchaService::verify($request->input('recaptcha'))) {
             return response()->json(['error' => 'Invalid recaptcha.'], 401);
         }
@@ -52,19 +54,17 @@ class LoginController extends Controller
         ]);
 
         if ($user->email_verified_at !== null) {
-            // Generate new session token and update user
+            // Generate new remember_token and update user
             $user->forceFill([
-                'session_token' => Str::random(60),
-                'is_logged_in' => true,
-                'session_expiration' => now()->addMinutes(config('session.lifetime')),
+                'remember_token' => Str::random(60),
                 'updated_at' => now(),
             ])->save();
 
-            // Return successful login response with session token
+            // Return successful login response
             return response()->json([
                 'status' => 200,
                 'message' => 'Login successful.',
-                'token' => $user->session_token,
+                'token' => $user->remember_token,
             ]);
         } else {
             // Return error response for unverified email
@@ -75,37 +75,35 @@ class LoginController extends Controller
     public function logout(Request $request)
     {
         try {
-            $sessionToken = $request->cookie('session_token'); // Use the cookie method to retrieve the session token
-            $session = Session::where('session_token', $sessionToken)
-                              ->where('is_active', true)
-                              ->first();
+            // Retrieve the "session_token" from the request header or body
+            $sessionToken = $request->header('session_token') ?? $request->input('session_token');
+            // Find the user with the matching "session_token"
+            $user = User::where('session_token', $sessionToken)->first();
 
-            if ($session) {
-                $user = $session->user;
-                $user->is_logged_in = false;
-                $user->save();
-
-                $session->is_active = false;
-                $session->save();
-
-                Cookie::queue(Cookie::forget('session_token'));
-
-                return response()->json([
-                    'status' => 200,
-                    'message' => 'Logout successful.'
+            if ($user) {
+                // Clear the "session_token" field, set "is_logged_in" to false, and update the "session_expiration"
+                $user->update([
+                    'session_token' => null,
+                    'is_logged_in' => false, // Set "is_logged_in" to false
+                    'session_expiration' => now(), // Update "session_expiration" to the current datetime
                 ]);
-            }
 
-            return response()->json([
-                'status' => 400,
-                'message' => 'No active session found.'
-            ]);
+                // Return a success response indicating the user has been successfully logged out
+                return response()->json([
+                    'message' => 'Logout successful.'
+                ], 200);
+            } else {
+                // Return an error response if no user is found with the provided "session_token"
+                return response()->json([
+                    'error' => 'Logout failure.'
+                ], 400);
+            }
         } catch (\Exception $e) {
+            // Handle any exceptions and return an appropriate error message
             return response()->json([
-                'status' => 500,
-                'message' => 'An error occurred during logout.',
-                'error' => $e->getMessage()
-            ]);
+                'error' => 'An error occurred during logout.',
+                'message' => $e->getMessage()
+            ], 500);
         }
     }
 }
