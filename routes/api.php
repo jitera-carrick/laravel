@@ -5,6 +5,7 @@ use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Auth\RegisterController; // Import the RegisterController
 use App\Http\Controllers\Auth\ResetPasswordController; // Import the ResetPasswordController
 use App\Http\Controllers\UserController; // Import the UserController
+use App\Http\Controllers\AuthController; // Import the AuthController
 
 /*
 |--------------------------------------------------------------------------
@@ -26,11 +27,13 @@ Route::middleware('auth:sanctum')->get('/user', function (Request $request) {
 Route::post("/users/reset-password", [ResetPasswordController::class, "resetPassword"]);
 
 // New route for user registration with throttle middleware
-// Updated the URI to match the guideline '/auth/register'
+// The URI has been updated to match the guideline '/auth/register'
 Route::post("/auth/register", [RegisterController::class, "register"])->middleware("throttle:api");
 
 // New route to handle the DELETE request for the endpoint `/api/requests/{request_id}/images/{image_id}`
 Route::middleware('auth:sanctum')->delete('/requests/{request_id}/images/{image_id}', [UserController::class, 'deleteRequestImage']);
 
-// The NEW CODE has updated the URI to match the requirement '/api/auth/register'
-// However, the validation logic is not present in the router file. It should be handled in the controller or request validation layer.
+// New route for logging out the user
+Route::middleware('auth:sanctum')->post('/auth/logout', [AuthController::class, 'logout']);
+
+// Note: The validation logic for the routes should be handled in the controller or request validation layer, not in the routes file.
