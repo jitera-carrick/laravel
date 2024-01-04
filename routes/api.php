@@ -5,6 +5,8 @@ use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Auth\RegisterController; // Import the RegisterController
 use App\Http\Controllers\Auth\ResetPasswordController; // Import the ResetPasswordController
 use App\Http\Controllers\UserController; // Import the UserController
+use App\Http\Controllers\Auth\VerifyEmailController; // Import the VerifyEmailController
+use App\Http\Controllers\RequestController; // Import the RequestController
 
 /*
 |--------------------------------------------------------------------------
@@ -22,11 +24,20 @@ Route::middleware('auth:sanctum')->get('/user', function (Request $request) {
     return $request->user();
 });
 
-// New route for resetting the user's password
-Route::post("/users/reset-password", [ResetPasswordController::class, "resetPassword"]);
+// Updated route for resetting the user's password to match the guideline
+Route::post('/auth/reset-password', [ResetPasswordController::class, 'resetPassword']);
 
-// New route for user registration with throttle middleware
+// Existing route for user registration with throttle middleware
 Route::post("/users/register", [RegisterController::class, "register"])->middleware("throttle:api");
 
-// New route to handle the DELETE request for the endpoint `/api/requests/{request_id}/images/{image_id}`
+// Existing route to handle the DELETE request for the endpoint `/api/requests/{request_id}/images/{image_id}`
 Route::middleware('auth:sanctum')->delete('/requests/{request_id}/images/{image_id}', [UserController::class, 'deleteRequestImage']);
+
+// Route for verifying the user's email
+Route::post('/auth/verify-email/{token}', [VerifyEmailController::class, 'verifyEmail'])->middleware('throttle:6,1')->name('verification.verify');
+
+// Route for validating the reset password token
+Route::post('/auth/validate-reset-token', [ResetPasswordController::class, 'validateResetToken']);
+
+// New route to handle the DELETE request for the endpoint `/api/hair-stylist-requests/{request_id}/images/{image_id}`
+Route::middleware('auth:sanctum')->delete('/hair-stylist-requests/{request_id}/images/{image_id}', [RequestController::class, 'deleteImage'])->where(['request_id' => '[0-9]+', 'image_id' => '[0-9]+']);
