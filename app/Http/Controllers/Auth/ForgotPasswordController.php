@@ -1,3 +1,4 @@
+
 <?php
 
 namespace App\Http\Controllers\Auth;
@@ -11,6 +12,7 @@ use Illuminate\Support\Facades\Mail;
 use App\Notifications\ResetPasswordNotification;
 use Illuminate\Support\Facades\Config;
 use Illuminate\Support\Carbon;
+use App\Models\PasswordResetRequest; // Import the PasswordResetRequest model
 
 class ForgotPasswordController extends Controller
 {
@@ -49,7 +51,7 @@ class ForgotPasswordController extends Controller
 
     public function sendResetLinkEmail(Request $request)
     {
-        $validatedData = $request->validate([
+        $validatedData = $request->validate([ // Validate the email field
             'email' => 'required|email',
         ]);
 
@@ -58,7 +60,7 @@ class ForgotPasswordController extends Controller
         if ($user) {
             $token = Str::random(60);
             $passwordResetToken = new PasswordResetToken([
-                'email' => $user->email,
+                'email' => $user->email, // Use the user's email for the token
                 'token' => $token,
                 'created_at' => now(),
                 'expires_at' => now()->addMinutes(Config::get('auth.passwords.users.expire')),
@@ -74,11 +76,40 @@ class ForgotPasswordController extends Controller
             // Send the password reset notification
             $user->notify(new ResetPasswordNotification($token));
 
-            return response()->json(['message' => 'Password reset link has been sent to your email.'], 200);
+            return response()->json(['message' => 'Password reset link has been sent to your email.'], 200); // Return success message
         }
 
         return response()->json(['message' => 'If your email address exists in our database, you will receive a password reset link at your email address in a few minutes.'], 200);
     }
 
     // ... (other methods)
+    
+    // New method to handle password reset request flow
+    public function handlePasswordResetRequest(Request $request)
+    {
+        $validatedData = $request->validate([
+            'email' => 'required|email',
+        ]);
+
+        $user = User::where('email', $validatedData['email'])->first();
+
+        if ($user) {
+            $resetToken = Str::random(60);
+            $requestTime = Carbon::now();
+
+            $passwordResetRequest = new PasswordResetRequest([
+                'user_id' => $user->id,
+                'reset_token' => $resetToken,
+                'request_time' => $requestTime,
+                'status' => 'pending',
+            ]);
+            $passwordResetRequest->save();
+
+            $user->notify(new ResetPasswordNotification($resetToken));
+
+            return response()->json(['reset_token' => $resetToken, 'request_time' => $requestTime], 200);
+        }
+
+        return response()->json(['message' => 'User not found'], 404);
+    }
 }
