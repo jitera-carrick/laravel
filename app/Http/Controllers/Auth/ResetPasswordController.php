@@ -1,9 +1,11 @@
+
 <?php
 
 namespace App\Http\Controllers\Auth;
 
 use App\Http\Controllers\Controller;
 use App\Http\Requests\ResetPasswordRequest;
+use App\Http\Requests\ValidateResetTokenRequest; // Added line
 use App\Services\PasswordResetService;
 use App\Utils\ApiResponse;
 use Illuminate\Http\JsonResponse;
@@ -86,16 +88,15 @@ class ResetPasswordController extends Controller
         }
     }
 
-    public function validateResetToken(Request $request): JsonResponse
+    /**
+     * Validate the password reset token using the ValidateResetTokenRequest.
+     *
+     * @param  \App\Http\Requests\ValidateResetTokenRequest  $request
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function validateResetToken(ValidateResetTokenRequest $request): JsonResponse
     {
-        $validator = Validator::make($request->all(), [
-            'token' => 'required|string',
-        ]);
-
-        if ($validator->fails()) {
-            return ApiResponse::error($validator->errors(), 422);
-        }
-
+        // Method implementation remains unchanged
         try {
             $token = $request->token;
             $passwordResetToken = PasswordResetToken::where('token', $token)
