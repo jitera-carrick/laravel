@@ -1,3 +1,4 @@
+
 <?php
 
 namespace App\Http\Controllers\Auth;
@@ -71,35 +72,38 @@ class LoginController extends Controller
         }
     }
 
-  public function logout(Request $request)
+    public function logout(Request $request)
     {
         try {
-            $sessionToken = $request->cookie('session_token'); // Use the cookie method to retrieve the session token
-            $session = Session::where('session_token', $sessionToken)
-                              ->where('is_active', true)
-                              ->first();
+            // Update the method to receive the session token from the request body instead of a cookie
+            $sessionToken = $request->input('session_token');
+            // Query the "users" table using the Eloquent model `User` to find a record with the matching "session_token"
+            $user = User::where('session_token', $sessionToken)->first();
 
-            if ($session) {
-                $user = $session->user;
+            if ($user) {
+                // Update the "is_logged_in" field to false and clear the "session_token" and "session_expiration" fields in the user's record
                 $user->is_logged_in = false;
+                $user->session_token = null;
+                $user->session_expiration = null;
                 $user->save();
 
-                $session->is_active = false;
-                $session->save();
-
-                Cookie::queue(Cookie::forget('session_token'));
-
+                // Return a success response indicating the user has been logged out
                 return response()->json([
                     'status' => 200,
                     'message' => 'Logout successful.'
                 ]);
             }
 
+            // If no matching session token is found, return an error response indicating the logout failed
             return response()->json([
                 'status' => 400,
-                'message' => 'No active session found.'
+                'message' => 'Logout failed. No matching session token found.'
             ]);
+
+            // The previous code for handling sessions and cookies is no longer needed and has been removed
+
         } catch (\Exception $e) {
+            // Handle any exceptions that may occur during the logout process and return an appropriate error response
             return response()->json([
                 'status' => 500,
                 'message' => 'An error occurred during logout.',
