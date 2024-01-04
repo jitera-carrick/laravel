@@ -26,7 +26,7 @@ class RequestController extends Controller
         // Validate the request
         $validator = Validator::make($httpRequest->all(), [
             'user_id' => 'required|exists:users,id',
-            'area' => 'required|string',
+            'area_id' => 'required|array|min:1',
             'menu_id' => 'required|array|min:1',
             'hair_concerns' => 'required|string|max:3000',
             'image_path' => 'required|array|max:3',
@@ -49,10 +49,12 @@ class RequestController extends Controller
         ]);
 
         // Create area selections
-        RequestAreaSelection::create([
-            'request_id' => $hairRequest->id,
-            'area' => $httpRequest->area,
-        ]);
+        foreach ($httpRequest->area_id as $areaId) {
+            RequestAreaSelection::create([
+                'request_id' => $hairRequest->id,
+                'area_id' => $areaId,
+            ]);
+        }
 
         // Create menu selections
         foreach ($httpRequest->menu_id as $menuId) {
