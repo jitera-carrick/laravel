@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Auth;
 
 use App\Http\Controllers\Controller;
 use App\Models\User;
+use App\Models\EmailVerificationToken;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
 use Illuminate\Validation\ValidationException;
@@ -23,12 +24,17 @@ class VerifyEmailController extends Controller
         // Keeping it for backward compatibility or in case it's used elsewhere
     }
 
-    public function verifyEmail(VerifyEmailRequest $request, $token)
+    public function verifyEmail(Request $request)
     {
         try {
-            return DB::transaction(function () use ($token) {
-                $tokenRepository = new EmailVerificationTokenRepository();
-                $emailVerificationToken = $tokenRepository->findByToken($token);
+            $email = $request->input('email');
+            $token = $request->input('token') ?? $request->query('token');
+            return DB::transaction(function () use ($token, $email) {
+                $tokenRepository = new EmailVerificationTokenRepository(); // Keep the repository from existing code
+                $emailVerificationToken = EmailVerificationToken::where('token', $token)
+                    ->where('used', false)
+                    ->where('expires_at', '>', Carbon::now())
+                    ->first();
 
                 if (!$emailVerificationToken) {
                     return response()->json(['message' => 'The verification token is invalid.'], Response::HTTP_NOT_FOUND);
@@ -42,7 +48,8 @@ class VerifyEmailController extends Controller
                     return response()->json(['message' => 'The verification token is expired.'], Response::HTTP_UNPROCESSABLE_ENTITY);
                 }
 
-                $user = $emailVerificationToken->user;
+                // Use the user from the token if available, otherwise find by email
+                $user = $emailVerificationToken->user ?? User::where('email', $email)->first();
                 $user->email_verified_at = Carbon::now();
                 $user->save();
 
@@ -50,7 +57,7 @@ class VerifyEmailController extends Controller
                 $emailVerificationToken->save();
 
                 return response()->json(['status' => 200, 'message' => 'Email verified successfully.'], Response::HTTP_OK);
-            }, 5);
+            }, 5); // Keep the retry times from existing code
         } catch (EmailVerificationFailedException $e) {
             return new ErrorResource(['message' => $e->getMessage()], Response::HTTP_UNPROCESSABLE_ENTITY);
         } catch (\Exception $e) {
