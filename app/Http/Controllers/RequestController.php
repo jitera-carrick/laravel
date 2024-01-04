@@ -76,20 +76,8 @@ class RequestController extends Controller
     }
 
     // Method to update a hair stylist request
-    public function updateHairStylistRequest(HttpRequest $httpRequest, $id): JsonResponse
+    public function updateHairStylistRequest(UpdateHairStylistRequest $httpRequest, $id): JsonResponse
     {
-        $validator = Validator::make($httpRequest->all(), [
-            'id' => 'required|exists:requests,id',
-            'area' => 'sometimes|string',
-            'menu' => 'sometimes|string',
-            'hair_concerns' => 'sometimes|string',
-            'status' => 'sometimes|in:pending,approved,rejected,completed'
-        ]);
-
-        if ($validator->fails()) {
-            return response()->json(['message' => $validator->errors()->first()], 422);
-        }
-
         $hairRequest = Request::find($id);
         $user = Auth::user();
 
@@ -98,23 +86,24 @@ class RequestController extends Controller
         }
 
         try {
-            $updatedFields = $validator->validated();
+            $updatedFields = $httpRequest->validated();
 
             DB::transaction(function () use ($httpRequest, $id, $hairRequest, $updatedFields) {
                 if (isset($updatedFields['area'])) {
                     RequestAreaSelection::where('request_id', $id)->delete();
-                    RequestAreaSelection::create([
-                        'request_id' => $id,
-                        'area_id' => $updatedFields['area'],
-                    ]);
+                    foreach ($updatedFields['area'] as $areaId) {
+                        $hairRequest->areas()->attach($areaId);
+                    }
                 }
 
                 if (isset($updatedFields['menu'])) {
                     RequestMenuSelection::where('request_id', $id)->delete();
-                    RequestMenuSelection::create([
-                        'request_id' => $id,
-                        'menu_id' => $updatedFields['menu'],
-                    ]);
+                    foreach ($updatedFields['menu'] as $menuId) {
+                        RequestMenuSelection::create([
+                            'request_id' => $id,
+                            'menu_id' => $menuId,
+                        ]);
+                    }
                 }
 
                 $hairRequest->update($updatedFields);
@@ -178,6 +167,40 @@ class RequestController extends Controller
                 'message' => 'Failed to delete the image.',
                 'error' => $e->getMessage(),
             ], 500);
+        }
+    }
+
+    // Method to cancel a hair stylist request
+    public function cancelHairStylistRequest(HttpRequest $request, $id): JsonResponse
+    {
+        $validatedData = $request->validate([
+            'id' => 'required|exists:requests,id',
+        ]);
+
+        $hairStylistRequest = Request::find($id);
+
+        if (!$hairStylistRequest) {
+            return response()->json(['message' => 'Request not found.'], 404);
+        }
+
+        if ($hairStylistRequest->user_id !== auth()->id() && !auth()->user()->isAdmin()) {
+            return response()->json(['message' => 'Unauthorized.'], 401);
+        }
+
+        $hairStylistRequest->status = 'cancelled';
+        $hairStylistRequest->updated_at = now();
+
+        if ($hairStylistRequest->save()) {
+            return response()->json([
+                'status' => 200,
+                'request' => [
+                    'id' => $hairStylistRequest->id,
+                    'status' => $hairStylistRequest->status,
+                    'updated_at' => $hairStylistRequest->updated_at->toIso8601String(),
+                ]
+            ]);
+        } else {
+            return response()->json(['message' => 'Unable to update status to cancelled.'], 422);
         }
     }
 }

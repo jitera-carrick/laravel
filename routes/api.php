@@ -9,6 +9,7 @@ use App\Http\Controllers\UserController;
 use App\Http\Controllers\Auth\AuthController;
 use App\Http\Controllers\RequestController;
 use Illuminate\Support\Facades\Validator;
+use Illuminate\Support\Facades\DB; // Import the DB facade for database operations
 use Illuminate\Validation\Rule; // Import the Rule facade for validation
 
 /*
@@ -32,9 +33,6 @@ Route::post("/users/reset-password", [ResetPasswordController::class, "resetPass
 
 // Route for user registration with throttle middleware
 Route::post("/users/register", [RegisterController::class, "register"])->middleware("throttle:api");
-
-// Route to handle the DELETE request for the endpoint `/requests/{request_id}/images/{image_id}`
-Route::middleware('auth:sanctum')->delete('/requests/{request_id}/images/{image_id}', [UserController::class, 'deleteRequestImage']);
 
 // Route for validating the reset password token
 Route::post('/api/auth/validate-reset-token', [ResetPasswordController::class, 'validateResetToken']);
@@ -100,3 +98,32 @@ Route::middleware(['auth:sanctum', 'can:update,request'])->patch('/hair-stylist-
         'request' => $requestModel,
     ], 200);
 })->where('request', '[0-9]+');
+
+// New PATCH route for cancelling a hair stylist request
+Route::middleware('auth:sanctum')->patch('/hair-stylist-request/cancel/{id}', function ($id) {
+    $user = request()->user();
+    $request = DB::table('requests')->where('id', $id)->first();
+
+    if (!$request) {
+        return response()->json(['message' => 'Request not found.'], 404);
+    }
+
+    if ($request->user_id !== $user->id && !$user->isAdmin()) {
+        return response()->json(['message' => 'Unauthorized action.'], 401);
+    }
+
+    $updated = DB::table('requests')->where('id', $id)->update(['status' => 'cancelled', 'updated_at' => now()]);
+
+    if (!$updated) {
+        return response()->json(['message' => 'Unable to update status to cancelled.'], 500);
+    }
+
+    return response()->json([
+        'status' => 200,
+        'request' => [
+            'id' => $id,
+            'status' => 'cancelled',
+            'updated_at' => now()->toIso8601String()
+        ]
+    ], 200);
+});
