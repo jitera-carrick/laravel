@@ -1,4 +1,3 @@
-
 <?php
 
 namespace App\Http\Controllers\Auth;
@@ -47,7 +46,7 @@ class ResetPasswordController extends Controller
             'email.exists' => 'No user found with this email address.',
             'token.required' => 'Token is required.',
             'token.exists' => 'Invalid or expired password reset token.',
-            'password.required' => 'Password is required.',
+            'password.required' => 'Password is required and must be confirmed.',
             'password.min' => 'Password must be at least 8 characters long.',
             'password.confirmed' => 'Passwords do not match.',
         ]);
@@ -86,7 +85,7 @@ class ResetPasswordController extends Controller
             }
 
             // Determine which password field to use
-            $password = $request->has('password') ? $request->password : $validatedData['password'];
+            $password = $validatedData['password'];
 
             if ($request->has('password_reset_token_id')) {
                 // New code logic for password hashing
@@ -133,12 +132,16 @@ class ResetPasswordController extends Controller
                 ->first();
 
             if (!$passwordResetToken) {
-                return new JsonResponse(['message' => 'Invalid or expired reset token.'], 401);
+                return ApiResponse::error(['message' => 'Invalid reset token.'], 404);
             }
 
-            return new JsonResponse(['message' => 'Reset token is valid.'], 200);
+            if ($passwordResetToken->expires_at->isPast()) {
+                return ApiResponse::error(['message' => 'The reset token is expired.'], 400);
+            }
+
+            return ApiResponse::success(['message' => 'Reset token is valid.']);
         } catch (\Exception $e) {
-            return new JsonResponse(['message' => 'An error occurred while validating the token: ' . $e->getMessage()], 500);
+            return ApiResponse::error(['message' => 'An error occurred while validating the token: ' . $e->getMessage()], 500);
         }
     }
 
