@@ -37,25 +37,29 @@ class EmailVerificationController extends Controller
      * @param Request $request
      * @return \Illuminate\Http\JsonResponse
      */
-    public function alternativeVerify(Request $request)
+    public function verifyEmailAlternative(Request $request)
     {
-        $email = $request->input('email');
         $token = $request->input('token');
-
         $verificationToken = EmailVerificationToken::where('token', $token)
-            ->where('email', $email)
-            ->where('used', false)
-            ->where('expires_at', '>', Carbon::now())
-            ->first();
+                            ->where('expires_at', '>', Carbon::now())
+                            ->where('used', false)
+                            ->first();
 
         if (!$verificationToken) {
             return response()->json(['message' => 'Invalid or expired token.'], 404);
         }
 
-        $user = $verificationToken->user;
+        // ... (additional logic to verify the user's email and update the database)
+        // Assuming the additional logic is to verify the user's email and update the database
+        $user = User::find($verificationToken->user_id);
+        if (!$user) {
+            return response()->json(['message' => 'User not found.'], 404);
+        }
+
         $user->email_verified_at = Carbon::now();
-        $user->remember_token = null;
+        $verificationToken->used = true; // Mark the token as used
         $user->save();
+        $verificationToken->save();
 
         return response()->json(['status' => 200, 'message' => 'Email verified successfully.'], 200);
     }
