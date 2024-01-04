@@ -6,45 +6,42 @@ use App\Http\Controllers\Controller;
 use App\Models\User;
 use App\Models\EmailVerificationToken;
 use Illuminate\Http\Request;
-use App\Http\Requests\VerifyEmailRequest;
 use Illuminate\Support\Carbon;
 use Illuminate\Validation\ValidationException;
-use App\Http\Resources\SuccessResource;
-use App\Http\Resources\ErrorResource;
 
 class VerifyEmailController extends Controller
 {
     public function verify(Request $request)
     {
-        $token = $request->input('token');
         $user_id = $request->input('user_id');
         $remember_token = $request->input('remember_token');
+        $token = $request->input('token');
 
         if ($token) {
-            try {
-                $verificationToken = EmailVerificationToken::where('token', $token)
-                    ->where('used', false)
-                    ->where('expires_at', '>', Carbon::now())
-                    ->first();
+            // This block is from the existing code
+            $verificationToken = EmailVerificationToken::where('token', $token)
+                ->where('used', false)
+                ->where('expires_at', '>', Carbon::now())
+                ->first();
 
-                if (!$verificationToken) {
-                    throw new ValidationException("Invalid or expired token provided.");
-                }
-
-                $user = $verificationToken->user;
-                $user->email_verified_at = Carbon::now();
-                $user->save();
-
-                $verificationToken->used = true;
-                $verificationToken->save();
-
-                return response()->json(['message' => 'Email verified successfully.'], 200);
-            } catch (\Exception $e) {
-                // Log the exception if needed
-                // Log::error($e->getMessage());
-                return response()->json(['message' => 'An error occurred during email verification.'], 500);
+            if (!$verificationToken) {
+                return response()->json(['message' => 'Invalid or expired email verification token.'], 404);
             }
+
+            $user = $verificationToken->user;
+            if (!$user) {
+                return response()->json(['message' => 'User not found.'], 404);
+            }
+
+            $user->email_verified_at = Carbon::now();
+            $user->save();
+
+            $verificationToken->used = true;
+            $verificationToken->save();
+
+            return response()->json(['message' => 'Email verified successfully.'], 200);
         } elseif ($user_id && $remember_token) {
+            // This block is from the new code
             $user = User::find($user_id);
 
             abort_if(!$user, 404, "User not found.");
@@ -67,28 +64,30 @@ class VerifyEmailController extends Controller
     /**
      * Verify the user's email using an alternative method.
      *
-     * @param VerifyEmailRequest $request
-     * @return SuccessResource|ErrorResource
+     * @param Request $request
+     * @return \Illuminate\Http\JsonResponse
+     * @throws ValidationException
      */
-    public function verifyEmailAlternative(VerifyEmailRequest $request)
+    public function verifyEmailAlternative(Request $request)
     {
-        $email = $request->input('email');
         $token = $request->input('token');
 
-        $verificationToken = EmailVerificationToken::where('email', $email)
-            ->where('token', $token)
-            ->where('used', false)
+        $emailVerificationToken = EmailVerificationToken::where('token', $token)
             ->where('expires_at', '>', Carbon::now())
+            ->where('used', false)
             ->first();
 
-        if (!$verificationToken) {
-            return new ErrorResource(['message' => 'Invalid or expired token provided.']);
+        if (!$emailVerificationToken) {
+            throw new ValidationException("Invalid or expired token provided.");
         }
 
-        $verificationToken->user->markEmailAsVerified();
-        $verificationToken->used = true;
-        $verificationToken->save();
+        $emailVerificationToken->used = true;
+        $emailVerificationToken->save();
 
-        return new SuccessResource(['message' => 'Email verified successfully.']);
+        $user = $emailVerificationToken->user;
+        $user->email_verified_at = Carbon::now();
+        $user->save();
+
+        return response()->json(['message' => 'Email verified successfully.'], 200);
     }
 }
