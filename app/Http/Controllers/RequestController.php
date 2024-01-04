@@ -1,7 +1,9 @@
+
 <?php
 
 namespace App\Http\Controllers;
 
+use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Http\Request as HttpRequest;
 use App\Http\Requests\UpdateHairStylistRequest;
 use App\Models\Request;
@@ -81,44 +83,32 @@ class RequestController extends Controller
     }
 
     // Method to update a hair stylist request
-    public function update(UpdateHairStylistRequest $request, $id): JsonResponse
+    public function updateHairStylistRequest(UpdateHairStylistRequest $request, Request $hairRequest): JsonResponse
     {
-        $hairRequest = Request::find($id);
         $user = Auth::user();
 
-        if (!$hairRequest || $hairRequest->user_id !== $user->id) {
+        if ($hairRequest->user_id !== $user->id) {
             return response()->json(['message' => 'Request not found or unauthorized.'], 404);
         }
 
-        // Validate the request
-        $validator = Validator::make($request->all(), [
-            'area' => 'required|array|min:1',
-            'menu' => 'required|array|min:1',
-            'hair_concerns' => 'required|string|max:3000',
-            'images' => 'required|array|min:1|max:3',
-            'images.*' => 'image|mimes:png,jpg,jpeg|max:5120', // 5MB
-        ]);
-
-        if ($validator->fails()) {
-            return response()->json(['message' => $validator->errors()->first()], 422);
-        }
+        $validated = $request->validated();
 
         // Update area and menu selections within a transaction
-        DB::transaction(function () use ($request, $id, $hairRequest) {
+        DB::transaction(function () use ($request, $hairRequest) {
             // Update area selections
-            RequestAreaSelection::where('request_id', $id)->delete();
+            RequestAreaSelection::where('request_id', $hairRequest->id)->delete();
             foreach ($request->area as $areaId) {
                 RequestAreaSelection::create([
-                    'request_id' => $id,
+                    'request_id' => $hairRequest->id,
                     'area_id' => $areaId,
                 ]);
             }
 
             // Update menu selections
-            RequestMenuSelection::where('request_id', $id)->delete();
+            RequestMenuSelection::where('request_id', $hairRequest->id)->delete();
             foreach ($request->menu as $menuId) {
                 RequestMenuSelection::create([
-                    'request_id' => $id,
+                    'request_id' => $hairRequest->id,
                     'menu_id' => $menuId,
                 ]);
             }
@@ -127,12 +117,12 @@ class RequestController extends Controller
             $hairRequest->update(['hair_concerns' => $request->hair_concerns]);
 
             // Update images
-            RequestImage::where('request_id', $id)->delete();
+            RequestImage::where('request_id', $hairRequest->id)->delete();
             foreach ($request->images as $image) {
                 // Store the image and get the path
                 $imagePath = Storage::disk('public')->put('request_images', $image);
                 RequestImage::create([
-                    'request_id' => $id,
+                    'request_id' => $hairRequest->id,
                     'image_path' => $imagePath,
                 ]);
             }
@@ -141,9 +131,9 @@ class RequestController extends Controller
         return response()->json([
             'status' => 200,
             'message' => 'Hair stylist request updated successfully',
-            'request_id' => $id,
+            'request_id' => $hairRequest->id,
             'request' => $hairRequest->fresh(),
-        ]);
+        ], 200);
     }
 
     // Method to delete an image from a hair stylist request
