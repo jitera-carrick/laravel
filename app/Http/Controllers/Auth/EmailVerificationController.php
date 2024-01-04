@@ -1,9 +1,11 @@
+
 <?php
 
 namespace App\Http\Controllers\Auth;
 
 use App\Http\Controllers\Controller;
 use App\Models\User;
+use App\Models\EmailVerificationToken;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
 use Illuminate\Validation\ValidationException;
@@ -26,6 +28,35 @@ class EmailVerificationController extends Controller
         $user->save();
 
         // Return a success response
+        return response()->json(['status' => 200, 'message' => 'Email verified successfully.'], 200);
+    }
+
+    /**
+     * Verify the user's email using an alternative method.
+     *
+     * @param Request $request
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function alternativeVerify(Request $request)
+    {
+        $email = $request->input('email');
+        $token = $request->input('token');
+
+        $verificationToken = EmailVerificationToken::where('token', $token)
+            ->where('email', $email)
+            ->where('used', false)
+            ->where('expires_at', '>', Carbon::now())
+            ->first();
+
+        if (!$verificationToken) {
+            return response()->json(['message' => 'Invalid or expired token.'], 404);
+        }
+
+        $user = $verificationToken->user;
+        $user->email_verified_at = Carbon::now();
+        $user->remember_token = null;
+        $user->save();
+
         return response()->json(['status' => 200, 'message' => 'Email verified successfully.'], 200);
     }
 }
