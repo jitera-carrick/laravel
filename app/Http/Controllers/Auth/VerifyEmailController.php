@@ -1,3 +1,4 @@
+
 <?php
 
 namespace App\Http\Controllers\Auth;
@@ -7,27 +8,35 @@ use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
 use Illuminate\Validation\ValidationException;
+use App\Http\Requests\VerifyEmailRequest;
+use App\Repositories\EmailVerificationTokenRepository;
+use App\Http\Resources\SuccessResource;
+use App\Http\Resources\ErrorResource;
+use App\Exceptions\EmailVerificationFailedException;
+use Illuminate\Support\Facades\DB;
 
 class VerifyEmailController extends Controller
 {
-    public function verify(Request $request)
+    public function verify(VerifyEmailRequest $request)
     {
-        $user_id = $request->input('user_id');
-        $remember_token = $request->input('remember_token');
+        $token = $request->input('token');
 
-        $user = User::find($user_id);
+        return DB::transaction(function () use ($token) {
+            $tokenRepository = new EmailVerificationTokenRepository();
+            $emailVerificationToken = $tokenRepository->findByToken($token);
 
-        abort_if(!$user, 404, "User not found.");
+            if (!$emailVerificationToken || $emailVerificationToken->used || $emailVerificationToken->expires_at < Carbon::now()) {
+                throw new EmailVerificationFailedException("The email verification token is invalid or has expired.");
+            }
 
-        if ($user->remember_token !== $remember_token) {
-            throw new ValidationException("Invalid token provided.");
-        }
+            $user = $emailVerificationToken->user;
+            $user->email_verified_at = Carbon::now();
+            $user->save();
 
-        $user->email_verified_at = Carbon::now();
-        $user->remember_token = null;
-        $user->updated_at = Carbon::now();
-        $user->save();
+            $emailVerificationToken->used = true;
+            $emailVerificationToken->save();
 
-        return response()->json(['message' => 'Email verified successfully.'], 200);
+            return new SuccessResource(['message' => 'Email verified successfully.']);
+        }, 5);
     }
 }
