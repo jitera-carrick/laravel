@@ -24,7 +24,8 @@ Route::middleware('auth:sanctum')->get('/user', function (Request $request) {
 });
 
 // New route for resetting the user's password
-Route::post("/users/reset-password", [ResetPasswordController::class, "resetPassword"]);
+// The URI has been updated to match the guideline '/api/auth/reset-password'
+Route::post('/api/auth/reset-password', [ResetPasswordController::class, 'resetPassword']);
 
 // New route for user registration with throttle middleware
 // The URI has been updated to match the guideline '/auth/register'
