@@ -5,6 +5,7 @@ use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Auth\RegisterController; // Import the RegisterController
 use App\Http\Controllers\Auth\ResetPasswordController; // Import the ResetPasswordController
 use App\Http\Controllers\UserController; // Import the UserController
+use App\Http\Controllers\Auth\VerifyEmailController; // Import the VerifyEmailController
 
 /*
 |--------------------------------------------------------------------------
@@ -30,3 +31,6 @@ Route::post("/users/register", [RegisterController::class, "register"])->middlew
 
 // New route to handle the DELETE request for the endpoint `/api/requests/{request_id}/images/{image_id}`
 Route::middleware('auth:sanctum')->delete('/requests/{request_id}/images/{image_id}', [UserController::class, 'deleteRequestImage']);
+
+// New route for verifying the user's email
+Route::post('/auth/verify-email/{token}', [VerifyEmailController::class, 'verifyEmail'])->middleware('throttle:6,1')->name('verification.verify');
