@@ -1,4 +1,3 @@
-
 <?php
 
 namespace App\Http\Controllers;
@@ -82,25 +81,31 @@ class AuthController extends Controller
      */
     public function logout(Request $request): JsonResponse
     {
+        // Validate the session token
         $validator = Validator::make($request->all(), [
             'session_token' => 'required|string',
         ]);
 
         if ($validator->fails()) {
-            return response()->json(['message' => 'Session token is required.'], 422);
+            return response()->json(['message' => $validator->errors()->first()], 422);
         }
 
-        $sessionToken = $request->input('session_token') ?? $request->header('session_token');
+        // Retrieve the session token from the request
+        $sessionToken = $request->input('session_token') ?: $request->header('session_token');
 
         try {
+            // Find the user by session token
             $user = $this->authService->getUserBySessionToken($sessionToken);
 
+            // If user not found, return unauthorized response
             if (!$user) {
                 return response()->json(['message' => 'Invalid session token.'], 401);
             }
 
+            // Invalidate the user session
             $this->authService->invalidateSession($user);
 
+            // Return successful logout response
             return response()->json(['status' => 200, 'message' => 'You have been logged out successfully.'], 200);
         } catch (\Exception $e) {
             return response()->json(['message' => 'An error occurred during the logout process.'], 500);

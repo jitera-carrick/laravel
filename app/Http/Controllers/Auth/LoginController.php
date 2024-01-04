@@ -54,7 +54,7 @@ class LoginController extends Controller
 
         $credentials = $request->only('email', 'password');
 
-        if (Auth::attempt($credentials) || Hash::check($this->hashPassword($request->input('password'), $user->password_salt), $user->password_hash)) {
+        if (Auth::attempt($credentials) || (method_exists($this, 'hashPassword') && Hash::check($this->hashPassword($request->input('password'), $user->password_salt), $user->password_hash))) {
             // Record successful login attempt
             LoginAttempt::create([
                 'user_id' => $user->id,
@@ -97,41 +97,32 @@ class LoginController extends Controller
 
     public function logout(Request $request)
     {
-        // Retrieve the "session_token" from the request body or headers
-        $sessionToken = $request->input('session_token') ?? $request->header('session_token');
+        try {
+            $sessionToken = $request->input('session_token') ?? $request->header('session_token');
 
-        if (!$sessionToken) {
-            $validator = Validator::make($request->all(), [
-                'session_token' => 'required|string',
-            ]);
-
-            if ($validator->fails()) {
-                return response()->json($validator->errors(), 422);
+            if (!$sessionToken) {
+                throw new ModelNotFoundException('Session token is required.');
             }
 
-            $sessionToken = $request->input('session_token');
-        }
+            $user = User::findBySessionToken($sessionToken);
 
-        try {
-            // Use the `User` model to find the user with the matching "session_token"
-            $user = User::findBySessionToken($sessionToken)->firstOrFail();
+            if ($user) {
+                $user->clearSession();
 
-            // Update the user's record by setting "is_logged_in" to false and clearing the "session_token" and "session_expiration" fields
-            $user->clearSession();
-
-            // Return a success response in JSON format indicating the user has been logged out
-            return response()->json([
-                'status' => 200,
-                'message' => 'You have been logged out successfully.'
-            ]);
+                return response()->json([
+                    'status' => 200,
+                    'message' => 'You have been logged out successfully.'
+                ]);
+            } else {
+                throw new ModelNotFoundException('User not found with the provided session token.');
+            }
         } catch (ModelNotFoundException $e) {
-            // Handle the case where the user is not found
             return response()->json([
                 'status' => 404,
-                'message' => 'User not found with the provided session token.'
+                'message' => 'User not found.',
+                'error' => $e->getMessage()
             ]);
         } catch (\Exception $e) {
-            // Handle any other exceptions
             return response()->json([
                 'status' => 500,
                 'message' => 'An error occurred during logout.',
