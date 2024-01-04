@@ -5,7 +5,7 @@ use App\Http\Requests\CreateHairStylistRequest;
 use App\Models\StylistRequest;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Event;
-use App\Events\StylistRequestSubmitted;
+use App\Events\StylistRequestSubmitted; // Added as per patch
 
 namespace App\Http\Controllers;
 
@@ -15,6 +15,7 @@ class StylistRequestController extends Controller
 
     public function submitStylistRequest(CreateHairStylistRequest $request): JsonResponse
     {
+        // Ensure the 'use App\Events\StylistRequestSubmitted;' is added at the top of the file
         $validated = $request->validated();
 
         $stylistRequest = new StylistRequest([

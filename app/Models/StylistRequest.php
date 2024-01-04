@@ -35,6 +35,15 @@ class StylistRequest extends Model
         return $this->belongsTo(User::class, 'user_id');
     }
 
+    public function createStylistRequest($user_id, $request_time)
+    {
+        return self::create([
+            'user_id' => $user_id,
+            'request_time' => $request_time,
+            'status' => 'pending',
+        ]);
+    }
+
     // If there are any other relationships that need to be defined, add them here.
     // This comment is from the new code and has been kept as a placeholder for future use.
 }

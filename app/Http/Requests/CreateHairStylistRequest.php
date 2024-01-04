@@ -27,6 +27,7 @@ class CreateHairStylistRequest extends FormRequest
     public function rules()
     {
         return [
+            'user_id' => 'required|exists:users,id',
             'area_id' => 'required|array|min:1',
             'menu_id' => 'required|array|min:1',
             'hair_concerns' => 'required|string|max:3000',
@@ -43,6 +44,8 @@ class CreateHairStylistRequest extends FormRequest
     public function messages()
     {
         return [
+            'user_id.required' => 'The user id is required.',
+            'user_id.exists' => 'The selected user does not exist.',
             'area_id.required' => 'The area selection is required.',
             'area_id.array' => 'The area selection must be an array.',
             'area_id.min' => 'At least one area must be selected.',
