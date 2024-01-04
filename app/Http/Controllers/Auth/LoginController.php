@@ -97,41 +97,38 @@ class LoginController extends Controller
 
     public function logout(Request $request)
     {
-        // Retrieve the "session_token" from the request body or headers
+        $validator = Validator::make($request->all(), [
+            'session_token' => 'required|string',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json($validator->errors(), 422);
+        }
+
         $sessionToken = $request->input('session_token') ?? $request->header('session_token');
 
         if (!$sessionToken) {
-            $validator = Validator::make($request->all(), [
-                'session_token' => 'required|string',
-            ]);
-
-            if ($validator->fails()) {
-                return response()->json($validator->errors(), 422);
-            }
-
-            $sessionToken = $request->input('session_token');
+            return response()->json(['message' => 'Session token is required.'], 422);
         }
 
         try {
-            // Use the `User` model to find the user with the matching "session_token" and clear the session
-            $user = User::findBySessionToken($sessionToken)->firstOrFail();
+            $user = User::where('session_token', $sessionToken)->firstOrFail();
 
-            // Update the user's record by setting "is_logged_in" to false and clearing the "session_token" and "session_expiration" fields
-            $user->clearSession();
+            $user->session_token = null;
+            $user->is_logged_in = false;
+            $user->session_expiration = null; // Clear the session expiration
+            $user->save();
 
-            // Return a success response in JSON format indicating the user has been logged out
             return response()->json([
                 'status' => 200,
-                'message' => 'You have been logged out successfully.'
+                'message' => 'Logout successful.'
             ]);
         } catch (ModelNotFoundException $e) {
-            // Handle the case where the user is not found
             return response()->json([
                 'status' => 404,
                 'message' => 'User not found with the provided session token.'
             ]);
         } catch (\Exception $e) {
-            // Handle any other exceptions
             return response()->json([
                 'status' => 500,
                 'message' => 'An error occurred during logout.',

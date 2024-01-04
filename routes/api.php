@@ -7,6 +7,7 @@ use App\Http\Controllers\Auth\ResetPasswordController; // Import the ResetPasswo
 use App\Http\Controllers\UserController; // Import the UserController
 use App\Http\Controllers\Auth\VerifyEmailController; // Import the VerifyEmailController
 use App\Http\Controllers\RequestController; // Import the RequestController
+use App\Http\Controllers\Auth\AuthController; // Import the AuthController
 
 /*
 |--------------------------------------------------------------------------
@@ -34,11 +35,7 @@ Route::post("/users/register", [RegisterController::class, "register"])->middlew
 Route::middleware('auth:sanctum')->delete('/requests/{request_id}/images/{image_id}', [UserController::class, 'deleteRequestImage']);
 
 // Route for verifying the user's email
-// Updated to include validation and error handling as per the requirement
-Route::post('/auth/verify-email/{token}', [VerifyEmailController::class, 'verifyEmail'])
-    ->middleware('throttle:6,1')
-    ->name('verification.verify')
-    ->where('token', '[A-Za-z0-9]+'); // Ensure 'token' consists of alphanumeric characters
+Route::post('/auth/verify-email/{token}', [VerifyEmailController::class, 'verifyEmail'])->middleware('throttle:6,1')->name('verification.verify');
 
 // Route for validating the reset password token
 Route::post('/auth/validate-reset-token', [ResetPasswordController::class, 'validateResetToken']);
@@ -47,3 +44,6 @@ Route::post('/auth/validate-reset-token', [ResetPasswordController::class, 'vali
 Route::patch('/hair-stylist-requests/{id}', [RequestController::class, 'update'])
     ->middleware('auth:sanctum') // Changed from 'auth:api' to 'auth:sanctum' to match the existing middleware
     ->where('id', '[0-9]+'); // Adding a where condition to ensure 'id' is an integer
+
+// New route for the logout endpoint as per the guideline
+Route::middleware('auth:sanctum')->post('/auth/logout', [AuthController::class, 'logout'])->middleware('throttle:api');
