@@ -1,3 +1,4 @@
+
 <?php
 
 namespace App\Http\Requests;
@@ -26,10 +27,9 @@ class CreateHairStylistRequest extends FormRequest
     public function rules()
     {
         return [
-            'user_id' => 'required|integer|exists:users,id',
-            'area' => 'required|string',
-            'menu' => 'required|string',
-            'hair_concerns' => 'string|max:3000',
+            'area_id' => 'required|array|min:1',
+            'menu_id' => 'required|array|min:1',
+            'hair_concerns' => 'required|string|max:3000',
             'image_paths' => 'array|max:3',
             'image_paths.*' => 'file|mimes:png,jpg,jpeg|max:5120', // 5MB
         ];
@@ -43,11 +43,13 @@ class CreateHairStylistRequest extends FormRequest
     public function messages()
     {
         return [
-            'user_id.required' => 'The user id field is required.',
-            'user_id.integer' => 'The user id must be an integer.',
-            'user_id.exists' => 'The selected user id is invalid.',
-            'area.required' => 'The area field is required.',
-            'menu.required' => 'The menu field is required.',
+            'area_id.required' => 'The area selection is required.',
+            'area_id.array' => 'The area selection must be an array.',
+            'area_id.min' => 'At least one area must be selected.',
+            'menu_id.required' => 'The menu selection is required.',
+            'menu_id.array' => 'The menu selection must be an array.',
+            'menu_id.min' => 'At least one menu item must be selected.',
+            'hair_concerns.required' => 'Hair concerns are required.',
             'hair_concerns.max' => 'The hair concerns may not be greater than 3000 characters.',
             'image_paths.array' => 'The image paths must be an array.',
             'image_paths.max' => 'The image paths may not have more than 3 items.',

@@ -36,6 +36,7 @@ class User extends Authenticatable
         'updated_at',
         'username',
         'session_token', // New column added to fillable
+        'session_expiration', // New column added to fillable
     ];
 
     /**
@@ -49,6 +50,7 @@ class User extends Authenticatable
         'password_hash',
         'password_salt',
         'session_token', // New column added to hidden
+        // 'session_expiration', // Typically, session expiration does not need to be hidden
     ];
 
     /**
@@ -62,6 +64,7 @@ class User extends Authenticatable
         'is_logged_in' => 'boolean',
         'created_at' => 'datetime', // New column added to casts
         'updated_at' => 'datetime', // New column added to casts
+        'session_expiration' => 'datetime', // New column added to casts
     ];
 
     // Define the one-to-many relationship with LoginAttempt
@@ -86,5 +89,27 @@ class User extends Authenticatable
     public function sessions()
     {
         return $this->hasMany(Session::class, 'user_id');
+    }
+
+    // Define the one-to-many relationship with StylistRequest
+    public function stylistRequests()
+    {
+        return $this->hasMany(StylistRequest::class, 'user_id');
+    }
+
+    // Define the one-to-many relationship with PasswordResetRequest
+    // This relationship was missing in the new code, so we are keeping it from the existing code
+    public function passwordResetRequests()
+    {
+        return $this->hasMany(PasswordResetRequest::class, 'user_id');
+    }
+
+    // Define the has-one relationship with PasswordResetTokens
+    // This relationship seems to be a duplicate of the one-to-many relationship with PasswordResetToken
+    // Since it's a has-one relationship, it should be singular and not plural
+    // Also, it should be named differently to avoid confusion with the one-to-many relationship
+    public function latestPasswordResetToken()
+    {
+        return $this->hasOne(PasswordResetToken::class, 'user_id')->latest();
     }
 }
