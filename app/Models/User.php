@@ -13,37 +13,50 @@ class User extends Authenticatable
 
     // ... existing code ...
 
-    // Define the one-to-many relationship with PasswordPolicies
-    public function passwordPolicies()
+    /**
+     * The attributes that are mass assignable.
+     *
+     * @var array<int, string>
+     */
+    protected $fillable = [
+        'name',
+        'email',
+        'username',
+        'password',
+        'password_hash',
+        'password_salt',
+        'last_password_reset',
+        'remember_token',
+        'session_token',
+        'is_logged_in',
+        'session_expiration',
+    ];
+
+    // ... existing relationships ...
+
+    // Define the one-to-many relationship with LoginAttempt
+    public function loginAttempts()
     {
-        return $this->hasOne(PasswordPolicy::class, 'user_id');
+        return $this->hasMany(LoginAttempt::class, 'user_id');
     }
 
-    // Define the one-to-many relationship with Session
-    public function sessions()
+    // Define the one-to-many relationship with Request
+    public function requests()
     {
-        return $this->hasMany(Session::class, 'user_id');
+        return $this->hasMany(Request::class, 'user_id');
     }
 
-    // Define the one-to-many relationship with StylistRequest
-    public function stylistRequests()
+    // Define the one-to-many relationship with EmailVerificationToken
+    public function emailVerificationTokens()
     {
-        return $this->hasMany(StylistRequest::class, 'user_id');
+        return $this->hasMany(EmailVerificationToken::class, 'user_id');
     }
 
-    // Define the one-to-many relationship with PasswordResetRequest
-    // This relationship was missing in the new code, so we are keeping it from the existing code
-    public function passwordResetRequests()
+    // Define the one-to-many relationship with PasswordResetToken
+    public function passwordResetTokens()
     {
-        return $this->hasMany(PasswordResetRequest::class, 'user_id');
+        return $this->hasMany(PasswordResetToken::class, 'user_id');
     }
 
-    // Define the has-one relationship with PasswordResetTokens
-    // This relationship seems to be a duplicate of the one-to-many relationship with PasswordResetToken
-    // Since it's a has-one relationship, it should be singular and not plural
-    // Also, it should be named differently to avoid confusion with the one-to-many relationship
-    public function latestPasswordResetToken()
-    {
-        return $this->hasOne(PasswordResetToken::class, 'user_id')->latest();
-    }
+    // ... existing methods ...
 }
