@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use Illuminate\Http\Request as HttpRequest;
+use App\Http\Requests\CreateHairStylistRequest;
 use App\Http\Requests\UpdateHairStylistRequest;
 use App\Models\Request;
 use App\Models\RequestAreaSelection;
@@ -10,9 +11,9 @@ use App\Models\RequestMenuSelection;
 use App\Models\RequestImage;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Http\JsonResponse;
-use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Validator;
 
 class RequestController extends Controller
 {
@@ -23,27 +24,29 @@ class RequestController extends Controller
     {
         $user = Auth::user();
 
-        // Validate the request
-        $validator = Validator::make($httpRequest->all(), [
-            'user_id' => 'required|exists:users,id',
-            'area_id' => 'required|array|min:1',
-            'menu_id' => 'required|array|min:1',
-            'hair_concerns' => 'required|string|max:3000',
-            'image_path' => 'required|array|max:3',
-            'image_path.*' => 'file|image|mimes:png,jpg,jpeg|max:5120', // 5MB
-        ]);
+        // Validate the request if CreateHairStylistRequest is not used
+        if (!$httpRequest instanceof CreateHairStylistRequest) {
+            $validator = Validator::make($httpRequest->all(), [
+                'user_id' => 'required|exists:users,id',
+                'area_id' => 'required|array|min:1',
+                'menu_id' => 'required|array|min:1',
+                'hair_concerns' => 'required|string|max:3000',
+                'image_path' => 'required|array|max:3',
+                'image_path.*' => 'file|image|mimes:png,jpg,jpeg|max:5120', // 5MB
+            ]);
 
-        if ($validator->fails()) {
-            return response()->json(['message' => $validator->errors()->first()], 422);
-        }
+            if ($validator->fails()) {
+                return response()->json(['message' => $validator->errors()->first()], 422);
+            }
 
-        if ($httpRequest->user_id != $user->id) {
-            return response()->json(['message' => 'Unauthorized user.'], 401);
+            if ($httpRequest->user_id != $user->id) {
+                return response()->json(['message' => 'Unauthorized user.'], 401);
+            }
         }
 
         // Create the request
         $hairRequest = Request::create([
-            'user_id' => $httpRequest->user_id,
+            'user_id' => $user->id,
             'hair_concerns' => $httpRequest->hair_concerns,
             'status' => 'pending', // Assuming 'pending' is a valid status
         ]);
@@ -90,17 +93,19 @@ class RequestController extends Controller
             return response()->json(['message' => 'Request not found or unauthorized.'], 404);
         }
 
-        // Validate the request
-        $validator = Validator::make($request->all(), [
-            'area' => 'required|array|min:1',
-            'menu' => 'required|array|min:1',
-            'hair_concerns' => 'required|string|max:3000',
-            'images' => 'required|array|min:1|max:3',
-            'images.*' => 'image|mimes:png,jpg,jpeg|max:5120', // 5MB
-        ]);
+        // Validate the request if UpdateHairStylistRequest is not used
+        if (!$request instanceof UpdateHairStylistRequest) {
+            $validator = Validator::make($request->all(), [
+                'area' => 'required|array|min:1',
+                'menu' => 'required|array|min:1',
+                'hair_concerns' => 'required|string|max:3000',
+                'images' => 'required|array|min:1|max:3',
+                'images.*' => 'image|mimes:png,jpg,jpeg|max:5120', // 5MB
+            ]);
 
-        if ($validator->fails()) {
-            return response()->json(['message' => $validator->errors()->first()], 422);
+            if ($validator->fails()) {
+                return response()->json(['message' => $validator->errors()->first()], 422);
+            }
         }
 
         // Update area and menu selections within a transaction
@@ -144,26 +149,6 @@ class RequestController extends Controller
             'request_id' => $id,
             'request' => $hairRequest->fresh(),
         ]);
-    }
-
-    // Method to update a hair stylist request
-    public function updateHairStylistRequest(UpdateHairStylistRequest $updateRequest, Request $hairRequest): JsonResponse
-    {
-        try {
-            $hairRequest->update($updateRequest->validated());
-
-            return response()->json([
-                'status' => 200,
-                'message' => 'Request updated successfully.',
-                'request_id' => $hairRequest->id,
-                'request' => $hairRequest->fresh(),
-            ]);
-        } catch (\Exception $e) {
-            return response()->json([
-                'status' => 500,
-                'message' => 'Failed to update the request.',
-            ]);
-        }
     }
 
     // Method to delete an image from a hair stylist request
