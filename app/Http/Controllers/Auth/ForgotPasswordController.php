@@ -48,41 +48,6 @@ class ForgotPasswordController extends Controller
         }
     }
 
-    public function sendResetLinkEmail(Request $request)
-    {
-        $request->validate([
-            'email' => 'required|email',
-        ]);
-
-        $user = User::where('email', $request->email)->first();
-
-        if (!$user) {
-            return response()->json(['message' => 'Email not found.'], 404);
-        }
-
-        $token = Str::random(60);
-        $passwordResetToken = new PasswordResetToken([
-            'email' => $user->email,
-            'token' => $token,
-            'created_at' => now(),
-            'expires_at' => now()->addMinutes(Config::get('auth.passwords.users.expire')),
-            'used' => false,
-            'user_id' => $user->id,
-        ]);
-        $passwordResetToken->save();
-
-        $user->notify(new ResetPasswordNotification($token));
-
-        return response()->json([
-            'status' => 200,
-            'message' => 'Password reset request sent successfully.',
-            'reset_token' => $token,
-        ]);
-    }
-
-    // ... (other methods remain unchanged)
-    
-    // New method to handle password reset request flow
     public function handlePasswordResetRequest(Request $request)
     {
         $validatedData = $request->validate([
@@ -91,27 +56,30 @@ class ForgotPasswordController extends Controller
 
         $user = User::where('email', $validatedData['email'])->first();
 
-        if (!$user) {
-            return response()->json(['message' => 'Email not found.'], 404);
+        if ($user) {
+            $resetToken = Str::random(60);
+            $requestTime = Carbon::now();
+
+            $passwordResetRequest = new PasswordResetRequest([
+                'user_id' => $user->id,
+                'reset_token' => $resetToken,
+                'request_time' => $requestTime,
+                'status' => 'pending',
+            ]);
+            $passwordResetRequest->save();
+
+            $user->notify(new ResetPasswordNotification($resetToken));
+
+            return response()->json([
+                'status' => 200,
+                'message' => 'Password reset request sent successfully.',
+                'reset_token' => $resetToken,
+                'request_time' => $requestTime, // Added from new code
+            ]);
         }
 
-        $resetToken = Str::random(60);
-        $requestTime = Carbon::now();
-
-        $passwordResetRequest = new PasswordResetRequest([
-            'user_id' => $user->id,
-            'reset_token' => $resetToken,
-            'request_time' => $requestTime,
-            'status' => 'pending',
-        ]);
-        $passwordResetRequest->save();
-
-        $user->notify(new ResetPasswordNotification($resetToken));
-
-        return response()->json([
-            'status' => 200,
-            'message' => 'Password reset request sent successfully.',
-            'reset_token' => $resetToken,
-        ]);
+        return response()->json(['message' => 'User not found'], 404);
     }
+
+    // ... (other methods remain unchanged)
 }
