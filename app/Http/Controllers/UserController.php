@@ -1,14 +1,13 @@
-
 <?php
 
 namespace App\Http\Controllers;
 
 use Illuminate\Database\Eloquent\ModelNotFoundException;
-use App\Http\Requests\CreateHairStylistRequest; // Import the new form request validation class
-use App\Http\Requests\UpdateHairStylistRequest; // Import the update form request validation class
-use App\Http\Requests\ValidateStylistRequest; // Import the ValidateStylistRequest form request validation class
+use App\Http\Requests\CreateHairStylistRequest;
+use App\Http\Requests\UpdateHairStylistRequest;
+use App\Http\Requests\ValidateStylistRequest;
 use App\Models\User;
-use App\Models\Request as HairStylistRequest; // Renamed to avoid confusion with HTTP Request
+use App\Models\Request as HairStylistRequest;
 use App\Models\RequestArea;
 use App\Models\RequestMenu;
 use App\Models\RequestImage;
@@ -17,8 +16,8 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request as HttpRequest;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Facades\Storage;
-use Illuminate\Support\Facades\Response; // Import the Response facade
-use Illuminate\Support\Facades\Notification; // Added import for Notification facade
+use Illuminate\Support\Facades\Response;
+use Illuminate\Support\Facades\Notification;
 use Illuminate\Support\Str;
 use App\Models\StylistRequest;
 use App\Events\StylistRequestSubmitted;
@@ -26,8 +25,6 @@ use App\Events\StylistRequestSubmitted;
 class UserController extends Controller
 {
     // ... other methods ...
-
-    // Existing methods remain unchanged
 
     // Method to create or update a hair stylist request
     public function createOrUpdateHairStylistRequest(HttpRequest $request): JsonResponse
@@ -62,31 +59,52 @@ class UserController extends Controller
     /**
      * Submit a stylist request.
      *
-     * @param HttpRequest $request
+     * @param ValidateStylistRequest $request
      * @return JsonResponse
      */
-    public function submitStylistRequest(HttpRequest $request): JsonResponse
+    public function submitStylistRequest(ValidateStylistRequest $request): JsonResponse
     {
-        try {
-            $userId = Auth::id();
-            if ($request->input('user_id') != $userId) {
-                return response()->json(['message' => 'Unauthorized.'], 401);
-            }
+        $validatedData = $request->validated();
+        $userId = $validatedData['user_id'];
+        $requestTime = now();
 
-            $requestTime = now();
-            $stylistRequest = new StylistRequest([
-                'user_id' => $userId,
-                'request_time' => $requestTime,
-                'status' => 'pending',
-            ]);
-            $stylistRequest->save();
+        $stylistRequest = StylistRequest::create([
+            'user_id' => $userId,
+            'status' => 'pending',
+            'request_time' => $requestTime,
+        ]);
 
-            // Notification logic here (assuming Notification class exists)
-            // Notification::send($admins, new StylistRequestReceived($stylistRequest));
+        event(new StylistRequestSubmitted($stylistRequest));
 
-            return response()->json(['request_id' => $stylistRequest->id, 'request_time' => $requestTime->toDateTimeString()]);
-        } catch (\Exception $e) {
-            return response()->json(['message' => 'An error occurred while submitting the stylist request.'], 500);
+        // Notification logic here (assuming Notification class exists)
+        // Notification::send($admins, new StylistRequestReceived($stylistRequest));
+
+        return Response::json([
+            'request_id' => $stylistRequest->id,
+            'request_time' => $requestTime->toDateTimeString(),
+        ]);
+    }
+
+    public function maintainUserSession(HttpRequest $request)
+    {
+        $sessionToken = $request->input('session_token');
+        $keepSession = $request->input('keep_session', false);
+
+        $user = User::where('session_token', $sessionToken)->first();
+
+        if (!$user) {
+            return response()->json(['message' => 'Session could not be maintained.'], 404);
+        }
+
+        $currentTime = now();
+        if ($currentTime->lessThan($user->session_expiration)) {
+            $newExpiration = $keepSession ? $currentTime->addDays(90) : $currentTime->addHours(24);
+            $user->session_expiration = $newExpiration;
+            $user->save();
+
+            return response()->json(['session_expiration' => $user->session_expiration]);
+        } else {
+            return response()->json(['message' => 'Session has expired.'], 401);
         }
     }
 
