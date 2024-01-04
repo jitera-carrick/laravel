@@ -38,8 +38,62 @@ class ResetPasswordController extends Controller
 
     public function resetPassword(Request $request): JsonResponse
     {
-        // Existing code remains unchanged
-        // ...
+        $validator = Validator::make($request->all(), [
+            'email' => 'required|email',
+            'token' => 'required',
+            'password' => 'required|min:6|regex:/^(?=.*[a-zA-Z])(?=.*\d).+$/',
+        ], [
+            'email.required' => 'Please enter a valid email address.',
+            'token.required' => 'The reset token is expired or invalid.',
+            'password.required' => 'Password is required.',
+            'password.min' => 'Password must be at least 6 characters long.',
+            'password.regex' => 'Password must contain both letters and numbers.',
+        ]);
+
+        if ($validator->fails()) {
+            return ApiResponse::error($validator->errors(), 422);
+        }
+
+        DB::beginTransaction();
+        try {
+            $passwordResetToken = PasswordResetToken::where('token', $request->token)
+                ->where('used', false)
+                ->where('expires_at', '>', Carbon::now())
+                ->first();
+
+            if (!$passwordResetToken) {
+                DB::rollBack();
+                return ApiResponse::error(['message' => 'The reset token is expired or invalid.'], 404);
+            }
+
+            $user = User::where('email', $request->email)->first();
+            if (!$user) {
+                DB::rollBack();
+                return ApiResponse::error(['message' => 'User not found.'], 404);
+            }
+
+            // Use the AuthService to handle password encryption and updating if available
+            if (class_exists(AuthService::class)) {
+                $authService = new AuthService();
+                $passwordData = $authService->encryptPassword($request->password);
+                $user->password = $passwordData['password_hash']; // Update the user's password hash
+                $user->password_salt = $passwordData['password_salt']; // Update the user's password salt
+            } else {
+                $user->password = Hash::make($request->password);
+            }
+
+            $user->save();
+
+            $passwordResetToken->used = true;
+            $passwordResetToken->save();
+
+            DB::commit();
+
+            return ApiResponse::success(['message' => 'Your password has been reset successfully.'], 200);
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return ApiResponse::error(['message' => 'An error occurred while resetting the password.'], 500);
+        }
     }
 
     public function validateResetToken(ValidateResetTokenRequest $request): JsonResponse
@@ -58,17 +112,14 @@ class ResetPasswordController extends Controller
 
         $passwordResetToken = PasswordResetToken::where('token', $token)
             ->where('used', false)
+            ->where('expires_at', '>', Carbon::now())
             ->first();
 
-        if (!$passwordResetToken) {
-            return ApiResponse::error(['message' => 'The reset token is invalid.'], 404);
+        if ($passwordResetToken) {
+            return ApiResponse::success(['message' => 'The password reset token is valid.'], 200);
+        } else {
+            return ApiResponse::error(['message' => 'The reset token is invalid or has expired.'], 404);
         }
-
-        if ($passwordResetToken->expires_at <= Carbon::now()) {
-            return ApiResponse::error(['message' => 'The reset token is expired.'], 400);
-        }
-
-        return ApiResponse::success(['message' => 'Reset token is valid.'], 200);
     }
 
     // ... other methods ...

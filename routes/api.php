@@ -23,17 +23,21 @@ Route::middleware('auth:sanctum')->get('/user', function (Request $request) {
     return $request->user();
 });
 
-// Route for resetting the user's password
-Route::post("/users/reset-password", [ResetPasswordController::class, "resetPassword"]);
+// Updated route for resetting the user's password to match the guideline
+// Note: The new code has a different URI for the password reset. We need to ensure that only one route exists for this action.
+// We will use the new URI as it seems to be the updated one according to the new code guidelines.
+Route::post('/auth/reset-password', [ResetPasswordController::class, 'resetPassword']);
 
-// Route for user registration with throttle middleware
+// Existing route for user registration with throttle middleware
 Route::post("/users/register", [RegisterController::class, "register"])->middleware("throttle:api");
 
-// Route to handle the DELETE request for the endpoint `/api/requests/{request_id}/images/{image_id}`
+// Existing route to handle the DELETE request for the endpoint `/api/requests/{request_id}/images/{image_id}`
 Route::middleware('auth:sanctum')->delete('/requests/{request_id}/images/{image_id}', [UserController::class, 'deleteRequestImage']);
 
 // Route for verifying the user's email
+// This route is not present in the new code, but we are keeping it as it is part of the existing functionality.
 Route::post('/auth/verify-email/{token}', [VerifyEmailController::class, 'verifyEmail'])->middleware('throttle:6,1')->name('verification.verify');
 
 // Route for validating the reset password token
+// This route is not present in the new code, but we are keeping it as it is part of the existing functionality.
 Route::post('/auth/validate-reset-token', [ResetPasswordController::class, 'validateResetToken']);
