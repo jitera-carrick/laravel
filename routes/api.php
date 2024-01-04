@@ -6,6 +6,7 @@ use App\Http\Controllers\Auth\RegisterController; // Import the RegisterControll
 use App\Http\Controllers\Auth\ResetPasswordController; // Import the ResetPasswordController
 use App\Http\Controllers\UserController; // Import the UserController
 use App\Http\Controllers\Auth\VerifyEmailController; // Import the VerifyEmailController
+use App\Http\Controllers\Auth\AuthController; // Import the AuthController
 
 /*
 |--------------------------------------------------------------------------
@@ -23,16 +24,18 @@ Route::middleware('auth:sanctum')->get('/user', function (Request $request) {
     return $request->user();
 });
 
-// Updated route for resetting the user's password to match the guideline
-// Note: The new code has a different URI for the password reset. We need to ensure that only one route exists for this action.
-// We will use the new URI as it seems to be the updated one according to the new code guidelines.
-Route::post('/auth/reset-password', [ResetPasswordController::class, 'resetPassword']);
+// New route for resetting the user's password
+// We are using the new URI as it seems to be the updated one according to the new code guidelines.
+Route::post("/users/reset-password", [ResetPasswordController::class, "resetPassword"]);
 
 // Existing route for user registration with throttle middleware
 Route::post("/users/register", [RegisterController::class, "register"])->middleware("throttle:api");
 
 // Existing route to handle the DELETE request for the endpoint `/api/requests/{request_id}/images/{image_id}`
 Route::middleware('auth:sanctum')->delete('/requests/{request_id}/images/{image_id}', [UserController::class, 'deleteRequestImage']);
+
+// New route for the logout endpoint
+Route::middleware('auth:sanctum')->post('/auth/logout', [AuthController::class, 'logout']);
 
 // Route for verifying the user's email
 // This route is not present in the new code, but we are keeping it as it is part of the existing functionality.
