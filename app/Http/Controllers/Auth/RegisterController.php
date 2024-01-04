@@ -1,4 +1,3 @@
-
 <?php
 
 namespace App\Http\Controllers\Auth;
@@ -12,7 +11,7 @@ use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
-use App\Notifications\VerifyEmailNotification;
+use App\Mail\VerifyEmail;
 
 class RegisterController extends Controller
 {
@@ -20,21 +19,22 @@ class RegisterController extends Controller
 
     public function register(Request $request)
     {
-        // Validate the request data
-        $validatedData = $request->validate([
+        // Custom validation messages
+        $messages = [
+            'name.required' => 'Name cannot be blank.',
+            'email.required' => 'Please enter a valid email address.',
+            'email.email' => 'Please enter a valid email address.',
+            'username.unique' => 'The username is already in use.',
+            'password.min' => 'Password must be at least 8 characters long.',
+        ];
+
+        // Validate the request data with custom messages
+        $validatedData = Validator::make($request->all(), [
             'name' => 'required|string|max:255',
             'email' => 'required|string|email|max:255|unique:users,email',
             'password' => 'required|string|min:8|confirmed',
             'username' => 'required|string|max:255|unique:users,username',
-        ]);
-
-        // Check for the uniqueness of the email and username
-        if (User::where('email', $validatedData['email'])->orWhere('username', $validatedData['username'])->exists()) {
-            throw ValidationException::withMessages([
-                'email' => ['The provided email is already in use.'],
-                'username' => ['The provided username is already in use.'],
-            ]);
-        }
+        ], $messages)->validate();
 
         // Create the user
         $user = User::create([
@@ -42,7 +42,7 @@ class RegisterController extends Controller
             'email' => $validatedData['email'],
             'password' => Hash::make($validatedData['password']),
             'remember_token' => Str::random(60),
-            'username' => $validatedData['username'], // Assuming username is part of the request
+            'username' => $validatedData['username'],
         ]);
 
         // Generate email verification token and send verification email
@@ -54,23 +54,16 @@ class RegisterController extends Controller
         ]);
 
         // Define the mailable class for the verification email
-        $verificationEmail = new \App\Mail\VerifyEmail($verificationToken->token);
+        $verificationEmail = new VerifyEmail($verificationToken->token);
 
         // Send the verification email using Laravel's Mail facade
         Mail::to($user->email)->send($verificationEmail);
 
         // Return a response with the user ID and confirmation message
         return response()->json([
-            'status' => 'success',
-            'message' => 'User registered successfully. Please check your email to verify your account.',
-            'verification_link' => route('verification.verify', ['token' => $verificationToken->token]), // Assuming there's a named route for email verification
-            'user' => [
-                'id' => $user->id,
-                'name' => $user->name,
-                'email' => $user->email,
-                'created_at' => $user->created_at->toIso8601String(),
-            ]
-        ]);
+            'status' => 201,
+            'message' => 'Registration successful. Please verify your email.'
+        ], 201);
     }
 
     // Other methods...
