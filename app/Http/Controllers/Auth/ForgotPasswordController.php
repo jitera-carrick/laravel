@@ -1,4 +1,3 @@
-
 <?php
 
 namespace App\Http\Controllers\Auth;
@@ -8,12 +7,11 @@ use Illuminate\Http\Request;
 use App\Models\User;
 use App\Models\PasswordResetToken;
 use Illuminate\Support\Str;
-use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Facades\Validator;
 use App\Notifications\ResetPasswordNotification;
 use Illuminate\Support\Facades\Config;
-use Illuminate\Support\Carbon;
-use Illuminate\Support\Facades\Password; // Import the Password facade
-use Illuminate\Http\JsonResponse; // Import JsonResponse
+use Illuminate\Http\JsonResponse;
+use Illuminate\Support\Carbon; // Ensure Carbon is imported for date calculations
 
 class ForgotPasswordController extends Controller
 {
@@ -52,20 +50,24 @@ class ForgotPasswordController extends Controller
 
     public function sendResetLinkEmail(Request $request): JsonResponse
     {
-        $validator = \Validator::make($request->all(), [
+        $validator = Validator::make($request->all(), [
             'email' => 'required|email|exists:users,email',
         ]);
         
         if ($validator->fails()) {
-            return response()->json(['message' => 'Please enter a valid email address.'], 400);
+            $errorMessage = $validator->errors()->first('email');
+            if (str_contains($errorMessage, 'exists')) {
+                return response()->json(['message' => 'Email address not found.'], 404);
+            }
+            return response()->json(['message' => 'Invalid email address format.'], 400);
         }
 
         $user = User::where('email', $request->input('email'))->first();
-        if (is_null($user)) {
-            return response()->json(['message' => 'The email address does not exist in our records.'], 404);
+        if (!$user) {
+            return response()->json(['message' => 'Email address not found.'], 404);
         }
 
-        $token = Str::random(64); // Updated token length for better security
+        $token = Str::random(64);
         $passwordResetToken = new PasswordResetToken([
             'email' => $user->email,
             'token' => $token,
@@ -75,7 +77,6 @@ class ForgotPasswordController extends Controller
         ]);
         $passwordResetToken->save();
 
-        // Send the password reset notification
         $user->notify(new ResetPasswordNotification($token));
 
         return response()->json(['status' => 'success', 'message' => 'Reset link has been sent to your email address.'], 200);
