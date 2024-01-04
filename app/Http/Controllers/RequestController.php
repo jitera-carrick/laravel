@@ -1,4 +1,3 @@
-
 <?php
 
 namespace App\Http\Controllers;
@@ -15,6 +14,7 @@ use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
+use App\Http\Resources\RequestResource;
 
 class RequestController extends Controller
 {
@@ -83,7 +83,7 @@ class RequestController extends Controller
     }
 
     // Method to update a hair stylist request
-    public function update(UpdateHairStylistRequest $request, $id): JsonResponse
+    public function updateHairStylistRequest(UpdateHairStylistRequest $request, $id): JsonResponse
     {
         $hairRequest = Request::find($id);
         $user = Auth::user();
@@ -92,49 +92,40 @@ class RequestController extends Controller
             return response()->json(['message' => 'Request not found or unauthorized.'], 404);
         }
 
-        // Validate the request
-        $validator = Validator::make($request->all(), [
-            'area' => 'required|array|min:1',
-            'menu' => 'required|array|min:1',
-            'hair_concerns' => 'required|string|max:3000',
-            'images' => 'required|array|min:1|max:3',
-            'images.*' => 'image|mimes:png,jpg,jpeg|max:5120', // 5MB
-        ]);
-
-        if ($validator->fails()) {
-            return response()->json(['message' => $validator->errors()->first()], 422);
-        }
+        $validatedData = $request->validated();
 
         // Update area and menu selections within a transaction
-        DB::transaction(function () use ($request, $id, $hairRequest) {
+        DB::transaction(function () use ($request, $hairRequest, $validatedData) {
             // Update area selections
-            RequestAreaSelection::where('request_id', $id)->delete();
-            foreach ($request->area as $areaId) {
+            RequestAreaSelection::where('request_id', $hairRequest->id)->delete();
+            foreach ($validatedData['area'] as $areaId) {
                 RequestAreaSelection::create([
-                    'request_id' => $id,
+                    'request_id' => $hairRequest->id,
                     'area_id' => $areaId,
                 ]);
             }
 
             // Update menu selections
-            RequestMenuSelection::where('request_id', $id)->delete();
-            foreach ($request->menu as $menuId) {
+            RequestMenuSelection::where('request_id', $hairRequest->id)->delete();
+            foreach ($validatedData['menu'] as $menuId) {
                 RequestMenuSelection::create([
-                    'request_id' => $id,
+                    'request_id' => $hairRequest->id,
                     'menu_id' => $menuId,
                 ]);
             }
 
             // Update hair concerns
-            $hairRequest->update(['hair_concerns' => $request->hair_concerns]);
+            if (isset($validatedData['hair_concerns'])) {
+                $hairRequest->fill(['hair_concerns' => $validatedData['hair_concerns']])->save();
+            }
 
             // Update images
-            RequestImage::where('request_id', $id)->delete();
-            foreach ($request->images as $image) {
+            RequestImage::where('request_id', $hairRequest->id)->delete();
+            foreach ($validatedData['images'] as $image) {
                 // Store the image and get the path
                 $imagePath = Storage::disk('public')->put('request_images', $image);
                 RequestImage::create([
-                    'request_id' => $id,
+                    'request_id' => $hairRequest->id,
                     'image_path' => $imagePath,
                 ]);
             }
@@ -143,19 +134,13 @@ class RequestController extends Controller
         return response()->json([
             'status' => 200,
             'message' => 'Hair stylist request updated successfully',
-            'request_id' => $id,
-            'request' => $hairRequest->fresh(),
+            'request_id' => $hairRequest->id,
+            'data' => new RequestResource($hairRequest->fresh()),
         ]);
     }
 
-    /**
-     * Delete an image from a hair stylist request.
-     *
-     * @param  int  $request_id
-     * @param  int  $image_id
-     * @return JsonResponse
-     */
-    public function deleteRequestImage(int $request_id, int $image_id): JsonResponse
+    // Method to delete an image from a hair stylist request
+    public function deleteImage(HttpRequest $httpRequest, $request_id, $image_id): JsonResponse
     {
         try {
             $validator = Validator::make(compact('request_id', 'image_id'), [
@@ -167,14 +152,17 @@ class RequestController extends Controller
                 throw new ValidationException($validator);
             }
 
-            $requestImage = RequestImage::where('id', $image_id)
-                ->where('request_id', $request_id)
-                ->first();
+            $user = Auth::user();
+            $request = Request::where('id', $request_id)->where('user_id', $user->id)->first();
+
+            if (!$request) {
+                return response()->json(['message' => 'Request not found or unauthorized.'], 404);
+            }
+
+            $requestImage = RequestImage::where('id', $image_id)->where('request_id', $request_id)->first();
 
             if (!$requestImage) {
-                return response()->json([
-                    'message' => 'Image not found or does not belong to the request.'
-                ], 404);
+                return response()->json(['message' => 'Image not found or does not belong to the request.'], 404);
             }
 
             $requestImage->delete();
@@ -189,30 +177,6 @@ class RequestController extends Controller
                 'message' => 'Failed to delete the image.',
                 'error' => $e->getMessage()
             ], 500);
-        }
-    }
-
-    // Method to delete an image from a hair stylist request
-    public function deleteImage(HttpRequest $httpRequest, $request_id, $image_id): JsonResponse
-    {
-        $user = Auth::user();
-        $request = Request::where('id', $request_id)->where('user_id', $user->id)->first();
-
-        if (!$request) {
-            return response()->json(['message' => 'Request not found or unauthorized.'], 404);
-        }
-
-        $requestImage = RequestImage::where('id', $image_id)->where('request_id', $request_id)->first();
-
-        if (!$requestImage) {
-            return response()->json(['message' => 'Image not found or does not belong to the request.'], 404);
-        }
-
-        try {
-            $requestImage->delete();
-            return response()->json(['message' => 'Image deleted successfully.'], 200);
-        } catch (\Exception $e) {
-            return response()->json(['message' => 'Failed to delete the image.'], 500);
         }
     }
 

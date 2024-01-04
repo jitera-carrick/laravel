@@ -1,3 +1,4 @@
+
 <?php
 
 namespace App\Http\Requests;
@@ -43,7 +44,7 @@ class UpdateHairStylistRequest extends FormRequest
      *
      * @return array
      */
-    public function rules()
+    public function rules() // Updated rules to match the guideline requirements
     {
         return [
             'request_id' => 'required|integer|exists:requests,id',
@@ -51,7 +52,11 @@ class UpdateHairStylistRequest extends FormRequest
             'menu' => 'required|string', // Updated to be required and a string
             'hair_concerns' => 'nullable|string|max:3000',
             'image_paths' => 'nullable|array', // Updated to be nullable
-            'image_paths.*' => 'nullable|file|mimes:png,jpg,jpeg|max:5120', // Updated to validate each file in the array
+            'image_paths.*' => 'nullable|file|mimes:png,jpg,jpeg|max:5120', // Validate each file in the array
+            'status' => [
+                'required',
+                Rule::in(['pending', 'approved', 'rejected']), // Assuming these are the enum values
+            ],
         ];
     }
 
@@ -71,6 +76,7 @@ class UpdateHairStylistRequest extends FormRequest
             'image_paths.array' => 'The image paths must be an array.',
             'image_paths.*.file' => 'Each image path must be a file.',
             'image_paths.*.mimes' => 'Each file must be of type: png, jpg, jpeg.',
+            'status.required' => 'The status field is required.',
             'image_paths.*.max' => 'Each file may not be greater than 5MB.',
         ];
     }
