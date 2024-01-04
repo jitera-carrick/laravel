@@ -22,7 +22,72 @@ class RequestController extends Controller
     // Method to create a hair stylist request
     public function createHairStylistRequest(HttpRequest $httpRequest): JsonResponse
     {
-        // ... existing code for createHairStylistRequest method ...
+        $validator = Validator::make($httpRequest->all(), [
+            'area' => 'required|exists:request_areas,id',
+            'menu' => 'required|exists:request_menus,id',
+            'hair_concerns' => 'required|string',
+            'status' => 'required|in:pending,completed,cancelled', // Assuming these are the valid statuses
+            'user_id' => 'required|exists:users,id',
+        ], [
+            'area.required' => 'Area is required and must be valid.',
+            'menu.required' => 'Menu is required and must be valid.',
+            'hair_concerns.required' => 'Hair concerns are required.',
+            'status.in' => 'Invalid status.',
+            'user_id.exists' => 'Invalid user ID.',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json(['message' => $validator->errors()->first()], 422);
+        }
+
+        $user = Auth::user();
+        if ($httpRequest->user_id != $user->id) {
+            return response()->json(['message' => 'Unauthorized user.'], 401);
+        }
+
+        // Create the request
+        $hairRequest = Request::create([
+            'user_id' => $user->id,
+            'area_id' => $httpRequest->area,
+            'menu_id' => $httpRequest->menu,
+            'hair_concerns' => $httpRequest->hair_concerns,
+            'status' => $httpRequest->status,
+        ]);
+
+        // Assuming RequestAreaSelection and RequestMenuSelection are the correct models for area and menu selections
+        RequestAreaSelection::create([
+            'request_id' => $hairRequest->id,
+            'area_id' => $httpRequest->area,
+        ]);
+
+        RequestMenuSelection::create([
+            'request_id' => $hairRequest->id,
+            'menu_id' => $httpRequest->menu,
+        ]);
+
+        // Assuming RequestImage is the correct model for images
+        if ($httpRequest->hasFile('image_path')) {
+            foreach ($httpRequest->image_path as $image) {
+                $imagePath = Storage::disk('public')->put('request_images', $image);
+                RequestImage::create([
+                    'request_id' => $hairRequest->id,
+                    'image_path' => $imagePath,
+                ]);
+            }
+        }
+
+        return response()->json([
+            'status' => 201,
+            'request' => [
+                'id' => $hairRequest->id,
+                'area' => $hairRequest->area_id,
+                'menu' => $hairRequest->menu_id,
+                'hair_concerns' => $hairRequest->hair_concerns,
+                'status' => $hairRequest->status,
+                'created_at' => $hairRequest->created_at->toIso8601String(),
+                'user_id' => $hairRequest->user_id,
+            ]
+        ], 201);
     }
 
     // Method to update a hair stylist request
