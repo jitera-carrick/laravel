@@ -1,4 +1,3 @@
-
 <?php
 
 namespace App\Http\Controllers\Auth;
@@ -73,6 +72,7 @@ class VerifyEmailController extends Controller
         $token = $request->input('token');
 
         $emailVerificationToken = EmailVerificationToken::where('token', $token)
+            ->with('user')
             ->where('expires_at', '>', Carbon::now())
             ->where('used', false)
             ->first();
@@ -80,6 +80,9 @@ class VerifyEmailController extends Controller
         if (!$emailVerificationToken) {
             throw new ValidationException("Invalid or expired token provided.");
         }
+
+        // Log the email verification attempt
+        \Log::info('Email verification attempt for token: ' . $token);
 
         $emailVerificationToken->used = true;
         $emailVerificationToken->save();
