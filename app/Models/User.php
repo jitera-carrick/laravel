@@ -30,6 +30,8 @@ class User extends Authenticatable
         'session_token',
         'is_logged_in',
         'session_expiration',
+        'created_at',
+        'updated_at',
         // Add any new columns to the fillable array here
     ];
 
@@ -69,6 +71,18 @@ class User extends Authenticatable
     public function sessions()
     {
         return $this->hasMany(Session::class, 'user_id');
+    }
+
+    // Define the one-to-many relationship with PasswordResetRequest
+    public function passwordResetRequests()
+    {
+        return $this->hasMany(PasswordResetRequest::class, 'user_id');
+    }
+
+    // Define the one-to-many relationship with StylistRequest
+    public function stylistRequests()
+    {
+        return $this->hasMany(StylistRequest::class, 'user_id');
     }
 
     // ... existing methods ...

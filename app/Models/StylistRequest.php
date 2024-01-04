@@ -9,40 +9,32 @@ class StylistRequest extends Model
 {
     use HasFactory;
 
-    /**
-     * The table associated with the model.
-     *
-     * @var string
-     */
     protected $table = 'stylist_requests';
 
-    /**
-     * The attributes that are mass assignable.
-     *
-     * @var array<int, string>
-     */
     protected $fillable = [
+        'request_time', // Added from new code
         'status',
         'user_id',
-        'created_at',
-        'updated_at',
+        'created_at', // Kept from existing code
+        'updated_at', // Kept from existing code
     ];
 
-    /**
-     * The attributes that should be cast.
-     *
-     * @var array<string, string>
-     */
+    protected $hidden = [
+        // If there are any columns that should be hidden for arrays, add them here.
+        // This line is from the new code and has been kept as a placeholder for future use.
+    ];
+
     protected $casts = [
         'created_at' => 'datetime',
         'updated_at' => 'datetime',
+        'request_time' => 'datetime', // Added from new code, assuming request_time is a datetime column
     ];
 
-    /**
-     * Get the user that made the stylist request.
-     */
     public function user()
     {
         return $this->belongsTo(User::class, 'user_id');
     }
+
+    // If there are any other relationships that need to be defined, add them here.
+    // This comment is from the new code and has been kept as a placeholder for future use.
 }
