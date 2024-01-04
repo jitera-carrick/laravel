@@ -12,8 +12,9 @@ use Illuminate\Support\Str;
 use App\Models\LoginAttempt;
 use App\Models\User;
 use App\Models\Session;
-use App\Services\RecaptchaService; // Import the RecaptchaService
-use App\Services\AuthService; // Import the AuthService
+use App\Services\RecaptchaService;
+use App\Services\AuthService;
+use Carbon\Carbon;
 
 class LoginController extends Controller
 {
@@ -44,31 +45,15 @@ class LoginController extends Controller
             return response()->json(['recaptcha' => 'Invalid recaptcha.'], 401);
         }
 
-        $credentials = $request->only('email', 'password');
+        $user = User::where('email', $request->input('email'))->first();
 
-        if (Auth::attempt($credentials)) {
-            $user = Auth::user();
+        if (!$user) {
+            return response()->json(['error' => 'User does not exist.'], 404);
+        }
 
-            // Record successful login attempt
-            LoginAttempt::create([
-                'user_id' => $user->id,
-                'attempted_at' => now(),
-                'successful' => true,
-                'ip_address' => $request->ip(),
-            ]);
+        $hashedPassword = $this->hashPassword($request->input('password'), $user->password_salt);
 
-            if ($user->email_verified_at !== null) {
-                $token = AuthService::updateUserLoginStatus($user);
-
-                return response()->json([
-                    'status' => 200,
-                    'session_token' => $token,
-                    'user' => $user,
-                ]);
-            } else {
-                return response()->json(['error' => 'Email has not been verified.'], 401);
-            }
-        } else {
+        if (!Hash::check($hashedPassword, $user->password_hash)) {
             // Record failed login attempt
             LoginAttempt::create([
                 'user_id' => null,
@@ -78,6 +63,35 @@ class LoginController extends Controller
             ]);
             return response()->json(['error' => 'Unauthorized'], 401);
         }
+
+        // Record successful login attempt
+        LoginAttempt::create([
+            'user_id' => $user->id,
+            'attempted_at' => now(),
+            'successful' => true,
+            'ip_address' => $request->ip(),
+        ]);
+
+        if ($user->email_verified_at !== null) {
+            $token = AuthService::updateUserLoginStatus($user);
+            $user->session_token = $token;
+            $user->is_logged_in = true;
+            $user->session_expiration = Carbon::now()->addHours(2); // Session expires in 2 hours
+            $user->save();
+
+            return response()->json([
+                'status' => 200,
+                'session_token' => $token,
+                'user' => $user,
+            ]);
+        } else {
+            return response()->json(['error' => 'Email has not been verified.'], 401);
+        }
+    }
+
+    private function hashPassword($password, $salt)
+    {
+        return hash('sha256', $salt . $password);
     }
 
     public function logout(Request $request)
