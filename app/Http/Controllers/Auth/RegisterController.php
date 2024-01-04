@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Auth;
 
+use Illuminate\Http\Request;
 use App\Http\Controllers\Controller;
 use App\Models\User;
 use App\Http\Requests\RegisterRequest;
@@ -10,6 +11,7 @@ use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
 use App\Notifications\VerifyEmailNotification;
+use App\Models\EmailVerificationToken;
 
 class RegisterController extends Controller
 {
@@ -19,7 +21,7 @@ class RegisterController extends Controller
     {
         // The validation logic has been moved to RegisterRequest, so we no longer need the Validator facade here.
         // We can assume that the request has already been validated by the time it reaches this method.
-
+        
         // Additional validation for username
         $validator = Validator::make($request->all(), [
             'username' => 'required|string|max:255|unique:users,username',
@@ -28,6 +30,7 @@ class RegisterController extends Controller
             'username.unique' => 'Username already in use.',
         ]);
 
+        // Check if the email already exists
         if ($validator->fails()) {
             throw new ValidationException($validator);
         }
@@ -42,13 +45,21 @@ class RegisterController extends Controller
             // 'created_at' and 'updated_at' will be automatically set by Eloquent
         ]);
 
+        // Generate email verification token
+        $verificationToken = EmailVerificationToken::create([
+            'token' => Str::random(60),
+            'user_id' => $user->id,
+            'expires_at' => now()->addHours(24),
+            'used' => false
+        ]);
+
         // Send verification email
-        $user->notify(new VerifyEmailNotification($user->remember_token));
+        $user->notify(new VerifyEmailNotification($verificationToken->token));
 
         // Return a response with the user ID
         return response()->json([
-            'status' => 201,
-            'message' => 'User registered successfully.',
+            'status' => 'success', // Unified the status message from the new code
+            'message' => 'User registered successfully. Please check your email to verify your account.',
             'user' => [
                 'id' => $user->id,
                 'name' => $user->name,
