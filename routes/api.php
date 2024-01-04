@@ -9,6 +9,7 @@ use App\Http\Controllers\UserController;
 use App\Http\Controllers\Auth\AuthController;
 use App\Http\Controllers\RequestController;
 use Illuminate\Support\Facades\Validator;
+use Illuminate\Validation\Rule; // Import the Rule facade for validation
 
 /*
 |--------------------------------------------------------------------------
@@ -41,7 +42,7 @@ Route::post('/api/auth/validate-reset-token', [ResetPasswordController::class, '
 // Route for user login
 Route::post('/auth/login', [AuthController::class, 'login'])->middleware('throttle:api');
 
-// Route for sending reset link email with throttle middleware
+// Send a reset link to the user's email address
 Route::post('/auth/send-reset-link-email', function (Request $request) {
     $validator = Validator::make($request->all(), [
         'email' => 'required|email|exists:users,email',
@@ -63,13 +64,39 @@ Route::post('/auth/send-reset-link-email', function (Request $request) {
 })->middleware('throttle:api');
 
 // Route for deleting a hair stylist request image with auth and permission middleware
-Route::delete('/hair-stylist-request/{request_id}/image/{image_id}', [RequestController::class, 'deleteHairStylistRequestImage'])
-    ->middleware('auth:sanctum')
+// This route is from the existing code and has been modified to match the new code's URI pattern and middleware
+Route::middleware(['auth:sanctum', 'can:delete,request_id'])->delete('/hair-stylist-request/{request_id}/image/{image_id}', [RequestController::class, 'deleteHairStylistRequestImage'])
     ->where('request_id', '[0-9]+')
-    ->where('image_id', '[0-9]+')
-    ->middleware(['can:delete,request_id']);
+    ->where('image_id', '[0-9]+');
 
 // New route for creating a hair stylist request
+// This route is from the existing code
 Route::middleware('auth:sanctum')->group(function () {
     Route::post('/hair-stylist-request/create', [RequestController::class, 'createHairStylistRequest']);
 });
+
+// New PATCH route for updating hair stylist requests
+// This route is from the new code
+Route::middleware(['auth:sanctum', 'can:update,request'])->patch('/hair-stylist-request/update/{request}', function (Request $request, \App\Models\Request $requestModel) {
+    $validator = Validator::make($request->all(), [
+        'area' => 'sometimes|string',
+        'menu' => 'sometimes|string',
+        'hair_concerns' => 'sometimes|string',
+        'status' => ['sometimes', Rule::in(['pending', 'confirmed', 'cancelled'])], // Assuming these are the enum values
+    ]);
+
+    if ($validator->fails()) {
+        return response()->json([
+            'status' => 422,
+            'message' => $validator->errors()->first(),
+        ], 422);
+    }
+
+    $requestModel->fill($request->only(['area', 'menu', 'hair_concerns', 'status']));
+    $requestModel->save();
+
+    return response()->json([
+        'status' => 200,
+        'request' => $requestModel,
+    ], 200);
+})->where('request', '[0-9]+');
