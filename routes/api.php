@@ -35,6 +35,9 @@ Route::post("/users/register", [RegisterController::class, "register"])->middlew
 // Route to handle the DELETE request for the endpoint `/api/requests/{request_id}/images/{image_id}`
 Route::middleware('auth:sanctum')->delete('/requests/{request_id}/images/{image_id}', [UserController::class, 'deleteRequestImage']);
 
+// Route for user login with validation middleware
+Route::post('/auth/login', [AuthController::class, 'login'])->middleware('throttle:api');
+
 // Route for the logout endpoint
 Route::middleware('auth:sanctum')->post('/auth/logout', [AuthController::class, 'logout']);
 

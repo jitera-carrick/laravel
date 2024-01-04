@@ -2,9 +2,10 @@
 
 namespace App\Http\Controllers;
 
-use Illuminate\Http\Request;
+use App\Http\Requests\LoginRequest; // Import the LoginRequest
 use App\Services\AuthService;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
 
 class AuthController extends Controller
@@ -16,7 +17,61 @@ class AuthController extends Controller
         $this->authService = $authService;
     }
 
-    // ... existing methods ...
+    /**
+     * Handle the login request.
+     *
+     * @param LoginRequest $request
+     * @return JsonResponse
+     */
+    public function login(LoginRequest $request): JsonResponse
+    {
+        $validator = Validator::make($request->all(), [
+            'email' => 'required|email',
+            'password' => 'required',
+            'recaptcha' => 'required' // Assuming there is a custom validation rule for recaptcha
+        ], [
+            'email.required' => 'Please enter a valid email address.',
+            'email.email' => 'Please enter a valid email address.',
+            'password.required' => 'Password cannot be blank.',
+            'recaptcha.required' => 'Invalid recaptcha.'
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json([
+                'status' => 422,
+                'message' => $validator->errors()->first()
+            ], 422);
+        }
+
+        try {
+            $credentials = $request->only('email', 'password');
+            $recaptcha = $request->input('recaptcha');
+
+            $authResult = $this->authService->authenticateUser($credentials['email'], $credentials['password'], $recaptcha);
+
+            if ($authResult['status'] === 'success') {
+                return response()->json([
+                    'status' => 200,
+                    'message' => 'Login successful.',
+                    'data' => [
+                        'token' => $authResult['session_token'],
+                        'user' => $authResult['user']
+                    ]
+                ], 200);
+            }
+
+            return response()->json([
+                'status' => 401,
+                'message' => $authResult['message']
+            ], 401);
+        } catch (\Exception $e) {
+            return response()->json([
+                'status' => 500,
+                'message' => 'An error occurred during login.',
+                'error' => $e->getMessage()
+            ], 500);
+        }
+    }
 
     /**
      * Handle the logout process for a user.
@@ -51,5 +106,5 @@ class AuthController extends Controller
         }
     }
 
-    // ... other methods ...
+    // ... other methods that might exist in the controller ...
 }
