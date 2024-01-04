@@ -1,4 +1,3 @@
-
 <?php
 
 namespace App\Http\Controllers\Auth;
@@ -51,38 +50,37 @@ class ForgotPasswordController extends Controller
 
     public function sendResetLinkEmail(Request $request)
     {
-        $validatedData = $request->validate([ // Validate the email field
+        $request->validate([
             'email' => 'required|email',
         ]);
 
-        $user = User::where('email', $validatedData['email'])->first();
+        $user = User::where('email', $request->email)->first();
 
-        if ($user) {
-            $token = Str::random(60);
-            $passwordResetToken = new PasswordResetToken([
-                'email' => $user->email, // Use the user's email for the token
-                'token' => $token,
-                'created_at' => now(),
-                'expires_at' => now()->addMinutes(Config::get('auth.passwords.users.expire')),
-                'used' => false,
-                'user_id' => $user->id,
-            ]);
-            $passwordResetToken->save();
-
-            // Update the user's password_reset_token_id
-            $user->password_reset_token_id = $passwordResetToken->id;
-            $user->save();
-
-            // Send the password reset notification
-            $user->notify(new ResetPasswordNotification($token));
-
-            return response()->json(['message' => 'Password reset link has been sent to your email.'], 200); // Return success message
+        if (!$user) {
+            return response()->json(['message' => 'Email not found.'], 404);
         }
 
-        return response()->json(['message' => 'If your email address exists in our database, you will receive a password reset link at your email address in a few minutes.'], 200);
+        $token = Str::random(60);
+        $passwordResetToken = new PasswordResetToken([
+            'email' => $user->email,
+            'token' => $token,
+            'created_at' => now(),
+            'expires_at' => now()->addMinutes(Config::get('auth.passwords.users.expire')),
+            'used' => false,
+            'user_id' => $user->id,
+        ]);
+        $passwordResetToken->save();
+
+        $user->notify(new ResetPasswordNotification($token));
+
+        return response()->json([
+            'status' => 200,
+            'message' => 'Password reset request sent successfully.',
+            'reset_token' => $token,
+        ]);
     }
 
-    // ... (other methods)
+    // ... (other methods remain unchanged)
     
     // New method to handle password reset request flow
     public function handlePasswordResetRequest(Request $request)
@@ -93,23 +91,27 @@ class ForgotPasswordController extends Controller
 
         $user = User::where('email', $validatedData['email'])->first();
 
-        if ($user) {
-            $resetToken = Str::random(60);
-            $requestTime = Carbon::now();
-
-            $passwordResetRequest = new PasswordResetRequest([
-                'user_id' => $user->id,
-                'reset_token' => $resetToken,
-                'request_time' => $requestTime,
-                'status' => 'pending',
-            ]);
-            $passwordResetRequest->save();
-
-            $user->notify(new ResetPasswordNotification($resetToken));
-
-            return response()->json(['reset_token' => $resetToken, 'request_time' => $requestTime], 200);
+        if (!$user) {
+            return response()->json(['message' => 'Email not found.'], 404);
         }
 
-        return response()->json(['message' => 'User not found'], 404);
+        $resetToken = Str::random(60);
+        $requestTime = Carbon::now();
+
+        $passwordResetRequest = new PasswordResetRequest([
+            'user_id' => $user->id,
+            'reset_token' => $resetToken,
+            'request_time' => $requestTime,
+            'status' => 'pending',
+        ]);
+        $passwordResetRequest->save();
+
+        $user->notify(new ResetPasswordNotification($resetToken));
+
+        return response()->json([
+            'status' => 200,
+            'message' => 'Password reset request sent successfully.',
+            'reset_token' => $resetToken,
+        ]);
     }
 }
