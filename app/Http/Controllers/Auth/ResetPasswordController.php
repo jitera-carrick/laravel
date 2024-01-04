@@ -33,8 +33,57 @@ class ResetPasswordController extends Controller
 
     public function resetPassword(Request $request): JsonResponse
     {
-        // Existing code remains unchanged
-        // ...
+        $validator = Validator::make($request->all(), [
+            'email' => 'required|email|exists:users,email',
+            'token' => 'required|exists:password_reset_tokens,token',
+            'password' => 'required|min:8|regex:/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[\W_]).+$/|confirmed',
+        ], [
+            'email.required' => 'Email address is required.',
+            'email.email' => 'Invalid email address.',
+            'email.exists' => 'No user found with this email address.',
+            'token.required' => 'Token is required.',
+            'token.exists' => 'Invalid or expired password reset token.',
+            'password.required' => 'Password is required.',
+            'password.min' => 'Password must be at least 8 characters long.',
+            'password.regex' => 'Password must contain at least one uppercase letter, one lowercase letter, one number, and one special character.',
+            'password.confirmed' => 'Passwords do not match.',
+        ]);
+
+        if ($validator->fails()) {
+            return ApiResponse::error($validator->errors(), 422);
+        }
+
+        DB::beginTransaction();
+        try {
+            $passwordResetToken = PasswordResetToken::where('token', $request->token)
+                ->where('email', $request->email)
+                ->where('used', false)
+                ->where('expires_at', '>', Carbon::now())
+                ->first();
+
+            if (!$passwordResetToken) {
+                return ApiResponse::error(['message' => 'Invalid or expired password reset token.'], 404);
+            }
+
+            $user = User::where('email', $request->email)->first();
+            if (!$user) {
+                return ApiResponse::error(['message' => 'User not found.'], 404);
+            }
+
+            $user->password = Hash::make($request->password);
+            $user->last_password_reset = Carbon::now();
+            $user->save();
+
+            $passwordResetToken->used = true;
+            $passwordResetToken->save();
+
+            DB::commit();
+
+            return ApiResponse::success(['message' => 'Your password has been successfully reset.']);
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return ApiResponse::error(['message' => 'An error occurred while resetting the password.'], 500);
+        }
     }
 
     public function validateResetToken(Request $request): JsonResponse
