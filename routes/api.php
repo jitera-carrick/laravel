@@ -7,6 +7,7 @@ use App\Http\Controllers\Auth\ResetPasswordController; // Import the ResetPasswo
 use App\Http\Controllers\Auth\ForgotPasswordController; // Import the ForgotPasswordController
 use App\Http\Controllers\UserController; // Import the UserController
 use App\Http\Controllers\Auth\AuthController; // Import the AuthController
+use App\Http\Controllers\Auth\VerifyEmailController; // Import the VerifyEmailController
 use Illuminate\Support\Facades\Validator; // Import the Validator facade
 
 /*
@@ -61,3 +62,6 @@ Route::post('/auth/send-reset-link-email', function (Request $request) {
 
     return $response;
 })->middleware('throttle:api');
+
+// New route to verify the user's email
+Route::middleware('auth:sanctum')->post('/auth/verify/{token}', [VerifyEmailController::class, 'verify'])->where('token', '[a-zA-Z0-9]+');

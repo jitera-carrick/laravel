@@ -63,4 +63,37 @@ class VerifyEmailController extends Controller
 
         return response()->json(['message' => 'Email verified successfully.']);
     }
+
+    // Updated verify method to match the requirement
+    public function verifyUsingToken($token)
+    {
+        try {
+            $verificationToken = EmailVerificationToken::where('token', $token)
+                ->where('used', false)
+                ->first();
+
+            if (!$verificationToken) {
+                return response()->json(['message' => 'Invalid verification token.'], 400);
+            }
+
+            if ($verificationToken->expires_at <= Carbon::now()) {
+                return response()->json(['message' => 'The verification token is expired.'], 400);
+            }
+
+            $user = $verificationToken->user;
+            if (!$user) {
+                return response()->json(['message' => 'User not found.'], 404);
+            }
+
+            $user->email_verified_at = Carbon::now();
+            $user->save();
+
+            $verificationToken->used = true;
+            $verificationToken->save();
+
+            return response()->json(['status' => 200, 'message' => 'Email verified successfully.'], 200);
+        } catch (\Exception $e) {
+            return response()->json(['message' => 'An unexpected error occurred on the server.'], 500);
+        }
+    }
 }
