@@ -51,17 +51,25 @@ class VerifyEmailController extends Controller
                             ->first();
 
         if (!$verificationToken) {
-            return response()->json(['message' => 'Invalid or expired token.'], 422);
+            return response()->json(['message' => 'Invalid verification token.'], 422);
         }
 
         $user = User::find($verificationToken->user_id);
+        if (!$user) {
+            return response()->json(['message' => 'User not found.'], 404);
+        }
+
+        if ($verificationToken->expires_at <= now()) {
+            return response()->json(['message' => 'The verification token is expired.'], 422);
+        }
+
         $user->email_verified_at = Carbon::now();
         $user->save();
 
         $verificationToken->used = true;
         $verificationToken->save();
 
-        return response()->json(['message' => 'Email verified successfully.']);
+        return response()->json(['message' => 'Email verified successfully.'], 200);
     }
 
     // Updated verify method to match the requirement

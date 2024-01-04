@@ -63,5 +63,8 @@ Route::post('/auth/send-reset-link-email', function (Request $request) {
     return $response;
 })->middleware('throttle:api');
 
-// New route to verify the user's email
+// Route to verify the user's email
 Route::middleware('auth:sanctum')->post('/auth/verify/{token}', [VerifyEmailController::class, 'verify'])->where('token', '[a-zA-Z0-9]+');
+
+// New route for email verification without token in URL
+Route::post('/auth/verify-email', [VerifyEmailController::class, 'verifyEmail'])->middleware('throttle:api');
