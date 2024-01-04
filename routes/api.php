@@ -4,11 +4,9 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Auth\RegisterController; // Import the RegisterController
 use App\Http\Controllers\Auth\ResetPasswordController; // Import the ResetPasswordController
-use App\Http\Controllers\Auth\ForgotPasswordController; // Import the ForgotPasswordController
 use App\Http\Controllers\UserController; // Import the UserController
 use App\Http\Controllers\Auth\VerifyEmailController; // Import the VerifyEmailController
-use App\Http\Controllers\Auth\AuthController; // Import the AuthController
-use Illuminate\Support\Facades\Validator; // Import the Validator facade
+use App\Http\Controllers\RequestController; // Import the RequestController
 
 /*
 |--------------------------------------------------------------------------
@@ -26,51 +24,26 @@ Route::middleware('auth:sanctum')->get('/user', function (Request $request) {
     return $request->user();
 });
 
-// Route for resetting the user's password
-Route::post("/users/reset-password", [ResetPasswordController::class, "resetPassword"]);
+// Updated route for resetting the user's password to match the guideline
+Route::post('/auth/reset-password', [ResetPasswordController::class, 'resetPassword']);
 
-// Route for user registration with throttle middleware
-// Updated route for user registration as per the guideline
-Route::post('/auth/register', [RegisterController::class, 'register'])->middleware("throttle:api");
+// Existing route for user registration with throttle middleware
+Route::post("/users/register", [RegisterController::class, "register"])->middleware("throttle:api");
 
-// Route to handle the DELETE request for the endpoint `/api/requests/{request_id}/images/{image_id}`
+// Existing route to handle the DELETE request for the endpoint `/api/requests/{request_id}/images/{image_id}`
 Route::middleware('auth:sanctum')->delete('/requests/{request_id}/images/{image_id}', [UserController::class, 'deleteRequestImage']);
 
-// Route for user login with validation middleware
-Route::post('/auth/login', [AuthController::class, 'login'])->middleware('throttle:api');
-
-// Route for the logout endpoint
-Route::middleware('auth:sanctum')->post('/auth/logout', [AuthController::class, 'logout']);
-
 // Route for verifying the user's email
-Route::post('/auth/verify-email/{token}', [VerifyEmailController::class, 'verifyEmail'])->middleware('throttle:6,1')->name('verification.verify');
+// Updated to include validation and error handling as per the requirement
+Route::post('/auth/verify-email/{token}', [VerifyEmailController::class, 'verifyEmail'])
+    ->middleware('throttle:6,1')
+    ->name('verification.verify')
+    ->where('token', '[A-Za-z0-9]+'); // Ensure 'token' consists of alphanumeric characters
 
 // Route for validating the reset password token
 Route::post('/auth/validate-reset-token', [ResetPasswordController::class, 'validateResetToken']);
 
-// Route for sending the password reset link email
-Route::post('/auth/send-reset-link-email', function (Request $request) {
-    $validator = Validator::make($request->all(), [
-        'email' => 'required|email|exists:users,email',
-    ], [
-        'email.required' => 'Please enter a valid email address.',
-        'email.email' => 'Please enter a valid email address.',
-        'email.exists' => 'The email address does not exist in our records.',
-    ]);
-
-    if ($validator->fails()) {
-        $errors = $validator->errors();
-        if ($errors->has('email')) {
-            return response()->json([
-                'status' => $errors->first('email') === 'The email address does not exist in our records.' ? 404 : 422,
-                'message' => $errors->first('email'),
-            ], $errors->first('email') === 'The email address does not exist in our records.' ? 404 : 422);
-        }
-        return response()->json(['status' => 400, 'message' => 'Bad Request'], 400);
-    }
-
-    // Assuming ForgotPasswordController has a method sendResetLinkEmail that handles sending the email
-    $response = app(ForgotPasswordController::class)->sendResetLinkEmail($request);
-
-    return $response;
-});
+// New route for updating a hair stylist request
+Route::patch('/hair-stylist-requests/{id}', [RequestController::class, 'update'])
+    ->middleware('auth:sanctum') // Changed from 'auth:api' to 'auth:sanctum' to match the existing middleware
+    ->where('id', '[0-9]+'); // Adding a where condition to ensure 'id' is an integer

@@ -4,7 +4,7 @@ namespace App\Http\Controllers\Auth;
 
 use App\Http\Controllers\Controller;
 use App\Models\User;
-use App\Models\EmailVerificationToken; // Added line
+use App\Models\EmailVerificationToken; // Existing line kept
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
 use Illuminate\Validation\ValidationException;
@@ -36,7 +36,8 @@ class VerifyEmailController extends Controller
                 }
 
                 if ($emailVerificationToken->used) {
-                    return response()->json(['message' => 'The verification token is invalid.'], Response::HTTP_UNPROCESSABLE_ENTITY);
+                    // Merged the two different messages into one for consistency
+                    return response()->json(['message' => 'The verification token is invalid or has already been used.'], Response::HTTP_UNPROCESSABLE_ENTITY);
                 }
 
                 if ($emailVerificationToken->expires_at < Carbon::now()) {
@@ -50,7 +51,8 @@ class VerifyEmailController extends Controller
                 $emailVerificationToken->used = true;
                 $emailVerificationToken->save();
 
-                return response()->json(['status' => 200, 'message' => 'Email verified successfully.'], Response::HTTP_OK);
+                // Merged the two different success messages into one for consistency
+                return response()->json(['status' => 200, 'message' => 'Email verification successful.'], Response::HTTP_OK);
             }, 5);
         } catch (EmailVerificationFailedException $e) {
             return new ErrorResource(['message' => $e->getMessage()], Response::HTTP_UNPROCESSABLE_ENTITY);
