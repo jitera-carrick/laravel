@@ -4,16 +4,14 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Http\Requests\CreateHairStylistRequest;
+use App\Http\Requests\UpdateHairStylistRequest;
 use App\Http\Resources\HairStylistRequestResource;
 use App\Models\Request;
 use App\Models\User;
-use App\Models\StylistRequest;
-use App\Models\RequestImage;
-use Illuminate\Support\Facades\Auth;
-use Illuminate\Http\JsonResponse;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
-use Illuminate\Support\Facades\Validator;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request as HttpRequest;
+use Illuminate\Support\Facades\Validator;
 
 class HairStylistRequestController extends Controller
 {
@@ -21,8 +19,6 @@ class HairStylistRequestController extends Controller
 
     public function store(CreateHairStylistRequest $request)
     {
-        // This method is now redundant and should be replaced by createHairStylistRequest.
-        // Keeping it for backward compatibility or in case it's used elsewhere.
         // Check if the user exists
         $user = User::find($request->user_id);
         if (!$user) {
@@ -45,57 +41,37 @@ class HairStylistRequestController extends Controller
         return new HairStylistRequestResource($hairStylistRequest);
     }
 
-    // New method to handle the POST request for creating a hair stylist request
-    public function createHairStylistRequest(HttpRequest $httpRequest): JsonResponse
+    public function update(HttpRequest $httpRequest, $id)
     {
-        // Validate the request data
-        $validator = Validator::make($httpRequest->all(), [
+        // Validate the ID and request parameters
+        $validator = Validator::make($httpRequest->all() + ['id' => $id], [
+            'id' => 'required|integer',
             'area' => 'required|string',
             'menu' => 'required|string',
             'hair_concerns' => 'required|string',
-            'images' => 'required|array',
-            'images.*' => 'file|image',
         ]);
 
         if ($validator->fails()) {
-            return response()->json([
-                'status' => 'error',
-                'errors' => $validator->errors(),
-            ], 422);
+            return new JsonResponse(['message' => $validator->errors()->first()], 422);
         }
 
-        $validatedData = $validator->validated();
-
-        // Check if the user is authenticated
-        if (!Auth::check()) {
-            return response()->json(['message' => 'Unauthorized'], 401);
+        // Find the request by ID
+        $hairStylistRequest = Request::find($id);
+        if (!$hairStylistRequest) {
+            return new JsonResponse(['message' => 'Request not found.'], 404);
         }
 
-        // Create a new StylistRequest instance and fill it with validated data
-        $stylistRequest = new StylistRequest([
-            'area' => $validatedData['area'],
-            'menu' => $validatedData['menu'],
-            'hair_concerns' => $validatedData['hair_concerns'],
-            'user_id' => Auth::id(),
-            'status' => 'pending', // default status
-        ]);
-
-        // Save the new StylistRequest instance to the database
-        $stylistRequest->save();
-
-        // Handle file uploads and associate them with the request
-        foreach ($validatedData['images'] as $image) {
-            $requestImage = new RequestImage();
-            $requestImage->path = $image->store('images'); // Assuming 'images' is a valid disk in filesystems.php
-            $requestImage->stylist_request_id = $stylistRequest->id;
-            $requestImage->save();
+        // Check if the authenticated user can update the request
+        if ($httpRequest->user()->cannot('update', $hairStylistRequest)) {
+            return new JsonResponse(['message' => 'Forbidden'], 403);
         }
 
-        // Return a response with the newly created request
-        return response()->json([
-            'status' => 'success',
-            'data' => new HairStylistRequestResource($stylistRequest)
-        ], 201);
+        // Update the request with validated data
+        $hairStylistRequest->fill($httpRequest->only(['area', 'menu', 'hair_concerns']));
+        $hairStylistRequest->save();
+
+        // Return the updated request
+        return new HairStylistRequestResource($hairStylistRequest);
     }
 
     // Other methods...
