@@ -1,8 +1,8 @@
-
 <?php
 
 namespace App\Http\Controllers;
 
+use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Http\Request as HttpRequest;
 use App\Http\Requests\UpdateHairStylistRequest;
 use App\Http\Requests\DeleteImageRequest; // Added line
@@ -149,17 +149,40 @@ class RequestController extends Controller
         ]);
     }
 
+    // Method to cancel a hair stylist request
+    public function cancelHairStylistRequest(int $id): JsonResponse
+    {
+        try {
+            $hairRequest = Request::findOrFail($id);
+            $user = Auth::user();
+
+            if ($hairRequest->user_id !== $user->id) {
+                return response()->json(['message' => 'Unauthorized to cancel this request.'], 401);
+            }
+
+            $hairRequest->status = 'cancelled';
+            $hairRequest->save();
+
+            return response()->json([
+                'status' => 200,
+                'message' => 'Hair stylist request cancelled successfully.',
+            ]);
+        } catch (ModelNotFoundException $e) {
+            return response()->json(['message' => 'Hair stylist request not found.'], 404);
+        }
+    }
+
     // Method to delete an image from a hair stylist request
     public function deleteRequestImage(DeleteImageRequest $httpRequest, $request_id, $image_id): JsonResponse // Renamed method
     {
         $user = Auth::user();
-        $request = Request::where('id', $httpRequest->request_id)->where('user_id', $user->id)->first(); // Updated line
+        $request = Request::where('id', $request_id)->where('user_id', $user->id)->first();
 
         if (!$request) {
             return response()->json(['message' => 'Request not found or unauthorized.'], 404);
         }
 
-        $requestImage = RequestImage::where('id', $httpRequest->image_id)->where('request_id', $httpRequest->request_id)->first(); // Updated line
+        $requestImage = RequestImage::where('id', $image_id)->where('request_id', $request_id)->first();
 
         if (!$requestImage) {
             return response()->json(['message' => 'Image not found or does not belong to the request.'], 404);
