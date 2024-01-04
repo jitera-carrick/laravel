@@ -5,7 +5,6 @@ namespace App\Http\Controllers\Auth;
 use Illuminate\Support\Str;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\ResetPasswordRequest;
-use App\Http\Requests\ValidateResetTokenRequest;
 use App\Services\PasswordResetService;
 use App\Utils\ApiResponse;
 use Illuminate\Http\JsonResponse;
@@ -36,26 +35,28 @@ class ResetPasswordController extends Controller
     public function resetPassword(Request $request): JsonResponse
     {
         // Merge validation rules and messages from both versions
-        $validator = Validator::make($request->all(), [
+        $rules = [
             'email' => 'sometimes|required|email|exists:users,email',
             'token' => 'required|exists:password_reset_tokens,token',
             'password' => 'required|confirmed|min:8',
-        ], [
+        ];
+        $messages = [
             'email.required' => 'Email address is required.',
             'email.email' => 'Invalid email address.',
             'email.exists' => 'No user found with this email address.',
             'token.required' => 'Token is required.',
             'token.exists' => 'Invalid or expired password reset token.',
             'password.required' => 'Password is required.',
-            'password.min' => 'Password must be at least 8 characters long.',
             'password.confirmed' => 'Passwords do not match.',
-        ]);
+            'password.min' => 'Password must be at least 8 characters long.',
+        ];
+        $validator = Validator::make($request->all(), $rules, $messages);
 
         if ($validator->fails()) {
             return ApiResponse::error($validator->errors(), 422);
         }
 
-        $validatedData = $validator->validated();
+        $validatedData = $validator->safe()->all();
 
         DB::beginTransaction();
         try {
@@ -63,7 +64,7 @@ class ResetPasswordController extends Controller
             if ($request->has('password_reset_token_id')) {
                 // New code logic
                 $passwordResetToken = PasswordResetToken::where('id', $request->password_reset_token_id)
-                    ->where('used', false)
+                    ->where('used', 0)
                     ->where('expires_at', '>', Carbon::now())
                     ->first();
             } else {
@@ -72,7 +73,7 @@ class ResetPasswordController extends Controller
                     ->where('email', $validatedData['email'] ?? null)
                     ->where('used', false)
                     ->where('expires_at', '>', Carbon::now())
-                    ->first();
+                    ->firstOrFail();
             }
 
             if (!$passwordResetToken) {
@@ -80,7 +81,7 @@ class ResetPasswordController extends Controller
             }
 
             $user = User::find($passwordResetToken->user_id);
-            if (!$user) {
+            if (is_null($user)) {
                 return ApiResponse::error(['message' => 'User not found.'], 404);
             }
 
@@ -88,7 +89,7 @@ class ResetPasswordController extends Controller
             $password = $request->has('password') ? $request->password : $validatedData['password'];
 
             if ($request->has('password_reset_token_id')) {
-                // New code logic for password hashing
+                // New code logic for password hashing using hashing configuration
                 $user->password_salt = Str::random(16); // Generate a new salt
                 $user->password_hash = hash('sha256', $password . $user->password_salt);
             } else {
@@ -96,7 +97,7 @@ class ResetPasswordController extends Controller
                 $user->password = Hash::make($password);
             }
 
-            $user->last_password_reset = Carbon::now();
+            $user->last_password_reset = Carbon::now()->toDateTimeString();
             $user->save();
 
             $passwordResetToken->used = true;
@@ -104,7 +105,7 @@ class ResetPasswordController extends Controller
 
             // Send confirmation email if the new code logic is used
             if ($request->has('password_reset_token_id')) {
-                Mail::to($user->email)->send(new \App\Mail\PasswordResetSuccess($user)); // Assuming PasswordResetSuccess is a valid Mailable
+                Mail::to($user->email)->send(new \App\Mail\PasswordResetSuccessMail($user)); // Assuming PasswordResetSuccessMail is a valid Mailable
             }
 
             DB::commit();
@@ -122,7 +123,7 @@ class ResetPasswordController extends Controller
             $token = $request->input('token');
             $passwordResetToken = PasswordResetToken::where('token', $token)
                 ->where('used', false)
-                ->where('expires_at', '>=', Carbon::now())
+                ->where('expires_at', '>', Carbon::now())
                 ->first();
 
             if (!$passwordResetToken) {
@@ -130,7 +131,7 @@ class ResetPasswordController extends Controller
             }
 
             return ApiResponse::success(['message' => 'Reset token is valid.'], 200);
-        } catch (\Throwable $e) {
+        } catch (\Exception $e) {
             return ApiResponse::error(['message' => 'An error occurred while validating the token: ' . $e->getMessage()], 500);
         }
     }
