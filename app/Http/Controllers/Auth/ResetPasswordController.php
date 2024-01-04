@@ -1,3 +1,4 @@
+
 <?php
 
 namespace App\Http\Controllers\Auth;
@@ -110,6 +111,24 @@ class ResetPasswordController extends Controller
             DB::rollBack();
             return ApiResponse::error(['message' => 'An error occurred while resetting the password.'], 500);
         }
+    }
+
+    /**
+     * Validate the password reset token.
+     *
+     * @param \Illuminate\Http\Request $request
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function validateResetToken(Request $request): JsonResponse
+    {
+        $token = $request->input('token');
+
+        $passwordResetToken = PasswordResetToken::where('token', $token)
+            ->where('used', false)
+            ->where('expires_at', '>', now())
+            ->first();
+
+        return $passwordResetToken ? ApiResponse::success(['message' => 'The token is valid.']) : ApiResponse::error(['message' => 'The token is invalid or expired.'], 422);
     }
 
     // ... other methods ...
