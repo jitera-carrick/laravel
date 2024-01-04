@@ -89,26 +89,66 @@ class RequestController extends Controller
     }
 
     // Method to update a hair stylist request
-    public function update(UpdateHairStylistRequest $request, $id): JsonResponse
+    public function updateHairStylistRequest(HttpRequest $httpRequest, $id): JsonResponse
     {
-        // ... existing code for update method ...
+        $hairRequest = Request::find($id);
+        $user = Auth::user();
+
+        if (!$hairRequest || $hairRequest->user_id !== $user->id) {
+            return response()->json(['message' => 'Request not found or unauthorized.'], 404);
+        }
+
+        $validator = Validator::make($httpRequest->all(), [
+            'area' => 'sometimes|string',
+            'menu' => 'sometimes|string',
+            'hair_concerns' => 'sometimes|string|max:3000',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json(['message' => $validator->errors()->first()], 422);
+        }
+
+        $validated = $validator->validated();
+
+        DB::transaction(function () use ($validated, $hairRequest) {
+            if (isset($validated['area'])) {
+                // Assuming 'area' is a string and maps to a single area_id
+                $areaId = RequestAreaSelection::where('name', $validated['area'])->value('id');
+                RequestAreaSelection::where('request_id', $hairRequest->id)->update(['area_id' => $areaId]);
+            }
+
+            if (isset($validated['menu'])) {
+                // Assuming 'menu' is a string and maps to a single menu_id
+                $menuId = RequestMenuSelection::where('name', $validated['menu'])->value('id');
+                RequestMenuSelection::where('request_id', $hairRequest->id)->update(['menu_id' => $menuId]);
+            }
+
+            if (isset($validated['hair_concerns'])) {
+                $hairRequest->update(['hair_concerns' => $validated['hair_concerns']]);
+            }
+        });
+
+        return response()->json([
+            'status' => 200,
+            'request' => $hairRequest->fresh(),
+        ]);
     }
 
     // Method to delete an image from a hair stylist request
-    public function deleteImage($requestId, $imageId): JsonResponse
+    public function deleteImage(HttpRequest $httpRequest, $request_id, $image_id): JsonResponse
     {
         $user = Auth::user();
         if (!$user) {
             return response()->json(['message' => 'Unauthorized.'], 401);
         }
 
-        $stylistRequest = Request::where('id', $requestId)->where('user_id', $user->id)->first();
+        $stylistRequest = Request::where('id', $request_id)->where('user_id', $user->id)->first();
 
         if (!$stylistRequest) {
             return response()->json(['message' => 'Request not found.'], 404);
         }
 
-        $requestImage = RequestImage::where('id', $imageId)->where('request_id', $requestId)->first();
+        $requestImage = RequestImage::where('id', $image_id)->where('request_id', $request_id)->first();
 
         if (!$requestImage) {
             return response()->json(['message' => 'Image not found or does not belong to the specified request.'], 404);

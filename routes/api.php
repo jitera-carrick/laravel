@@ -39,5 +39,7 @@ Route::post('/auth/verify-email/{token}', [VerifyEmailController::class, 'verify
 // Route for validating the reset password token
 Route::post('/auth/validate-reset-token', [ResetPasswordController::class, 'validateResetToken']);
 
-// New route to handle the DELETE request for the endpoint `/api/hair-stylist-requests/{request_id}/images/{image_id}`
-Route::middleware('auth:sanctum')->delete('/hair-stylist-requests/{request_id}/images/{image_id}', [RequestController::class, 'deleteImage'])->where(['request_id' => '[0-9]+', 'image_id' => '[0-9]+']);
+// New route for updating a hair stylist request
+Route::patch('/hair-stylist-requests/{id}', [RequestController::class, 'update'])
+    ->middleware('auth:sanctum') // Changed from 'auth:api' to 'auth:sanctum' to match the existing middleware
+    ->where('id', '[0-9]+'); // Adding a where condition to ensure 'id' is an integer
