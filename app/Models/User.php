@@ -91,18 +91,14 @@ class User extends Authenticatable
         return $this->hasMany(Session::class, 'user_id');
     }
 
-    // Define the one-to-many relationship with StylistRequest
-    public function stylistRequests()
+    // Define the one-to-many relationship with EmailVerificationToken
+    public function emailVerificationTokens()
     {
-        return $this->hasMany(StylistRequest::class, 'user_id');
+        return $this->hasMany(EmailVerificationToken::class, 'user_id');
     }
 
-    // Define the one-to-many relationship with PasswordResetRequest
-    // This relationship was missing in the new code, so we are keeping it from the existing code
-    public function passwordResetRequests()
-    {
-        return $this->hasMany(PasswordResetRequest::class, 'user_id');
-    }
+    // The following relationships are not needed as they are not mentioned in the "# TABLE" section
+    // Remove the stylistRequests and passwordResetRequests relationships
 
     // Define the has-one relationship with PasswordResetTokens
     // This relationship seems to be a duplicate of the one-to-many relationship with PasswordResetToken
