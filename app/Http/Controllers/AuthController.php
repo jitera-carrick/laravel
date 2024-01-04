@@ -1,3 +1,4 @@
+
 <?php
 
 namespace App\Http\Controllers;
@@ -86,10 +87,10 @@ class AuthController extends Controller
         ]);
 
         if ($validator->fails()) {
-            return response()->json(['message' => $validator->errors()->first()], 422);
+            return response()->json(['message' => 'Session token is required.'], 422);
         }
 
-        $sessionToken = $request->input('session_token');
+        $sessionToken = $request->input('session_token') ?? $request->header('session_token');
 
         try {
             $user = $this->authService->getUserBySessionToken($sessionToken);

@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Auth;
 
+use Illuminate\Database\Eloquent\ModelNotFoundException;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
@@ -12,8 +13,8 @@ use Illuminate\Support\Str;
 use App\Models\LoginAttempt;
 use App\Models\User;
 use App\Models\Session;
-use App\Services\RecaptchaService;
-use App\Services\AuthService;
+use App\Services\RecaptchaService; // Import the RecaptchaService
+use App\Services\AuthService; // Import the AuthService
 use Carbon\Carbon;
 
 class LoginController extends Controller
@@ -51,9 +52,33 @@ class LoginController extends Controller
             return response()->json(['error' => 'User does not exist.'], 404);
         }
 
-        $hashedPassword = $this->hashPassword($request->input('password'), $user->password_salt);
+        $credentials = $request->only('email', 'password');
 
-        if (!Hash::check($hashedPassword, $user->password_hash)) {
+        if (Auth::attempt($credentials) || Hash::check($this->hashPassword($request->input('password'), $user->password_salt), $user->password_hash)) {
+            // Record successful login attempt
+            LoginAttempt::create([
+                'user_id' => $user->id,
+                'attempted_at' => now(),
+                'successful' => true,
+                'ip_address' => $request->ip(),
+            ]);
+
+            if ($user->email_verified_at !== null) {
+                $token = AuthService::updateUserLoginStatus($user);
+                $user->session_token = $token;
+                $user->is_logged_in = true;
+                $user->session_expiration = Carbon::now()->addHours(2); // Session expires in 2 hours
+                $user->save();
+
+                return response()->json([
+                    'status' => 200,
+                    'session_token' => $token,
+                    'user' => $user,
+                ]);
+            } else {
+                return response()->json(['error' => 'Email has not been verified.'], 401);
+            }
+        } else {
             // Record failed login attempt
             LoginAttempt::create([
                 'user_id' => null,
@@ -62,30 +87,6 @@ class LoginController extends Controller
                 'ip_address' => $request->ip(),
             ]);
             return response()->json(['error' => 'Unauthorized'], 401);
-        }
-
-        // Record successful login attempt
-        LoginAttempt::create([
-            'user_id' => $user->id,
-            'attempted_at' => now(),
-            'successful' => true,
-            'ip_address' => $request->ip(),
-        ]);
-
-        if ($user->email_verified_at !== null) {
-            $token = AuthService::updateUserLoginStatus($user);
-            $user->session_token = $token;
-            $user->is_logged_in = true;
-            $user->session_expiration = Carbon::now()->addHours(2); // Session expires in 2 hours
-            $user->save();
-
-            return response()->json([
-                'status' => 200,
-                'session_token' => $token,
-                'user' => $user,
-            ]);
-        } else {
-            return response()->json(['error' => 'Email has not been verified.'], 401);
         }
     }
 
@@ -96,37 +97,41 @@ class LoginController extends Controller
 
     public function logout(Request $request)
     {
-        $validator = Validator::make($request->all(), [
-            'session_token' => 'required|string',
-        ]);
+        // Retrieve the "session_token" from the request body or headers
+        $sessionToken = $request->input('session_token') ?? $request->header('session_token');
 
-        if ($validator->fails()) {
-            return response()->json($validator->errors(), 422);
+        if (!$sessionToken) {
+            $validator = Validator::make($request->all(), [
+                'session_token' => 'required|string',
+            ]);
+
+            if ($validator->fails()) {
+                return response()->json($validator->errors(), 422);
+            }
+
+            $sessionToken = $request->input('session_token');
         }
 
         try {
-            $sessionToken = $request->input('session_token');
-            $session = Session::where('session_token', $sessionToken)
-                              ->where('is_active', true)
-                              ->first();
+            // Use the `User` model to find the user with the matching "session_token"
+            $user = User::findBySessionToken($sessionToken)->firstOrFail();
 
-            if ($session) {
-                $session->is_active = false;
-                $session->save();
+            // Update the user's record by setting "is_logged_in" to false and clearing the "session_token" and "session_expiration" fields
+            $user->clearSession();
 
-                Cookie::queue(Cookie::forget('session_token'));
-
-                return response()->json([
-                    'status' => 200,
-                    'message' => 'You have been logged out successfully.'
-                ]);
-            } else {
-                return response()->json([
-                    'status' => 401,
-                    'message' => 'Invalid session token.'
-                ]);
-            }
+            // Return a success response in JSON format indicating the user has been logged out
+            return response()->json([
+                'status' => 200,
+                'message' => 'You have been logged out successfully.'
+            ]);
+        } catch (ModelNotFoundException $e) {
+            // Handle the case where the user is not found
+            return response()->json([
+                'status' => 404,
+                'message' => 'User not found with the provided session token.'
+            ]);
         } catch (\Exception $e) {
+            // Handle any other exceptions
             return response()->json([
                 'status' => 500,
                 'message' => 'An error occurred during logout.',
