@@ -11,6 +11,8 @@ use Illuminate\Support\Facades\Mail;
 use App\Notifications\ResetPasswordNotification;
 use Illuminate\Support\Facades\Config;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\Password; // Import the Password facade
+use Illuminate\Http\JsonResponse; // Import JsonResponse
 
 class ForgotPasswordController extends Controller
 {
@@ -47,37 +49,38 @@ class ForgotPasswordController extends Controller
         }
     }
 
-    public function sendResetLinkEmail(Request $request)
+    public function sendResetLinkEmail(Request $request): JsonResponse
     {
-        $validatedData = $request->validate([
-            'email' => 'required|email',
+        $validator = \Validator::make($request->all(), [
+            'email' => 'required|email|exists:users,email',
         ]);
-
-        $user = User::where('email', $validatedData['email'])->first();
-
-        if ($user) {
-            $token = Str::random(60);
-            $passwordResetToken = new PasswordResetToken([
-                'email' => $user->email,
-                'token' => $token,
-                'created_at' => now(),
-                'expires_at' => now()->addMinutes(Config::get('auth.passwords.users.expire')),
-                'used' => false,
-                'user_id' => $user->id,
-            ]);
-            $passwordResetToken->save();
-
-            // Update the user's password_reset_token_id
-            $user->password_reset_token_id = $passwordResetToken->id;
-            $user->save();
-
-            // Send the password reset notification
-            $user->notify(new ResetPasswordNotification($token));
-
-            return response()->json(['message' => 'Password reset link has been sent to your email.'], 200);
+        
+        if ($validator->fails()) {
+            return response()->json(['message' => 'Please enter a valid email address.'], 400);
         }
 
-        return response()->json(['message' => 'If your email address exists in our database, you will receive a password reset link at your email address in a few minutes.'], 200);
+        $user = User::where('email', $request->input('email'))->first();
+        if (is_null($user)) {
+            return response()->json(['message' => 'The email address does not exist in our records.'], 404);
+        }
+
+        $token = Str::random(64); // Updated token length for better security
+        $passwordResetToken = new PasswordResetToken([
+            'email' => $user->email,
+            'token' => $token,
+            // Use the 'expires_at' field from the new code as it is more precise
+            'expires_at' => now()->addMinutes(Config::get('auth.passwords.users.expire')),
+            'used' => false,
+            'user_id' => $user->id,
+        ]); // No changes needed here as the structure is already following the guideline
+        $passwordResetToken->save();
+
+        // No need to update the user's password_reset_token_id as it's not used in the new code
+
+        // Send the password reset notification
+        $user->notify(new ResetPasswordNotification($token));
+
+        return response()->json(['status' => 'success', 'message' => 'Reset link has been sent to your email address.'], 200); // Updated status to a more descriptive string
     }
 
     // ... (other methods)
