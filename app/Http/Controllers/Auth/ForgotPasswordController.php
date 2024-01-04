@@ -54,7 +54,7 @@ class ForgotPasswordController extends Controller
         $validator = \Validator::make($request->all(), [
             'email' => 'required|email|exists:users,email',
         ]);
-        
+
         if ($validator->fails()) {
             return response()->json(['message' => 'Please enter a valid email address.'], 400);
         }
@@ -64,7 +64,7 @@ class ForgotPasswordController extends Controller
             return response()->json(['message' => 'The email address does not exist in our records.'], 404);
         }
 
-        $token = Str::random(64); // Updated token length for better security
+        $token = Str::random(64); // Generate a random token
         $passwordResetToken = new PasswordResetToken([
             'email' => $user->email,
             'token' => $token,
@@ -72,7 +72,7 @@ class ForgotPasswordController extends Controller
             'expires_at' => now()->addMinutes(Config::get('auth.passwords.users.expire')),
             'used' => false,
             'user_id' => $user->id,
-        ]); // No changes needed here as the structure is already following the guideline
+        ]); // Create a new password reset token entry
         $passwordResetToken->save();
 
         // No need to update the user's password_reset_token_id as it's not used in the new code
@@ -80,7 +80,7 @@ class ForgotPasswordController extends Controller
         // Send the password reset notification
         $user->notify(new ResetPasswordNotification($token));
 
-        return response()->json(['status' => 'success', 'message' => 'Reset link has been sent to your email address.'], 200); // Updated status to a more descriptive string
+        return response()->json(['status' => 'success', 'message' => 'Reset link has been sent to your email address.'], 200); // Return success response
     }
 
     // ... (other methods)
