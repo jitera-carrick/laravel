@@ -7,6 +7,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Facades\Cookie;
+use Illuminate\Support\Facades\Auth; // Added Auth facade
 use Illuminate\Support\Str;
 use App\Models\LoginAttempt;
 use App\Models\User;
@@ -17,29 +18,24 @@ class LoginController extends Controller
 {
     public function login(Request $request)
     {
-        // Merge the validation rules
         $validator = Validator::make($request->all(), [
             'email' => 'required|email',
             'password' => 'required',
-            'recaptcha' => 'required|string', // Recaptcha validation rule from existing code
+            'recaptcha' => 'required|string',
         ]);
 
         if ($validator->fails()) {
             return response()->json($validator->errors(), 422);
         }
 
-        // Retrieve the email and password from the request
         $email = $request->input('email');
         $password = $request->input('password');
-
-        // Check if the email exists in the "users" table
         $user = User::where('email', $email)->first();
 
         if (!$user) {
             return response()->json(['error' => 'Email does not exist.'], 400);
         }
 
-        // Check recaptcha validity
         if (!RecaptchaService::verify($request->input('recaptcha'))) {
             return response()->json(['error' => 'Invalid recaptcha.'], 401);
         }
