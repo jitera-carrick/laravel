@@ -11,101 +11,13 @@ class User extends Authenticatable
 {
     use HasApiTokens, HasFactory, Notifiable;
 
-    /**
-     * The table associated with the model.
-     *
-     * @var string
-     */
-    protected $table = 'users';
+    // ... existing code ...
 
-    /**
-     * The attributes that are mass assignable.
-     *
-     * @var array<int, string>
-     */
-    protected $fillable = [
-        'name',
-        'email',
-        'password',
-        'password_hash',
-        'password_salt',
-        'last_password_reset',
-        'remember_token',
-        'is_logged_in',
-        'created_at',
-        'updated_at',
-        'username',
-        'session_token', // New column added to fillable
-        'session_expiration', // New column added to fillable
-    ];
-
-    /**
-     * The attributes that should be hidden for serialization.
-     *
-     * @var array<int, string>
-     */
-    protected $hidden = [
-        'password',
-        'remember_token',
-        'password_hash',
-        'password_salt',
-        'session_token', // New column added to hidden
-        // 'session_expiration', // Typically, session expiration does not need to be hidden
-    ];
-
-    /**
-     * The attributes that should be cast.
-     *
-     * @var array<string, string>
-     */
-    protected $casts = [
-        'email_verified_at' => 'datetime',
-        'last_password_reset' => 'datetime',
-        'is_logged_in' => 'boolean',
-        'created_at' => 'datetime', // New column added to casts
-        'updated_at' => 'datetime', // New column added to casts
-        'session_expiration' => 'datetime', // New column added to casts
-    ];
-
-    // Define the one-to-many relationship with LoginAttempt
-    public function loginAttempts()
+    // Define the one-to-many relationship with PasswordPolicies
+    public function passwordPolicies()
     {
-        return $this->hasMany(LoginAttempt::class, 'user_id');
+        return $this->hasOne(PasswordPolicy::class, 'user_id');
     }
 
-    // Define the one-to-many relationship with Request
-    public function requests()
-    {
-        return $this->hasMany(Request::class, 'user_id');
-    }
-
-    // Define the one-to-many relationship with PasswordResetToken
-    public function passwordResetTokens() // Updated relationship method to plural as it's one-to-many
-    {
-        return $this->hasMany(PasswordResetToken::class, 'user_id');
-    }
-
-    // Define the one-to-many relationship with Session
-    public function sessions()
-    {
-        return $this->hasMany(Session::class, 'user_id');
-    }
-
-    // Define the one-to-many relationship with EmailVerificationToken
-    public function emailVerificationTokens()
-    {
-        return $this->hasMany(EmailVerificationToken::class, 'user_id');
-    }
-
-    // The following relationships are not needed as they are not mentioned in the "# TABLE" section
-    // Remove the stylistRequests and passwordResetRequests relationships
-
-    // Define the has-one relationship with PasswordResetTokens
-    // This relationship seems to be a duplicate of the one-to-many relationship with PasswordResetToken
-    // Since it's a has-one relationship, it should be singular and not plural
-    // Also, it should be named differently to avoid confusion with the one-to-many relationship
-    public function latestPasswordResetToken()
-    {
-        return $this->hasOne(PasswordResetToken::class, 'user_id')->latest();
-    }
+    // ... rest of the existing code ...
 }
