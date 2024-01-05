@@ -28,33 +28,34 @@ class ResetPasswordController extends Controller
     public function reset(ResetPasswordRequest $request): JsonResponse
     {
         // Existing code remains unchanged
-        // ...
+        return $this->resetPassword($request); // Delegate to the new resetPassword method
     }
 
     public function resetPassword(Request $request): JsonResponse
     {
         // Merge validation rules and messages from both versions
         $validator = Validator::make($request->all(), [
-            'email' => 'required|email',
+            'email' => 'required|email|exists:users,email',
             'token' => 'required', // From existing code
             'password' => 'required|min:6|regex:/^(?=.*[a-zA-Z])(?=.*\d).+$/|not_in:'.$request->email.'|confirmed', // From new code
-            'password_confirmation' => 'required', // From new code
+            'password_confirmation' => 'required_with:password', // From new code, updated to be conditional
             'password_reset_token_id' => 'required|exists:password_reset_tokens,id', // From new code
             'new_password' => 'required|min:8', // From existing code
         ], [
             'email.required' => 'Email address is required.',
             'email.email' => 'Invalid email address.',
+            'email.exists' => 'No user found with this email address.', // From existing code
             'token.required' => 'Invalid or expired password reset token.', // From existing code
             'password.required' => 'Password is required.',
             'password.min' => 'Password must be at least 6 characters long.',
             'password.regex' => 'Password must contain both letters and numbers.',
             'password.not_in' => 'Password should not contain the email address.',
             'password.confirmed' => 'Passwords do not match.',
-            'password_confirmation.required' => 'Password confirmation is required.',
+            'password_confirmation.required_with' => 'Password confirmation is required when password is present.', // Updated message
             'password_reset_token_id.required' => 'Password reset token is required.',
             'password_reset_token_id.exists' => 'Invalid or expired password reset token.',
-            'new_password.required' => 'Password must be at least 8 characters long.', // From existing code
-            'new_password.min' => 'Password must be at least 8 characters long.', // From existing code
+            'new_password.required' => 'New password is required.', // From existing code
+            'new_password.min' => 'New password must be at least 8 characters long.', // From existing code
         ]);
 
         if ($validator->fails()) {
@@ -112,5 +113,19 @@ class ResetPasswordController extends Controller
         }
     }
 
-    // ... other methods ...
+    public function validateResetToken(Request $request): JsonResponse
+    {
+        $token = $request->input('token');
+        $passwordResetToken = PasswordResetToken::where('token', $token)->first();
+
+        if (!$passwordResetToken || $passwordResetToken->expires_at < Carbon::now()) {
+            return response()->json(['message' => 'Token is invalid or expired'], 422);
+        }
+
+        if ($passwordResetToken->used) {
+            return response()->json(['message' => 'Token has already been used'], 422);
+        }
+
+        return response()->json(['message' => 'Token is valid'], 200);
+    }
 }
