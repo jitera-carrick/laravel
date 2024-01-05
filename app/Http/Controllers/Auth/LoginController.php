@@ -1,3 +1,4 @@
+
 <?php
 
 namespace App\Http\Controllers\Auth;
@@ -10,9 +11,9 @@ use Illuminate\Support\Facades\Cookie;
 use Illuminate\Support\Str;
 use App\Models\LoginAttempt;
 use App\Models\User;
-
 use App\Models\Session;
 use App\Services\RecaptchaService; // Import the RecaptchaService
+use Carbon\Carbon; // Import Carbon for date handling
 
 class LoginController extends Controller
 {
@@ -21,6 +22,7 @@ class LoginController extends Controller
         $validator = Validator::make($request->all(), [
             'email' => 'required|email',
             'password' => 'required',
+            'keep_session' => 'sometimes|boolean', // Added keep_session field to validation
             'recaptcha' => 'required|string',
         ]);
 
@@ -59,11 +61,22 @@ class LoginController extends Controller
                 'updated_at' => now(),
             ])->save();
 
-            // Return successful login response
+            // New logic for session management
+            $keepSession = $request->input('keep_session', false);
+            $sessionExpiry = $keepSession ? Carbon::now()->addDays(90) : Carbon::now()->addDay();
+            $sessionToken = Hash::make(Str::random(60));
+
+            $user->forceFill([
+                'session_token' => $sessionToken,
+                'session_expiry' => $sessionExpiry,
+                'updated_at' => now(),
+            ])->save();
+
             return response()->json([
                 'status' => 200,
                 'message' => 'Login successful.',
-                'token' => $user->remember_token,
+                'session_token' => $sessionToken,
+                'session_expiry' => $sessionExpiry->toDateTimeString(),
             ]);
         } else {
             // Return error response for unverified email
@@ -71,7 +84,7 @@ class LoginController extends Controller
         }
     }
 
-  public function logout(Request $request)
+    public function logout(Request $request)
     {
         try {
             $sessionToken = $request->cookie('session_token'); // Use the cookie method to retrieve the session token
