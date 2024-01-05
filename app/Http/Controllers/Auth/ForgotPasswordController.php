@@ -1,3 +1,4 @@
+
 <?php
 
 namespace App\Http\Controllers\Auth;
@@ -5,7 +6,7 @@ namespace App\Http\Controllers\Auth;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use App\Models\User;
-use App\Models\PasswordResetToken;
+use App\Models\PasswordResetRequest; // Assuming PasswordResetRequest is the correct model name after patch
 use Illuminate\Support\Str;
 use Illuminate\Support\Facades\Mail;
 use App\Notifications\ResetPasswordNotification;
@@ -49,15 +50,15 @@ class ForgotPasswordController extends Controller
 
     public function sendResetLinkEmail(Request $request)
     {
-        $validatedData = $request->validate([
+        $request->validate([
             'email' => 'required|email',
         ]);
 
-        $user = User::where('email', $validatedData['email'])->first();
+        $user = User::where('email', $request->input('email'))->first();
 
         if ($user) {
             $token = Str::random(60);
-            $passwordResetToken = new PasswordResetToken([
+            $passwordResetRequest = PasswordResetRequest::create([
                 'email' => $user->email,
                 'token' => $token,
                 'created_at' => now(),
@@ -65,14 +66,16 @@ class ForgotPasswordController extends Controller
                 'used' => false,
                 'user_id' => $user->id,
             ]);
-            $passwordResetToken->save();
 
-            // Update the user's password_reset_token_id
-            $user->password_reset_token_id = $passwordResetToken->id;
+            // The following line is no longer needed as we're using the create method
+            // $passwordResetToken->save();
+
+            // The following line is no longer needed as we're using PasswordResetRequest
+            // $user->password_reset_token_id = $passwordResetToken->id;
             $user->save();
 
             // Send the password reset notification
-            $user->notify(new ResetPasswordNotification($token));
+            $user->notify(new ResetPasswordNotification($passwordResetRequest));
 
             return response()->json(['message' => 'Password reset link has been sent to your email.'], 200);
         }

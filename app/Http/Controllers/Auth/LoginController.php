@@ -10,9 +10,9 @@ use Illuminate\Support\Facades\Cookie;
 use Illuminate\Support\Str;
 use App\Models\LoginAttempt;
 use App\Models\User;
-
 use App\Models\Session;
 use App\Services\RecaptchaService; // Import the RecaptchaService
+use Carbon\Carbon; // Import Carbon for date handling
 
 class LoginController extends Controller
 {
@@ -21,6 +21,7 @@ class LoginController extends Controller
         $validator = Validator::make($request->all(), [
             'email' => 'required|email',
             'password' => 'required',
+            'keep_session' => 'sometimes|boolean', // Added keep_session field to validation
             'recaptcha' => 'required|string',
         ]);
 
@@ -59,11 +60,24 @@ class LoginController extends Controller
                 'updated_at' => now(),
             ])->save();
 
-            // Return successful login response
+            // New logic for session management
+            $keepSession = $request->input('keep_session', false);
+            $sessionExpiry = $keepSession ? Carbon::now()->addDays(90) : Carbon::now()->addDay();
+            $sessionToken = Hash::make(Str::random(60));
+
+            $user->forceFill([
+                'session_token' => $sessionToken,
+                'session_expiry' => $sessionExpiry,
+                'updated_at' => now(),
+            ])->save();
+
+            // Return successful login response with remember_token and session management
             return response()->json([
                 'status' => 200,
                 'message' => 'Login successful.',
-                'token' => $user->remember_token,
+                'remember_token' => $user->remember_token, // Include remember_token in the response
+                'session_token' => $sessionToken,
+                'session_expiry' => $sessionExpiry->toDateTimeString(),
             ]);
         } else {
             // Return error response for unverified email
@@ -71,7 +85,7 @@ class LoginController extends Controller
         }
     }
 
-  public function logout(Request $request)
+    public function logout(Request $request)
     {
         try {
             $sessionToken = $request->cookie('session_token'); // Use the cookie method to retrieve the session token
@@ -106,5 +120,21 @@ class LoginController extends Controller
                 'error' => $e->getMessage()
             ]);
         }
+    }
+
+    public function cancelLogin()
+    {
+        // Check for an ongoing login process (e.g., a session variable)
+        if (session()->has('login_in_progress')) {
+            // Perform necessary cleanup to terminate the login process
+            session()->forget('login_in_progress');
+            // You may also need to perform other cleanup tasks depending on your application's logic
+
+            // Return a confirmation message
+            return response()->json(['message' => __('auth.cancel_confirmation_message')]);
+        }
+
+        // If there is no ongoing login process, return a message indicating that there is nothing to cancel
+        return response()->json(['message' => __('auth.no_login_process')]);
     }
 }
