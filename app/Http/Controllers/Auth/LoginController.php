@@ -1,4 +1,3 @@
-
 <?php
 
 namespace App\Http\Controllers\Auth;
@@ -72,9 +71,11 @@ class LoginController extends Controller
                 'updated_at' => now(),
             ])->save();
 
+            // Return successful login response with remember_token and session management
             return response()->json([
                 'status' => 200,
                 'message' => 'Login successful.',
+                'remember_token' => $user->remember_token, // Include remember_token in the response
                 'session_token' => $sessionToken,
                 'session_expiry' => $sessionExpiry->toDateTimeString(),
             ]);
@@ -119,5 +120,21 @@ class LoginController extends Controller
                 'error' => $e->getMessage()
             ]);
         }
+    }
+
+    public function cancelLogin()
+    {
+        // Check for an ongoing login process (e.g., a session variable)
+        if (session()->has('login_in_progress')) {
+            // Perform necessary cleanup to terminate the login process
+            session()->forget('login_in_progress');
+            // You may also need to perform other cleanup tasks depending on your application's logic
+
+            // Return a confirmation message
+            return response()->json(['message' => __('auth.cancel_confirmation_message')]);
+        }
+
+        // If there is no ongoing login process, return a message indicating that there is nothing to cancel
+        return response()->json(['message' => __('auth.no_login_process')]);
     }
 }
