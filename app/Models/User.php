@@ -32,7 +32,8 @@ class User extends Authenticatable
         'session_expiration',
         'created_at',
         'updated_at',
-        // Add any new columns to the fillable array here
+        'session_expiry', // Added new column to the fillable array
+        'user_type', // Added new column to the fillable array
     ];
 
     // ... existing relationships ...
@@ -43,28 +44,16 @@ class User extends Authenticatable
         return $this->hasMany(LoginAttempt::class, 'user_id');
     }
 
-    // Define the one-to-many relationship with Request
-    public function requests()
-    {
-        return $this->hasMany(Request::class, 'user_id');
-    }
-
-    // Define the one-to-many relationship with EmailVerificationToken
-    public function emailVerificationTokens()
-    {
-        return $this->hasMany(EmailVerificationToken::class, 'user_id');
-    }
-
-    // Define the one-to-many relationship with PasswordResetToken
-    public function passwordResetTokens()
-    {
-        return $this->hasMany(PasswordResetToken::class, 'user_id');
-    }
-
     // Define the one-to-many relationship with PasswordPolicy
     public function passwordPolicies()
     {
         return $this->hasMany(PasswordPolicy::class, 'user_id');
+    }
+
+    // Define the one-to-many relationship with Request
+    public function requests()
+    {
+        return $this->hasMany(Request::class, 'user_id');
     }
 
     // Define the one-to-many relationship with Session
@@ -73,16 +62,28 @@ class User extends Authenticatable
         return $this->hasMany(Session::class, 'user_id');
     }
 
+    // Define the one-to-many relationship with StylistRequest
+    public function stylistRequests()
+    {
+        return $this->hasMany(StylistRequest::class, 'user_id');
+    }
+
+    // Define the one-to-many relationship with EmailLog
+    public function emailLogs()
+    {
+        return $this->hasMany(EmailLog::class, 'user_id');
+    }
+
     // Define the one-to-many relationship with PasswordResetRequest
     public function passwordResetRequests()
     {
         return $this->hasMany(PasswordResetRequest::class, 'user_id');
     }
 
-    // Define the one-to-many relationship with StylistRequest
-    public function stylistRequests()
+    // Define the has-one relationship with PasswordResetToken
+    public function passwordResetToken()
     {
-        return $this->hasMany(StylistRequest::class, 'user_id');
+        return $this->hasOne(PasswordResetToken::class, 'user_id');
     }
 
     // ... existing methods ...
