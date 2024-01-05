@@ -9,35 +9,30 @@ class EmailVerificationToken extends Model
 {
     use HasFactory;
 
-    /**
-     * The attributes that are mass assignable.
-     *
-     * @var array<int, string>
-     */
+    protected $table = 'email_verification_tokens';
+
     protected $fillable = [
         'token',
         'expires_at',
-        'used',
+        'verified',
         'user_id',
     ];
 
-    /**
-     * The attributes that should be cast.
-     *
-     * @var array
-     */
-    protected $casts = [
-        'used' => 'boolean',
-        'expires_at' => 'datetime',
+    protected $hidden = [
+        // If there are any columns that should be hidden from array outputs, they should be listed here.
     ];
 
-    /**
-     * The user that the verification token belongs to.
-     *
-     * @return \Illuminate\Database\Eloquent\Relations\BelongsTo
-     */
+    protected $casts = [
+        'created_at' => 'datetime',
+        'updated_at' => 'datetime',
+        'expires_at' => 'datetime',
+        'verified'   => 'boolean',
+    ];
+
     public function user()
     {
         return $this->belongsTo(User::class, 'user_id');
     }
+
+    // If there are any additional methods or relationships, they should be defined here.
 }
