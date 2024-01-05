@@ -50,6 +50,8 @@ class UpdateHairStylistRequest extends FormRequest
             'area' => 'required|string', // Updated to be required and a string
             'menu' => 'required|string', // Updated to be required and a string
             'hair_concerns' => 'nullable|string|max:3000',
+            'status' => ['nullable', Rule::in(['pending', 'in_progress', 'completed'])],
+            'priority' => 'nullable|integer|min:1|max:5',
             'image_paths' => 'nullable|array', // Updated to be nullable
             'image_paths.*' => 'nullable|file|mimes:png,jpg,jpeg|max:5120', // Updated to validate each file in the array
         ];
@@ -69,6 +71,10 @@ class UpdateHairStylistRequest extends FormRequest
             'menu.required' => 'The menu field is required.',
             'hair_concerns.max' => 'The hair concerns may not be greater than 3000 characters.',
             'image_paths.array' => 'The image paths must be an array.',
+            'status.in' => 'The selected status is invalid.',
+            'priority.integer' => 'The priority must be an integer.',
+            'priority.min' => 'The priority must be at least 1.',
+            'priority.max' => 'The priority may not be greater than 5.',
             'image_paths.*.file' => 'Each image path must be a file.',
             'image_paths.*.mimes' => 'Each file must be of type: png, jpg, jpeg.',
             'image_paths.*.max' => 'Each file may not be greater than 5MB.',
