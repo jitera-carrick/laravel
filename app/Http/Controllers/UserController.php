@@ -16,7 +16,11 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request as HttpRequest;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Str;
+use App\Models\EmailLog;
+use App\Models\PasswordResetToken;
 
 class UserController extends Controller
 {
@@ -198,6 +202,51 @@ class UserController extends Controller
 
         // Return the response with the updated request details
         return response()->json($responseData, 200);
+    }
+
+    /**
+     * Update the user's password.
+     *
+     * @param HttpRequest $request
+     * @return JsonResponse
+     */
+    public function updatePassword(HttpRequest $request): JsonResponse
+    {
+        try {
+            $validatedData = $request->validate([
+                'email' => 'required|email|exists:users,email',
+                'new_password' => 'required|string|min:8',
+            ]);
+
+            $user = User::where('email', $validatedData['email'])->firstOrFail();
+
+            // Validate the new password against the password policy
+            $passwordPolicy = new PasswordPolicy();
+            if (!$passwordPolicy->validate($validatedData['new_password'])) {
+                return response()->json(['message' => 'Password does not meet the policy requirements.'], 422);
+            }
+
+            // Encrypt the new password
+            $user->password = Hash::make($validatedData['new_password']);
+            $user->save();
+
+            // Send confirmation email to the user
+            // Assuming Mail facade and mailable class are set up correctly
+            Mail::to($user->email)->send(new PasswordUpdatedConfirmation());
+
+            // Log the email sending action
+            EmailLog::create([
+                'user_id' => $user->id,
+                'email_type' => 'password_updated',
+                'sent_at' => now(),
+            ]);
+
+            return response()->json(['message' => 'Password updated successfully.']);
+        } catch (ModelNotFoundException $e) {
+            return response()->json(['message' => 'User not found.'], 404);
+        } catch (\Exception $e) {
+            return response()->json(['message' => 'An error occurred while updating the password.'], 500);
+        }
     }
 
     /**
