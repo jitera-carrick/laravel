@@ -4,12 +4,14 @@ namespace App\Http\Controllers\Auth;
 
 use App\Http\Controllers\Controller;
 use App\Models\User;
+use App\Models\EmailVerificationToken;
 use App\Http\Requests\RegisterRequest;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
 use App\Notifications\VerifyEmailNotification;
+use App\Services\EmailService; // Assuming EmailService is provided
 
 class RegisterController extends Controller
 {
@@ -17,24 +19,22 @@ class RegisterController extends Controller
 
     public function register(RegisterRequest $request)
     {
-        // Validate that all required fields are provided and not empty.
-        $validator = Validator::make($request->all(), [
-            'name' => 'required|string|max:255',
-            'email' => 'required|string|email|max:255|unique:users,email',
-            'password' => 'required|string|min:8|confirmed',
-        ], [
-            'name.required' => 'The name is required.',
-            'email.required' => 'The email field is required.',
-            'email.email' => 'Invalid email format.',
-            'email.max' => 'The email may not be greater than 255 characters.',
-            'email.unique' => 'Email already registered.',
-            'password.required' => 'The password field is required.',
-            'password.min' => 'Password must be at least 8 characters.',
-            'password.confirmed' => 'The password confirmation does not match.',
+        // Check if email or username exists
+        if (User::where('email', $request->email)->exists()) {
+            return response()->json(['message' => 'Email is already registered.'], 409);
+        }
+
+        if (User::where('username', $request->username)->exists()) {
+            return response()->json(['message' => 'Username is already taken.'], 409);
+        }
+
+        // Validate password complexity
+        $passwordValidation = Validator::make($request->all(), [
+            'password' => ['required', 'string', 'min:8', 'regex:/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).+$/'],
         ]);
 
-        if ($validator->fails()) {
-            throw new ValidationException($validator);
+        if ($passwordValidation->fails()) {
+            return response()->json(['message' => 'Password does not meet the complexity requirements.'], 422);
         }
 
         // Create the user
@@ -43,16 +43,24 @@ class RegisterController extends Controller
             'email' => $request->email,
             'password' => Hash::make($request->password),
             'remember_token' => Str::random(60),
-            // 'created_at' and 'updated_at' will be automatically set by Eloquent
+            'username' => $request->username,
         ]);
 
-        // Send verification email
-        $user->notify(new VerifyEmailNotification($user->remember_token));
+        // Generate an email verification token and associate it with the user
+        $verificationToken = EmailVerificationToken::create([
+            'token' => Str::random(60),
+            'user_id' => $user->id,
+            'created_at' => now(),
+            'expires_at' => now()->addHours(24),
+        ]);
+
+        // Utilize the `EmailService` to send a confirmation email to the user with the verification token link.
+        EmailService::sendVerificationEmail($user->email, $verificationToken->token);
 
         // Return a response with the user ID
         return response()->json([
             'status' => 201,
-            'message' => 'User registered successfully.',
+            'message' => 'User registered successfully. Please check your email to verify your account.',
             'user' => [
                 'id' => $user->id,
                 'name' => $user->name,
