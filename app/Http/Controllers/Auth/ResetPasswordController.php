@@ -1,3 +1,4 @@
+
 <?php
 
 namespace App\Http\Controllers\Auth;
@@ -15,6 +16,7 @@ use Illuminate\Http\Request;
 use App\Models\User;
 use App\Models\PasswordResetToken;
 use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Facades\Response; // Added from patch
 
 class ResetPasswordController extends Controller
 {
@@ -110,6 +112,29 @@ class ResetPasswordController extends Controller
             DB::rollBack();
             return ApiResponse::error(['message' => 'An error occurred while resetting the password.'], 500);
         }
+    }
+
+    // ... other methods ...
+
+    public function validateResetToken(Request $request): JsonResponse
+    {
+        $token = $request->route('token');
+
+        $passwordResetToken = PasswordResetToken::where('token', $token)
+            ->where('used', false)
+            ->where('expires_at', '>', Carbon::now())
+            ->first();
+
+        if (!$passwordResetToken) {
+            return Response::json([
+                'message' => 'Invalid or expired password reset token.'
+            ], 422);
+        }
+
+        return Response::json([
+            'message' => 'The password reset token is valid.',
+            'token' => $token
+        ], 200);
     }
 
     // ... other methods ...
