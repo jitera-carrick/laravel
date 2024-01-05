@@ -1,3 +1,4 @@
+
 <?php
 
 namespace App\Http\Controllers\Auth;
@@ -46,7 +47,7 @@ class ForgotPasswordController extends Controller
             return response()->json(['error' => 'An error occurred while validating the token'], 500);
         }
     }
-
+    
     public function sendResetLinkEmail(Request $request)
     {
         $validatedData = $request->validate([
@@ -54,7 +55,7 @@ class ForgotPasswordController extends Controller
         ]);
 
         $user = User::where('email', $validatedData['email'])->first();
-
+        
         if ($user) {
             $token = Str::random(60);
             $passwordResetToken = new PasswordResetToken([
@@ -66,11 +67,11 @@ class ForgotPasswordController extends Controller
                 'user_id' => $user->id,
             ]);
             $passwordResetToken->save();
-
+            
             // Update the user's password_reset_token_id
             $user->password_reset_token_id = $passwordResetToken->id;
             $user->save();
-
+            
             // Send the password reset notification
             $user->notify(new ResetPasswordNotification($token));
 
