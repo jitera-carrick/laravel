@@ -50,6 +50,7 @@ class ForgotPasswordController extends Controller
     public function sendResetLinkEmail(Request $request)
     {
         $validatedData = $request->validate([
+            // Ensure the email field is required and must be a valid email format
             'email' => 'required|email',
         ]);
 
@@ -58,6 +59,7 @@ class ForgotPasswordController extends Controller
         if ($user) {
             $token = Str::random(60);
             $passwordResetToken = new PasswordResetToken([
+                // Create a new password reset token entry for the user
                 'email' => $user->email,
                 'token' => $token,
                 'created_at' => now(),
@@ -65,6 +67,7 @@ class ForgotPasswordController extends Controller
                 'used' => false,
                 'user_id' => $user->id,
             ]);
+            // Save the new password reset token to the database
             $passwordResetToken->save();
 
             // Update the user's password_reset_token_id
@@ -72,6 +75,7 @@ class ForgotPasswordController extends Controller
             $user->save();
 
             // Send the password reset notification
+            // Utilize Laravel's notification system to send the reset token link
             $user->notify(new ResetPasswordNotification($token));
 
             return response()->json(['message' => 'Password reset link has been sent to your email.'], 200);
