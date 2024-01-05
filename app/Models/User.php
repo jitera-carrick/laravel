@@ -33,6 +33,7 @@ class User extends Authenticatable
         'created_at',
         'updated_at',
         // Add any new columns to the fillable array here
+        'email_verified_at', // New column added to fillable array
     ];
 
     // ... existing relationships ...
