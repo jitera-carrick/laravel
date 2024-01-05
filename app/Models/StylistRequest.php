@@ -12,22 +12,22 @@ class StylistRequest extends Model
     protected $table = 'stylist_requests';
 
     protected $fillable = [
-        'request_time', // Added from new code
+        'details', // Updated to include 'details' column
         'status',
         'user_id',
-        'created_at', // Kept from existing code
-        'updated_at', // Kept from existing code
+        'created_at',
+        'updated_at',
     ];
 
     protected $hidden = [
         // If there are any columns that should be hidden for arrays, add them here.
-        // This line is from the new code and has been kept as a placeholder for future use.
     ];
 
     protected $casts = [
         'created_at' => 'datetime',
         'updated_at' => 'datetime',
-        'request_time' => 'datetime', // Added from new code, assuming request_time is a datetime column
+        // Assuming 'details' is a JSON column, it should be cast to an array.
+        'details' => 'array', // Added cast for 'details' column
     ];
 
     public function user()
@@ -35,6 +35,5 @@ class StylistRequest extends Model
         return $this->belongsTo(User::class, 'user_id');
     }
 
-    // If there are any other relationships that need to be defined, add them here.
-    // This comment is from the new code and has been kept as a placeholder for future use.
+    // Other relationships can be added here as needed.
 }
