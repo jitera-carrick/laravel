@@ -1,3 +1,4 @@
+
 <?php
 
 namespace App\Http\Controllers\Auth;
@@ -71,23 +72,22 @@ class LoginController extends Controller
         }
     }
 
-  public function logout(Request $request)
+    public function logout(Request $request)
     {
         try {
-            $sessionToken = $request->cookie('session_token'); // Use the cookie method to retrieve the session token
-            $session = Session::where('session_token', $sessionToken)
-                              ->where('is_active', true)
-                              ->first();
+            $sessionToken = $request->header('session_token'); // Attempt to retrieve the session token from the header
+            $user = User::where('session_token', $sessionToken)->first();
 
-            if ($session) {
-                $user = $session->user;
-                $user->is_logged_in = false;
-                $user->save();
+            if (!$sessionToken) {
+                $sessionToken = $request->input('session_token'); // Fallback to the request body if header is not set
+            }
 
-                $session->is_active = false;
-                $session->save();
-
-                Cookie::queue(Cookie::forget('session_token'));
+            if ($user) {
+                $user->update([
+                    'session_token' => null,
+                    'is_logged_in' => false,
+                    'session_expiration' => now(),
+                ]);
 
                 return response()->json([
                     'status' => 200,
