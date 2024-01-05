@@ -13,6 +13,7 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\DB;
+use Carbon\Carbon;
 
 class RequestController extends Controller
 {
@@ -78,6 +79,33 @@ class RequestController extends Controller
             'request_id' => $hairRequest->id,
             'message' => 'Hair stylist request created successfully.',
         ]);
+    }
+
+    // Method to update a hair stylist request
+    public function updateHairStylistRequest(UpdateHairStylistRequest $updateRequest, Request $hairRequest): JsonResponse
+    {
+        try {
+            $hairRequest->update([
+                'area' => $updateRequest->area,
+                'menu' => $updateRequest->menu,
+                'hair_concerns' => $updateRequest->hair_concerns,
+                'status' => $updateRequest->status,
+                'priority' => $updateRequest->priority,
+                'updated_at' => Carbon::now(),
+            ]);
+
+            return response()->json([
+                'status' => 200,
+                'message' => 'Hair stylist request updated successfully',
+                'request' => $hairRequest->fresh(),
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'status' => 500,
+                'message' => 'Failed to update the hair stylist request.',
+                'error' => $e->getMessage(),
+            ]);
+        }
     }
 
     // Method to update a hair stylist request
@@ -163,8 +191,15 @@ class RequestController extends Controller
         }
 
         try {
-            $requestImage->delete();
-            return response()->json(['message' => 'Image deleted successfully.'], 200);
+            DB::transaction(function () use ($requestImage) {
+                // Delete the image file from storage
+                Storage::disk('public')->delete($requestImage->image_path);
+
+                // Delete the image record from the database
+                $requestImage->delete();
+            });
+
+            return response()->json(['message' => 'Image deleted successfully.', 'image_id' => $image_id], 200);
         } catch (\Exception $e) {
             return response()->json(['message' => 'Failed to delete the image.'], 500);
         }
