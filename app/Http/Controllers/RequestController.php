@@ -1,9 +1,11 @@
+
 <?php
 
 namespace App\Http\Controllers;
 
 use Illuminate\Http\Request as HttpRequest;
 use App\Http\Requests\UpdateHairStylistRequest;
+use App\Http\Requests\CreateHairStylistRequest; // Added line
 use App\Models\Request;
 use App\Models\RequestAreaSelection;
 use App\Models\RequestMenuSelection;
@@ -25,7 +27,7 @@ class RequestController extends Controller
 
         // Validate the request
         $validator = Validator::make($httpRequest->all(), [
-            'user_id' => 'required|exists:users,id',
+            'user_id' => 'sometimes|exists:users,id', // Changed line
             'area_id' => 'required|array|min:1',
             'menu_id' => 'required|array|min:1',
             'hair_concerns' => 'required|string|max:3000',
@@ -33,7 +35,7 @@ class RequestController extends Controller
             'image_path.*' => 'file|image|mimes:png,jpg,jpeg|max:5120', // 5MB
         ]);
 
-        if ($validator->fails()) {
+        if ($validator->fails() || !$user) { // Changed line
             return response()->json(['message' => $validator->errors()->first()], 422);
         }
 
@@ -41,12 +43,15 @@ class RequestController extends Controller
             return response()->json(['message' => 'Unauthorized user.'], 401);
         }
 
-        // Create the request
+        // Create the request with default values for status and priority
         $hairRequest = Request::create([
-            'user_id' => $httpRequest->user_id,
+            'user_id' => $httpRequest->user_id ?? $user->id, // Changed line
             'hair_concerns' => $httpRequest->hair_concerns,
             'status' => 'pending', // Assuming 'pending' is a valid status
-        ]);
+            'priority' => $httpRequest->priority ?? 'normal', // Assuming 'normal' is a valid priority // Added line
+            'created_at' => now(), // Added line
+            'updated_at' => now(), // Added line
+        ])->fresh(); // Changed line
 
         // Create area selections
         foreach ($httpRequest->area_id as $areaId) {
@@ -71,7 +76,7 @@ class RequestController extends Controller
                 'request_id' => $hairRequest->id,
                 'image_path' => $imagePath,
             ]);
-        }
+        } 
 
         return response()->json([
             'status' => 200,
