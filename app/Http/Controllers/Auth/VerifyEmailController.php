@@ -4,30 +4,46 @@ namespace App\Http\Controllers\Auth;
 
 use App\Http\Controllers\Controller;
 use App\Models\User;
+use App\Models\EmailVerificationToken;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
 use Illuminate\Validation\ValidationException;
 
 class VerifyEmailController extends Controller
 {
-    public function verify(Request $request)
+    public function verify(Request $request, $token) // Updated to include $token as a route parameter
     {
-        $user_id = $request->input('user_id');
-        $remember_token = $request->input('remember_token');
+        // The token is now retrieved from the route parameter instead of request body
+        $verificationToken = EmailVerificationToken::where('token', $token)->first();
 
-        $user = User::find($user_id);
-
-        abort_if(!$user, 404, "User not found.");
-
-        if ($user->remember_token !== $remember_token) {
-            throw new ValidationException("Invalid token provided.");
+        if (!$verificationToken) {
+            return response()->json(['message' => 'Invalid verification token.'], 404);
         }
 
-        $user->email_verified_at = Carbon::now();
-        $user->remember_token = null;
-        $user->updated_at = Carbon::now();
-        $user->save();
+        if ($verificationToken->verified) {
+            return response()->json(['message' => 'Email is already verified.'], 422);
+        }
 
-        return response()->json(['message' => 'Email verified successfully.'], 200);
+        if (Carbon::now()->greaterThan($verificationToken->expires_at)) {
+            return response()->json(['message' => 'The verification token is expired.'], 422);
+        }
+
+        $user = User::find($verificationToken->user_id);
+
+        if (!$user) {
+            return response()->json(['message' => 'User not found.'], 404);
+        }
+
+        try {
+            $user->email_verified_at = Carbon::now();
+            $user->save();
+
+            $verificationToken->verified = true;
+            $verificationToken->save();
+
+            return response()->json(['status' => 200, 'message' => 'Email verified successfully.'], 200); // Updated the response format to match the requirement
+        } catch (\Exception $e) {
+            return response()->json(['message' => 'Failed to verify email.'], 500);
+        }
     }
 }
