@@ -1,3 +1,4 @@
+
 <?php
 
 namespace App\Http\Controllers\Auth;
@@ -71,40 +72,37 @@ class LoginController extends Controller
         }
     }
 
-  public function logout(Request $request)
+    public function logout(Request $request)
     {
         try {
-            $sessionToken = $request->cookie('session_token'); // Use the cookie method to retrieve the session token
-            $session = Session::where('session_token', $sessionToken)
-                              ->where('is_active', true)
-                              ->first();
-
-            if ($session) {
-                $user = $session->user;
-                $user->is_logged_in = false;
-                $user->save();
-
-                $session->is_active = false;
-                $session->save();
-
-                Cookie::queue(Cookie::forget('session_token'));
-
-                return response()->json([
-                    'status' => 200,
-                    'message' => 'Logout successful.'
-                ]);
+            // Retrieve the session token from the request header or body
+            $sessionToken = $request->header('session_token');
+            if (!$sessionToken) {
+                $sessionToken = $request->input('session_token');
             }
 
+            // Find the user with the matching session token
+            $user = User::where('session_token', $sessionToken)->first();
+
+            if ($user) {
+                // Update the user's session information
+                $user->update(['session_token' => null, 'is_logged_in' => false, 'session_expiration' => now()]);
+            } else {
+                throw new \Exception('Session token mismatch');
+            }
+
+            Cookie::queue(Cookie::forget('session_token'));
+
             return response()->json([
-                'status' => 400,
-                'message' => 'No active session found.'
+                'status' => 200,
+                'message' => 'Logout successful.'
             ]);
         } catch (\Exception $e) {
-            return response()->json([
-                'status' => 500,
-                'message' => 'An error occurred during logout.',
-                'error' => $e->getMessage()
-            ]);
+            $statusCode = $e->getMessage() === 'Session token mismatch' ? 400 : 500;
+            return response()->json(
+                ['message' => 'An error occurred during logout.', 'error' => $e->getMessage()],
+                $statusCode
+            );
         }
     }
 }
