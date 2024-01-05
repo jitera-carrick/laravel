@@ -18,21 +18,40 @@ class AuthController extends Controller
 {
     public function login(Request $request)
     {
-        $validatedData = $request->validate([
-            'email' => 'required|email',
-            'password' => 'required',
-            'recaptcha' => 'required',
-        ]);
+        // Check if the request is an instance of LoginRequest to use the new validation
+        if ($request instanceof LoginRequest) {
+            $email = $request->input('email');
+            $password = $request->input('password');
 
-        $user = User::where('email', $validatedData['email'])->first();
+            $user = User::where('email', $email)->first();
 
-        if (!$user || !Hash::check($validatedData['password'], $user->password)) {
-            return ApiResponse::error('Invalid email or password.', 401);
-        }
+            if (!$user) {
+                return ApiResponse::error('Email does not exist.', 400);
+            }
 
-        $recaptchaIsValid = AuthService::validateRecaptcha($validatedData['recaptcha']);
-        if (!$recaptchaIsValid) {
-            return ApiResponse::error('Invalid recaptcha.', 422);
+            $hashedPassword = HashHelper::hash($password, $user->password_salt);
+
+            if (!hash_equals($hashedPassword, $user->password_hash)) {
+                return ApiResponse::error('Incorrect password.', 401);
+            }
+        } else {
+            // Use the existing validation for other types of requests
+            $validatedData = $request->validate([
+                'email' => 'required|email',
+                'password' => 'required',
+                'recaptcha' => 'required',
+            ]);
+
+            $user = User::where('email', $validatedData['email'])->first();
+
+            if (!$user || !Hash::check($validatedData['password'], $user->password)) {
+                return ApiResponse::error('Invalid email or password.', 401);
+            }
+
+            $recaptchaIsValid = AuthService::validateRecaptcha($validatedData['recaptcha']);
+            if (!$recaptchaIsValid) {
+                return ApiResponse::error('Invalid recaptcha.', 422);
+            }
         }
 
         $sessionToken = AuthService::generateSessionToken($user);
@@ -45,22 +64,41 @@ class AuthController extends Controller
         return ApiResponse::success(['session_token' => $sessionToken, 'message' => 'Login successful.']);
     }
 
-    public function logout(LogoutRequest $request)
+    public function logout(Request $request)
     {
         try {
-            $user = User::where('session_token', $request->session_token)->first();
+            // Check if the request is an instance of LogoutRequest to use the new validation
+            if ($request instanceof LogoutRequest) {
+                $sessionToken = $request->input('session_token');
+                if (!$sessionToken) {
+                    return ApiResponse::error('Invalid session token.', 400);
+                }
 
-            if ($user) {
-                $user->update([
-                    'session_token' => null,
-                    'is_logged_in' => false,
-                    'session_expiration' => Carbon::now(),
-                ]);
+                $user = User::where('session_token', $sessionToken)->first();
 
-                return ApiResponse::success('Logout successful.');
+                if (!$user) {
+                    return ApiResponse::error('Invalid session token.', 401);
+                }
+
+                if ($user->session_expiration < Carbon::now()) {
+                    return ApiResponse::error('Invalid session token.', 401);
+                }
+            } else {
+                // Use the existing logic for other types of requests
+                $user = User::where('session_token', $request->session_token)->first();
+
+                if (!$user) {
+                    return ApiResponse::error('Logout attempt failed. No user found with the provided session token.');
+                }
             }
 
-            return ApiResponse::error('Logout attempt failed. No user found with the provided session token.');
+            $user->update([
+                'session_token' => null,
+                'is_logged_in' => false,
+                'session_expiration' => Carbon::now(),
+            ]);
+
+            return ApiResponse::success('Logout successful.');
         } catch (\Exception $e) {
             return Handler::renderException($e);
         }

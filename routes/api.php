@@ -10,6 +10,7 @@ use App\Http\Controllers\RequestController; // Import the RequestController
 use App\Http\Controllers\RequestImageController; // Import the RequestImageController
 use App\Http\Controllers\Auth\VerifyEmailController; // Import the VerifyEmailController
 use App\Http\Controllers\Auth\LoginController; // Import the LoginController
+use App\Http\Controllers\Auth\AuthController; // Import the AuthController
 
 /*
 |--------------------------------------------------------------------------
@@ -54,3 +55,6 @@ Route::post('/auth/verify/{token}', [VerifyEmailController::class, 'verifyEmail'
 
 // New POST route for user login
 Route::post('/auth/login', [LoginController::class, 'login'])->middleware('throttle:api');
+
+// New route for logging out the user
+Route::middleware('auth:sanctum')->post('/auth/logout', [AuthController::class, 'logout']);
