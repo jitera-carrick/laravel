@@ -1,3 +1,4 @@
+
 <?php
 
 namespace App\Http\Controllers\Auth;
@@ -5,6 +6,7 @@ namespace App\Http\Controllers\Auth;
 use App\Http\Controllers\Controller;
 use App\Models\User;
 use App\Http\Requests\RegisterRequest;
+use App\Models\EmailVerificationToken;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Str;
@@ -17,43 +19,33 @@ class RegisterController extends Controller
 
     public function register(RegisterRequest $request)
     {
-        // Validate that all required fields are provided and not empty.
-        $validator = Validator::make($request->all(), [
-            'name' => 'required|string|max:255',
-            'email' => 'required|string|email|max:255|unique:users,email',
-            'password' => 'required|string|min:8|confirmed',
-        ], [
-            'name.required' => 'The name is required.',
-            'email.required' => 'The email field is required.',
-            'email.email' => 'Invalid email format.',
-            'email.max' => 'The email may not be greater than 255 characters.',
-            'email.unique' => 'Email already registered.',
-            'password.required' => 'The password field is required.',
-            'password.min' => 'Password must be at least 8 characters.',
-            'password.confirmed' => 'The password confirmation does not match.',
-        ]);
-
-        if ($validator->fails()) {
-            throw new ValidationException($validator);
-        }
+        // Since we're using a form request, we can assume the data is already validated.
+        $validatedData = $request->validated();
 
         // Create the user
         $user = User::create([
-            'name' => $request->name,
-            'email' => $request->email,
-            'password' => Hash::make($request->password),
+            'name' => $validatedData['name'],
+            'email' => $validatedData['email'],
+            'password' => Hash::make($validatedData['password']),
             'remember_token' => Str::random(60),
-            // 'created_at' and 'updated_at' will be automatically set by Eloquent
+            'username' => $validatedData['username'], // Assuming 'username' is a valid field in the request
         ]);
 
+        // Generate email verification token and save it
+        $emailVerificationToken = new EmailVerificationToken([
+            'token' => Str::random(60),
+            'expires_at' => now()->addHours(24),
+        ]);
+        $user->emailVerificationTokens()->save($emailVerificationToken);
+
         // Send verification email
-        $user->notify(new VerifyEmailNotification($user->remember_token));
+        $user->notify(new VerifyEmailNotification($emailVerificationToken->token));
 
         // Return a response with the user ID
         return response()->json([
             'status' => 201,
             'message' => 'User registered successfully.',
-            'user' => [
+            'data' => [
                 'id' => $user->id,
                 'name' => $user->name,
                 'email' => $user->email,
