@@ -1,3 +1,4 @@
+
 <?php
 
 namespace App\Http\Controllers;
@@ -162,11 +163,29 @@ class RequestController extends Controller
             return response()->json(['message' => 'Image not found or does not belong to the request.'], 404);
         }
 
-        try {
+        try {            
+            // Delete the image record from the database
             $requestImage->delete();
+            
+            // Delete the image file from the storage
+            $this->deleteImageFile($requestImage->image_path);
+
             return response()->json(['message' => 'Image deleted successfully.'], 200);
         } catch (\Exception $e) {
             return response()->json(['message' => 'Failed to delete the image.'], 500);
+        }
+    }
+
+    /**
+     * Delete the image file from the storage.
+     *
+     * @param string $imagePath
+     * @return void
+     */
+    private function deleteImageFile($imagePath)
+    {
+        if (Storage::disk('public')->exists($imagePath)) {
+            Storage::disk('public')->delete($imagePath);
         }
     }
 
