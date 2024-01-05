@@ -11,24 +11,28 @@ use App\Services\AuthService;
 use App\Services\HashHelper;
 use App\Helpers\ApiResponse;
 use App\Exceptions\Handler;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Hash;
 
 class AuthController extends Controller
 {
-    public function login(LoginRequest $request)
+    public function login(Request $request)
     {
-        $email = $request->input('email');
-        $password = $request->input('password');
+        $validatedData = $request->validate([
+            'email' => 'required|email',
+            'password' => 'required',
+            'recaptcha' => 'required',
+        ]);
 
-        $user = User::where('email', $email)->first();
+        $user = User::where('email', $validatedData['email'])->first();
 
-        if (!$user) {
-            return ApiResponse::error('Email does not exist.', 400);
+        if (!$user || !Hash::check($validatedData['password'], $user->password)) {
+            return ApiResponse::error('Invalid email or password.', 401);
         }
 
-        $hashedPassword = HashHelper::hash($password, $user->password_salt);
-
-        if (!hash_equals($hashedPassword, $user->password_hash)) {
-            return ApiResponse::error('Incorrect password.', 401);
+        $recaptchaIsValid = AuthService::validateRecaptcha($validatedData['recaptcha']);
+        if (!$recaptchaIsValid) {
+            return ApiResponse::error('Invalid recaptcha.', 422);
         }
 
         $sessionToken = AuthService::generateSessionToken($user);
@@ -38,7 +42,7 @@ class AuthController extends Controller
             'is_logged_in' => true
         ]);
 
-        return ApiResponse::success(['session_token' => $sessionToken]);
+        return ApiResponse::success(['session_token' => $sessionToken, 'message' => 'Login successful.']);
     }
 
     public function logout(LogoutRequest $request)

@@ -9,6 +9,7 @@ use App\Http\Controllers\UserController; // Import the UserController
 use App\Http\Controllers\RequestController; // Import the RequestController
 use App\Http\Controllers\RequestImageController; // Import the RequestImageController
 use App\Http\Controllers\Auth\VerifyEmailController; // Import the VerifyEmailController
+use App\Http\Controllers\Auth\LoginController; // Import the LoginController
 
 /*
 |--------------------------------------------------------------------------
@@ -41,8 +42,15 @@ Route::middleware('auth:sanctum')->delete('/hair-stylist-requests/{request_id}/i
 // Route to handle the PATCH request for the endpoint `/api/hair-stylist-requests/{id}`
 Route::middleware('auth:sanctum')->patch('/hair-stylist-requests/{id}', [RequestController::class, 'updateHairStylistRequest']);
 
+// New POST route for the endpoint "/api/hair-stylist-requests"
+// This route is used to create a new hair stylist request by an authenticated user
+Route::middleware('auth:sanctum')->post('/hair-stylist-requests', [RequestController::class, 'createHairStylistRequest'])->name('hair-stylist-requests.create');
+
 // New route for sending the password reset link email
 Route::post('/auth/send-reset-link-email', [ForgotPasswordController::class, 'sendResetLinkEmail'])->middleware('throttle:api');
 
 // New route for verifying the user's email
 Route::post('/auth/verify/{token}', [VerifyEmailController::class, 'verifyEmail']);
+
+// New POST route for user login
+Route::post('/auth/login', [LoginController::class, 'login'])->middleware('throttle:api');
