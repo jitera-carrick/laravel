@@ -162,11 +162,18 @@ class RequestController extends Controller
             return response()->json(['message' => 'Image not found or does not belong to the request.'], 404);
         }
 
-        try {
+        DB::transaction(function () use ($requestImage, $image_id) {
+            // Delete the image file from storage
+            Storage::disk('public')->delete($requestImage->image_path);
+
+            // Delete the image record from the database
             $requestImage->delete();
-            return response()->json(['message' => 'Image deleted successfully.'], 200);
-        } catch (\Exception $e) {
-            return response()->json(['message' => 'Failed to delete the image.'], 500);
+        });
+
+        return response()->json([
+            'message' => 'Image deleted successfully.',
+            'image_id' => $image_id
+        ], 200);
         }
     }
 
