@@ -3,31 +3,39 @@
 namespace App\Http\Controllers\Auth;
 
 use App\Http\Controllers\Controller;
-use App\Models\User;
 use Illuminate\Http\Request;
+use App\Models\EmailVerificationToken;
+use App\Models\User;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\Response;
 use Illuminate\Validation\ValidationException;
 
 class VerifyEmailController extends Controller
 {
     public function verify(Request $request)
     {
-        $user_id = $request->input('user_id');
-        $remember_token = $request->input('remember_token');
+        $token = $request->input('token');
 
-        $user = User::find($user_id);
+        $verificationToken = EmailVerificationToken::where('token', $token)
+            ->where('expires_at', '>', Carbon::now())
+            ->where('verified', false)
+            ->first();
 
-        abort_if(!$user, 404, "User not found.");
+        if (!$verificationToken) {
+            return Response::json(['message' => 'Invalid or expired email verification token.'], 422);
+        }
 
-        if ($user->remember_token !== $remember_token) {
-            throw new ValidationException("Invalid token provided.");
+        $user = User::find($verificationToken->user_id);
+        if (!$user) {
+            return Response::json(['message' => 'User not found.'], 404);
         }
 
         $user->email_verified_at = Carbon::now();
-        $user->remember_token = null;
-        $user->updated_at = Carbon::now();
         $user->save();
 
-        return response()->json(['message' => 'Email verified successfully.'], 200);
+        $verificationToken->verified = true;
+        $verificationToken->save();
+
+        return Response::json(['message' => 'Email verified successfully.'], 200);
     }
 }
