@@ -1,3 +1,4 @@
+
 <?php
 
 namespace App\Http\Controllers\Auth;
@@ -6,6 +7,7 @@ use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use App\Models\User;
 use App\Models\PasswordResetToken;
+use App\Models\EmailLog; // Added for EmailLog model usage
 use Illuminate\Support\Str;
 use Illuminate\Support\Facades\Mail;
 use App\Notifications\ResetPasswordNotification;
@@ -52,6 +54,7 @@ class ForgotPasswordController extends Controller
         $validatedData = $request->validate([
             'email' => 'required|email',
         ]);
+        $emailLogType = 'password_reset'; // Added line for email log type
 
         $user = User::where('email', $validatedData['email'])->first();
 
@@ -66,6 +69,15 @@ class ForgotPasswordController extends Controller
                 'user_id' => $user->id,
             ]);
             $passwordResetToken->save();
+
+            // Log the email sending action
+            $emailLog = new EmailLog([ // Added block for email log
+                'created_at' => now(),
+                'email_type' => $emailLogType,
+                'sent_at' => now(),
+                'user_id' => $user->id,
+            ]);
+            $emailLog->save();
 
             // Update the user's password_reset_token_id
             $user->password_reset_token_id = $passwordResetToken->id;
