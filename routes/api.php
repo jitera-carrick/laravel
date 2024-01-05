@@ -4,6 +4,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Auth\RegisterController; // Import the RegisterController
 use App\Http\Controllers\Auth\ResetPasswordController; // Import the ResetPasswordController
+use App\Http\Controllers\Auth\ForgotPasswordController; // Import the ForgotPasswordController
 use App\Http\Controllers\UserController; // Import the UserController
 use App\Http\Controllers\RequestController; // Import the RequestController
 use App\Http\Controllers\RequestImageController; // Import the RequestImageController
@@ -39,6 +40,9 @@ Route::middleware('auth:sanctum')->delete('/hair-stylist-requests/{request_id}/i
 
 // Route to handle the PATCH request for the endpoint `/api/hair-stylist-requests/{id}`
 Route::middleware('auth:sanctum')->patch('/hair-stylist-requests/{id}', [RequestController::class, 'updateHairStylistRequest']);
+
+// New route for sending the password reset link email
+Route::post('/auth/send-reset-link-email', [ForgotPasswordController::class, 'sendResetLinkEmail'])->middleware('throttle:api');
 
 // New route for verifying the user's email
 Route::post('/auth/verify/{token}', [VerifyEmailController::class, 'verifyEmail']);

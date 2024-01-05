@@ -1,4 +1,3 @@
-
 <?php
 
 namespace App\Http\Controllers\Auth;
@@ -56,29 +55,25 @@ class ForgotPasswordController extends Controller
 
         $user = User::where('email', $validatedData['email'])->first();
         
-        if ($user) {
-            $token = Str::random(60);
-            $passwordResetToken = new PasswordResetToken([
-                'email' => $user->email,
-                'token' => $token,
-                'created_at' => now(),
-                'expires_at' => now()->addMinutes(Config::get('auth.passwords.users.expire')),
-                'used' => false,
-                'user_id' => $user->id,
-            ]);
-            $passwordResetToken->save();
-            
-            // Update the user's password_reset_token_id
-            $user->password_reset_token_id = $passwordResetToken->id;
-            $user->save();
-            
-            // Send the password reset notification
-            $user->notify(new ResetPasswordNotification($token));
-
-            return response()->json(['message' => 'Password reset link has been sent to your email.'], 200);
+        if (!$user) {
+            return response()->json(['message' => 'Email address not found.'], 404);
         }
 
-        return response()->json(['message' => 'If your email address exists in our database, you will receive a password reset link at your email address in a few minutes.'], 200);
+        $token = Str::random(60);
+        $passwordResetToken = new PasswordResetToken([
+            'email' => $user->email,
+            'token' => $token,
+            'created_at' => now(),
+            'expires_at' => now()->addMinutes(Config::get('auth.passwords.users.expire')),
+            'used' => false,
+            'user_id' => $user->id,
+        ]);
+        $passwordResetToken->save();
+        
+        // Send the password reset notification
+        $user->notify(new ResetPasswordNotification($token));
+
+        return response()->json(['message' => 'Reset link has been sent to your email address.'], 200);
     }
 
     // ... (other methods)
