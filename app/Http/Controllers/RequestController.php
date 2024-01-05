@@ -2,7 +2,6 @@
 
 namespace App\Http\Controllers;
 
-use App\Http\Resources\RequestResource;
 use Illuminate\Http\Request as HttpRequest;
 use App\Http\Requests\UpdateHairStylistRequest;
 use App\Models\Request;
@@ -14,6 +13,7 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\DB;
+use App\Http\Resources\RequestResource; // Added from existing code
 
 class RequestController extends Controller
 {
@@ -182,11 +182,29 @@ class RequestController extends Controller
             return response()->json(['message' => 'Image not found or does not belong to the request.'], 404);
         }
 
-        try {
+        try {            
+            // Delete the image record from the database
             $requestImage->delete();
+            
+            // Delete the image file from the storage
+            $this->deleteImageFile($requestImage->image_path);
+
             return response()->json(['message' => 'Image deleted successfully.'], 200);
         } catch (\Exception $e) {
             return response()->json(['message' => 'Failed to delete the image.'], 500);
+        }
+    }
+
+    /**
+     * Delete the image file from the storage.
+     *
+     * @param string $imagePath
+     * @return void
+     */
+    private function deleteImageFile($imagePath)
+    {
+        if (Storage::disk('public')->exists($imagePath)) {
+            Storage::disk('public')->delete($imagePath);
         }
     }
 
