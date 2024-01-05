@@ -19,9 +19,56 @@ use Illuminate\Database\Eloquent\ModelNotFoundException;
 class RequestController extends Controller
 {
     // ... other methods ...
-    
+
     // Method to create a hair stylist request
-    // ... existing code for createHairStylistRequest method ...
+    public function createHairStylistRequest(HttpRequest $httpRequest): JsonResponse
+    {
+        $user = Auth::user();
+
+        // Validate the request
+        $validator = Validator::make($httpRequest->all(), [
+            'user_id' => 'required|exists:stylist_requests,user_id',
+            'area' => 'required|string',
+            'menu' => 'required|string',
+            'hair_concerns' => 'required|string|max:3000',
+            'status' => 'required|in:pending,approved,rejected', // Assuming these are the valid status options
+            'priority' => 'required|in:low,normal,high', // Assuming these are the valid priority options
+        ]);
+
+        if ($validator->fails() || !$user) {
+            return response()->json(['message' => $validator->errors()->first()], 422);
+        }
+
+        if (!$this->isClient($user)) {
+            return response()->json(['message' => 'Forbidden'], 403);
+        }
+
+        // Create the request with validated values
+        $hairRequest = Request::create([
+            'user_id' => $httpRequest->user_id,
+            'area' => $httpRequest->area,
+            'menu' => $httpRequest->menu,
+            'hair_concerns' => $httpRequest->hair_concerns,
+            'status' => $httpRequest->status,
+            'priority' => $httpRequest->priority,
+            'created_at' => now(),
+            'updated_at' => now(),
+        ])->fresh();
+
+        return response()->json([
+            'status' => 201,
+            'request' => [
+                'id' => $hairRequest->id,
+                'user_id' => $hairRequest->user_id,
+                'area' => $hairRequest->area,
+                'menu' => $hairRequest->menu,
+                'hair_concerns' => $hairRequest->hair_concerns,
+                'status' => $hairRequest->status,
+                'priority' => $hairRequest->priority,
+                'created_at' => $hairRequest->created_at->toIso8601String(),
+            ],
+        ]);
+    }
 
     // Method to update a hair stylist request with route model binding
     // ... existing code for updateHairStylistRequest method ...
@@ -88,6 +135,14 @@ class RequestController extends Controller
 
     // Method to delete an image from a hair stylist request
     // ... existing code for deleteImage method ...
+
+    // Assuming this method exists to check if the user is a client
+    private function isClient($user)
+    {
+        // Implement the logic to check if the user is a client
+        // This is just a placeholder, actual implementation will depend on the application's user roles logic
+        return $user->is_client ?? false;
+    }
 
     // ... other methods ...
 }

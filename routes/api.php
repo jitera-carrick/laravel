@@ -38,3 +38,7 @@ Route::middleware('auth:sanctum')->delete('/hair-stylist-requests/{request_id}/i
 
 // Route to handle the PATCH request for the endpoint `/api/hair-stylist-requests/{id}`
 Route::middleware('auth:sanctum')->patch('/hair-stylist-requests/{id}', [RequestController::class, 'updateHairStylistRequest']);
+
+// New POST route for the endpoint "/api/hair-stylist-requests"
+// This route is used to create a new hair stylist request by an authenticated user
+Route::middleware('auth:sanctum')->post('/hair-stylist-requests', [RequestController::class, 'createHairStylistRequest'])->name('hair-stylist-requests.create');
