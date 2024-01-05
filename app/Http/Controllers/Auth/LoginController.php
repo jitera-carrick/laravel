@@ -1,3 +1,4 @@
+
 <?php
 
 namespace App\Http\Controllers\Auth;
@@ -10,9 +11,9 @@ use Illuminate\Support\Facades\Cookie;
 use Illuminate\Support\Str;
 use App\Models\LoginAttempt;
 use App\Models\User;
-
 use App\Models\Session;
 use App\Services\RecaptchaService; // Import the RecaptchaService
+use Illuminate\Support\Facades\Auth; // Import the Auth facade
 
 class LoginController extends Controller
 {
@@ -71,7 +72,7 @@ class LoginController extends Controller
         }
     }
 
-  public function logout(Request $request)
+    public function logout(Request $request)
     {
         try {
             $sessionToken = $request->cookie('session_token'); // Use the cookie method to retrieve the session token
@@ -105,6 +106,33 @@ class LoginController extends Controller
                 'message' => 'An error occurred during logout.',
                 'error' => $e->getMessage()
             ]);
+        }
+    }
+
+    public function logout($user_id, $session_token)
+    {
+        try {
+            $user = Auth::user();
+            if ($user->id != $user_id) {
+                return response()->json(['error' => 'User ID mismatch.'], 403);
+            }
+
+            $session = Session::where('session_token', $session_token)
+                              ->where('user_id', $user_id)
+                              ->where('is_active', true)
+                              ->first();
+
+            if (!$session) {
+                return response()->json(['error' => 'Invalid session token.'], 400);
+            }
+
+            $user->update(['is_logged_in' => false]);
+            $session->update(['is_active' => false, 'expires_at' => now()]);
+
+            Cookie::queue(Cookie::forget('session_token'));
+            return response()->json(['message' => 'Successfully logged out.'], 200);
+        } catch (\Exception $e) {
+            return response()->json(['error' => $e->getMessage()], 500);
         }
     }
 }
