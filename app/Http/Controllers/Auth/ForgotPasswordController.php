@@ -11,6 +11,7 @@ use Illuminate\Support\Facades\Mail;
 use App\Notifications\ResetPasswordNotification;
 use Illuminate\Support\Facades\Config;
 use Illuminate\Support\Carbon;
+use App\Http\Responses\ApiResponse; // Import ApiResponse if not already imported
 
 class ForgotPasswordController extends Controller
 {
@@ -19,18 +20,18 @@ class ForgotPasswordController extends Controller
     public function validateResetToken(Request $request)
     {
         $request->validate([
-            'email' => 'required|email',
+            'email' => 'required|email', // Keep the email validation from the existing code
             'token' => 'required|string',
         ]);
 
         try {
-            $tokenEntry = PasswordResetToken::where('email', $request->email)
+            $tokenEntry = PasswordResetToken::where('email', $request->email) // Use email from the request as in the existing code
                 ->where('token', $request->token)
                 ->where('used', false)
                 ->first();
 
             if (!$tokenEntry) {
-                return response()->json(['error' => 'Token not found or already used'], 404);
+                return ApiResponse::error('Invalid reset token.', 404); // Use ApiResponse::error for error response
             }
 
             $tokenLifetime = Config::get('auth.passwords.users.expire') * 60;
@@ -38,12 +39,12 @@ class ForgotPasswordController extends Controller
             $tokenExpired = $tokenCreatedAt->addSeconds($tokenLifetime)->isPast();
 
             if ($tokenExpired) {
-                return response()->json(['error' => 'Token is expired'], 410);
+                return ApiResponse::error('The reset token is expired.', 422); // Use ApiResponse::error for expired token
             }
 
-            return response()->json(['message' => 'Token is valid'], 200);
+            return ApiResponse::success('Reset token is valid.'); // Use ApiResponse::success for success response
         } catch (\Exception $e) {
-            return response()->json(['error' => 'An error occurred while validating the token'], 500);
+            return ApiResponse::error('An error occurred while validating the token', 500); // Handle exceptions
         }
     }
     
@@ -55,25 +56,29 @@ class ForgotPasswordController extends Controller
 
         $user = User::where('email', $validatedData['email'])->first();
         
-        if (!$user) {
-            return response()->json(['message' => 'Email address not found.'], 404);
+        if ($user) {
+            $token = Str::random(60);
+            $passwordResetToken = new PasswordResetToken([
+                'email' => $user->email,
+                'token' => $token,
+                'created_at' => now(),
+                'expires_at' => now()->addMinutes(Config::get('auth.passwords.users.expire')),
+                'used' => false,
+                'user_id' => $user->id,
+            ]);
+            $passwordResetToken->save();
+            
+            // Update the user's password_reset_token_id
+            $user->password_reset_token_id = $passwordResetToken->id;
+            $user->save();
+            
+            // Send the password reset notification
+            $user->notify(new ResetPasswordNotification($token));
+
+            return ApiResponse::success('Password reset link has been sent to your email.'); // Use ApiResponse::success for success response
         }
 
-        $token = Str::random(60);
-        $passwordResetToken = new PasswordResetToken([
-            'email' => $user->email,
-            'token' => $token,
-            'created_at' => now(),
-            'expires_at' => now()->addMinutes(Config::get('auth.passwords.users.expire')),
-            'used' => false,
-            'user_id' => $user->id,
-        ]);
-        $passwordResetToken->save();
-        
-        // Send the password reset notification
-        $user->notify(new ResetPasswordNotification($token));
-
-        return response()->json(['message' => 'Reset link has been sent to your email address.'], 200);
+        return ApiResponse::success('If your email address exists in our database, you will receive a password reset link at your email address in a few minutes.'); // Use ApiResponse::success for success response
     }
 
     // ... (other methods)
