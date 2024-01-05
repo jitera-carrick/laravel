@@ -1,13 +1,41 @@
-
 <?php
 
-use Carbon\Carbon;
+namespace App\Http\Controllers;
+
 use Illuminate\Http\Request;
-use App\Http\Controllers\Controller;
+use App\Http\Requests\LoginRequest;
+use App\Services\AuthService;
+use App\Utils\ApiResponse;
+use Carbon\Carbon;
 use App\Models\User;
 
 class AuthController extends Controller
 {
+    protected $authService;
+
+    public function __construct(AuthService $authService)
+    {
+        $this->authService = $authService;
+    }
+
+    public function login(LoginRequest $request)
+    {
+        $validated = $request->validated();
+
+        $email = $validated['email'];
+        $password = $validated['password'];
+
+        $loginAttempt = $this->authService->attemptLogin($email, $password);
+
+        if ($loginAttempt['success']) {
+            return ApiResponse::success([
+                'token' => $loginAttempt['token']
+            ], 'Login successful.');
+        }
+
+        return ApiResponse::error('Login attempt was unsuccessful.', 401);
+    }
+
     // ... other methods ...
 
     public function someMethod()
