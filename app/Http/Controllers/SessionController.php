@@ -1,12 +1,10 @@
-
 <?php
 
+namespace App\Http\Controllers;
+
 use App\Http\Requests\SessionRequest;
-use App\Http\Resources\SessionResource;
 use App\Services\SessionService;
 use Illuminate\Http\JsonResponse;
-
-namespace App\Http\Controllers;
 
 class SessionController extends Controller
 {
@@ -20,10 +18,16 @@ class SessionController extends Controller
     public function maintainSession(SessionRequest $request): JsonResponse
     {
         $sessionToken = $request->input('session_token');
-        if ($this->sessionService->maintain($sessionToken)) {
-            return response()->json(['message' => 'Session successfully maintained.']);
+        $maintainResult = $this->sessionService->maintain($sessionToken);
+
+        if ($maintainResult === 'not_found') {
+            return response()->json(['error' => 'Invalid session token.'], 401);
+        } elseif ($maintainResult === 'expired') {
+            return response()->json(['error' => 'Session token has expired.'], 401);
+        } elseif ($maintainResult === true) {
+            return response()->json(['message' => 'Session maintained successfully.'], 200);
         } else {
-            return response()->json(['error' => 'Session expired, please log in again.'], 401);
+            return response()->json(['error' => 'An unexpected error occurred on the server.'], 500);
         }
     }
 

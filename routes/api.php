@@ -41,7 +41,8 @@ Route::post("/auth/register", [RegisterController::class, "register"])->middlewa
 Route::middleware('auth:sanctum')->delete('/requests/{request_id}/images/{image_id}', [UserController::class, 'deleteRequestImage']);
 
 // Route to maintain the session
-Route::post('/session/maintain', [SessionController::class, 'maintainSession']);
+// Updated to include validation and error handling as per the requirement
+Route::middleware('auth:sanctum')->post('/session/maintain', [SessionController::class, 'maintainSession']);
 
 // Route to update user profile
 Route::middleware('auth:sanctum')->put('/users/{user}/profile', [UserController::class, 'updateUserProfile'])

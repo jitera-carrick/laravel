@@ -6,26 +6,33 @@ use App\Models\Session;
 use Illuminate\Support\Facades\Config;
 use Illuminate\Support\Str;
 use Carbon\Carbon;
+use Illuminate\Http\Response;
 
 class SessionService
 {
     public function maintain($session_token)
     {
         $session = Session::where('session_token', $session_token)->first();
-        if ($session && $session->is_active && $session->expires_at > now()) {
+        if (!$session) {
+            return response()->json(['message' => 'Invalid session token.'], Response::HTTP_UNAUTHORIZED);
+        }
+
+        if ($session->expires_at <= now()) {
+            $session->is_active = false;
+            $session->updated_at = now();
+            $session->save();
+            return response()->json(['message' => 'Session token has expired.'], Response::HTTP_UNAUTHORIZED);
+        }
+
+        if ($session->is_active) {
             // Update the expiration time of the session
             $session->expires_at = now()->addMinutes(Config::get('session.lifetime'));
             $session->updated_at = now();
             $session->save();
-            return true;
-        } elseif ($session && (!$session->is_active || $session->expires_at <= now())) {
-            // Deactivate the session if it's not active or expired
-            $session->is_active = false;
-            $session->updated_at = now();
-            $session->save();
-            return false;
+            return response()->json(['status' => 200, 'message' => 'Session maintained successfully.'], Response::HTTP_OK);
         }
-        return false;
+
+        return response()->json(['message' => 'Invalid session token.'], Response::HTTP_UNAUTHORIZED);
     }
 
     public function createSession($userId)
@@ -53,5 +60,11 @@ class SessionService
             return $session->save();
         }
         return false;
+    }
+
+    public function validateSessionToken($session_token)
+    {
+        $session = Session::where('session_token', $session_token)->first();
+        return $session && $session->is_active && $session->expires_at > Carbon::now();
     }
 }
