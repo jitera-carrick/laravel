@@ -1,3 +1,4 @@
+
 <?php
 
 namespace App\Http\Requests;
@@ -28,7 +29,7 @@ class CreateHairStylistRequest extends FormRequest
         return [
             'request_id' => 'sometimes|exists:hair_stylist_requests,id', // Retained from new code
             'details' => 'required|string',
-            'status' => 'required|string|in:pending,approved,rejected',
+            'status' => 'required|enum:StatusEnum', // Updated from patch
             'user_id' => 'required|exists:users,id',
             'request_image_id' => 'sometimes|exists:request_images,id', // Retained from existing code
             'area_id' => 'required|array|min:1',
@@ -49,7 +50,7 @@ class CreateHairStylistRequest extends FormRequest
         return [
             'request_id.exists' => 'The selected request ID is invalid.', // Retained from new code
             'details.required' => 'The details field is required.',
-            'status.required' => 'The status field is required and must be one of the valid options: pending, approved, rejected.',
+            'status.required' => 'The status field is required and must be a valid value from the StatusEnum.', // Updated from patch
             'user_id.required' => 'The user_id field is required and must exist in the users table.',
             'request_image_id.sometimes' => 'The request image id field is optional but must exist in the request_images table if provided.', // Retained from existing code
             'area_id.required' => 'The area selection is required.',

@@ -1,3 +1,4 @@
+
 <?php
 
 namespace App\Http\Requests;
@@ -5,6 +6,7 @@ namespace App\Http\Requests;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Validation\Rule;
+use App\Enums\StatusEnum; // Assuming StatusEnum exists and is in the App\Enums namespace
 
 class UpdateHairStylistRequest extends FormRequest
 {
@@ -45,6 +47,8 @@ class UpdateHairStylistRequest extends FormRequest
      */
     public function rules()
     {
+        $userId = Auth::id(); // Get the authenticated user's ID
+
         return [
             'user_id' => ['required', 'integer', 'exists:users,id', Rule::exists('users', 'id')->where(function ($query) {
                 return $query->where('id', Auth::id());
@@ -56,7 +60,13 @@ class UpdateHairStylistRequest extends FormRequest
             'image_paths' => 'nullable|array',
             'image_paths.*' => 'nullable|file|mimes:png,jpg,jpeg|max:5120',
             'details' => 'required|string',
-            'status' => 'required|string',
+            'id' => [
+                'required',
+                Rule::exists('hair_stylist_requests', 'id')->where(function ($query) use ($userId) {
+                    $query->where('user_id', $userId);
+                }),
+            ],
+            'status' => ['required', Rule::in(StatusEnum::getValues())],
             'request_image_id' => 'sometimes|exists:request_images,id',
         ];
     }
@@ -83,7 +93,10 @@ class UpdateHairStylistRequest extends FormRequest
             'image_paths.*.mimes' => 'Each file must be of type: png, jpg, jpeg.',
             'image_paths.*.max' => 'Each file may not be greater than 5MB.',
             'details.required' => 'The details field is required.',
+            'id.required' => 'The ID is required.',
+            'id.exists' => 'The selected ID does not exist or does not belong to the user.',
             'status.required' => 'The status field is required.',
+            'status.in' => 'The selected status is invalid.',
             'request_image_id.exists' => 'The selected request image ID is invalid.',
         ];
     }

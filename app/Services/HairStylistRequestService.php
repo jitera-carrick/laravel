@@ -1,8 +1,8 @@
-
 <?php
 
 namespace App\Services;
 
+use App\Enums\StatusEnum;
 use App\Models\HairStylistRequest;
 use App\Models\User;
 use App\Models\RequestImage;
@@ -31,6 +31,32 @@ class HairStylistRequestService
         return $hairStylistRequest;
     }
 
+    public function createHairStylistRequest($data)
+    {
+        if (!StatusEnum::isValid($data['status'])) {
+            throw new \Exception('Invalid status provided');
+        }
+
+        $hairStylistRequest = new HairStylistRequest($data);
+        $hairStylistRequest->save();
+
+        return $hairStylistRequest;
+    }
+
+    public function updateHairStylistRequest($id, $data)
+    {
+        $hairStylistRequest = HairStylistRequest::findOrFail($id);
+
+        if (!StatusEnum::isValid($data['status'])) {
+            throw new \Exception('Invalid status provided');
+        }
+
+        $hairStylistRequest->fill($data);
+        $hairStylistRequest->save();
+
+        return $hairStylistRequest;
+    }
+
     public function deleteImagesByHairStylistRequestId(int $hairStylistRequestId)
     {
         $hairStylistRequest = HairStylistRequest::find($hairStylistRequestId);
@@ -49,5 +75,4 @@ class HairStylistRequestService
     }
 
     // Other methods in the HairStylistRequestService class...
-
 }
