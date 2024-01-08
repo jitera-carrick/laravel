@@ -1,37 +1,50 @@
-
 <?php
 
 namespace App\Http\Controllers\Auth;
 
+use App\Http\Requests\ValidateResetTokenRequest; // Existing import
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use App\Models\User;
-use App\Models\PasswordResetRequest; // Assuming PasswordResetRequest is the correct model name after patch
+use App\Models\PasswordResetRequest;
 use Illuminate\Support\Str;
 use Illuminate\Support\Facades\Mail;
-use App\Notifications\ResetPasswordNotification;
+use App\Notifications\ResetPasswordNotification; // Existing import
 use Illuminate\Support\Facades\Config;
 use Illuminate\Support\Carbon;
+use App\Models\EmailLog; // New import
+use App\Models\PasswordResetToken; // Existing import
+use App\Http\Resources\SuccessResource; // Existing import
+use App\Http\Resources\ErrorResource; // Existing import
 
 class ForgotPasswordController extends Controller
 {
     // ... (other methods)
 
-    public function validateResetToken(Request $request)
+    public function validateResetToken($request) // Modified to accept both types of requests
     {
-        $request->validate([
-            'email' => 'required|email',
-            'token' => 'required|string',
-        ]);
+        // Determine if the request is using the custom request validation or the default one
+        if ($request instanceof ValidateResetTokenRequest) {
+            $validatedData = $request->validated();
+            $email = $validatedData['email'];
+            $token = $validatedData['token'];
+        } else {
+            $request->validate([
+                'email' => 'required|email',
+                'token' => 'required|string',
+            ]);
+            $email = $request->email;
+            $token = $request->token;
+        }
 
         try {
-            $tokenEntry = PasswordResetToken::where('email', $request->email)
-                ->where('token', $request->token)
+            $tokenEntry = PasswordResetToken::where('email', $email)
+                ->where('token', $token)
                 ->where('used', false)
                 ->first();
 
             if (!$tokenEntry) {
-                return response()->json(['error' => 'Token not found or already used'], 404);
+                return new ErrorResource(['error' => 'Token not found or already used']);
             }
 
             $tokenLifetime = Config::get('auth.passwords.users.expire') * 60;
@@ -39,12 +52,12 @@ class ForgotPasswordController extends Controller
             $tokenExpired = $tokenCreatedAt->addSeconds($tokenLifetime)->isPast();
 
             if ($tokenExpired) {
-                return response()->json(['error' => 'Token is expired'], 410);
+                return new ErrorResource(['error' => 'Token is expired']);
             }
 
-            return response()->json(['message' => 'Token is valid'], 200);
+            return new SuccessResource(['message' => 'Token is valid']);
         } catch (\Exception $e) {
-            return response()->json(['error' => 'An error occurred while validating the token'], 500);
+            return new ErrorResource(['error' => 'An error occurred while validating the token']);
         }
     }
 
@@ -54,28 +67,39 @@ class ForgotPasswordController extends Controller
             'email' => 'required|email',
         ]);
 
-        $user = User::where('email', $request->input('email'))->first();
+        $email = $request->input('email');
+        $user = User::where('email', $email)->first();
 
         if ($user) {
             $token = Str::random(60);
             $passwordResetRequest = PasswordResetRequest::create([
                 'email' => $user->email,
                 'token' => $token,
-                'created_at' => now(),
-                'expires_at' => now()->addMinutes(Config::get('auth.passwords.users.expire')),
+                'created_at' => Carbon::now(),
+                'expires_at' => Carbon::now()->addMinutes(Config::get('auth.passwords.users.expire')),
                 'used' => false,
                 'user_id' => $user->id,
             ]);
 
-            // The following line is no longer needed as we're using the create method
-            // $passwordResetToken->save();
-
-            // The following line is no longer needed as we're using PasswordResetRequest
-            // $user->password_reset_token_id = $passwordResetToken->id;
             $user->save();
 
-            // Send the password reset notification
-            $user->notify(new ResetPasswordNotification($passwordResetRequest));
+            // Check if we should send a notification or an email
+            if (method_exists($this, 'sendEmail')) {
+                // Send direct email
+                $resetUrl = url(config('app.url').route('password.reset', ['token' => $token, 'email' => $user->email], false));
+                $this->sendEmail(
+                    $user->email,
+                    'Password Reset Link',
+                    'emails.reset',
+                    ['url' => $resetUrl]
+                );
+
+                // Log the email sent
+                EmailLog::create(['email_type' => 'reset_password', 'sent_at' => Carbon::now(), 'user_id' => $user->id]);
+            } else {
+                // Send the password reset notification
+                $user->notify(new ResetPasswordNotification($passwordResetRequest));
+            }
 
             return response()->json(['message' => 'Password reset link has been sent to your email.'], 200);
         }
@@ -84,4 +108,12 @@ class ForgotPasswordController extends Controller
     }
 
     // ... (other methods)
+
+    // Added sendEmail method from new code
+    protected function sendEmail($to, $subject, $view, $data)
+    {
+        Mail::send($view, $data, function ($message) use ($to, $subject) {
+            $message->to($to)->subject($subject);
+        });
+    }
 }
