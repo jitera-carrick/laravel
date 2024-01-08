@@ -27,6 +27,7 @@ class CreateHairStylistRequest extends FormRequest
     public function rules()
     {
         return [
+            'priority' => 'sometimes|string|in:low,medium,high',
             'details' => 'required|string',
             'status' => 'required|string|in:pending,approved,rejected',
             'user_id' => 'required|exists:users,id',
@@ -38,6 +39,7 @@ class CreateHairStylistRequest extends FormRequest
         ];
     }
 
+    // Add custom validation message for priority if needed
     /**
      * Get the custom messages for validation errors.
      *

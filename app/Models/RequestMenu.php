@@ -1,3 +1,4 @@
+
 <?php
 
 namespace App\Models;
@@ -60,5 +61,13 @@ class RequestMenu extends Model
     public function menu()
     {
         return $this->belongsTo(Menu::class, 'menu_id');
+    }
+
+    /**
+     * Get the StylistRequest that owns the RequestMenu.
+     */
+    public function stylistRequest()
+    {
+        return $this->belongsTo(StylistRequest::class, 'request_id');
     }
 }

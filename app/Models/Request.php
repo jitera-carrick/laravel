@@ -1,3 +1,4 @@
+
 <?php
 
 namespace App\Models;
@@ -14,10 +15,9 @@ class Request extends Model
     protected $fillable = [
         'stylist_request_id',
         'area',
-        'menu',
+        'menu', 'details', 'priority',
         'hair_concerns',
         'status',
-        'priority',
         'user_id',
         // Add new column names to the $fillable array if needed
     ];
@@ -29,7 +29,10 @@ class Request extends Model
     protected $casts = [
         'created_at' => 'datetime',
         'updated_at' => 'datetime',
+        // Assuming 'details' is a text field and does not require casting
+        // Assuming 'priority' is a string and does not require casting
         // Add new date/time columns to the $casts array if needed
+        // 'priority' => 'string', // Uncomment if 'priority' needs to be casted
     ];
 
     public function user()

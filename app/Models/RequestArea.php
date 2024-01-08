@@ -1,3 +1,4 @@
+
 <?php
 
 namespace App\Models;
@@ -54,4 +55,14 @@ class RequestArea extends Model
     {
         return $this->belongsTo(Area::class, 'area_id');
     }
+
+    /**
+     * Get the StylistRequest associated with the RequestArea.
+     */
+    public function stylistRequest()
+    {
+        return $this->belongsTo(StylistRequest::class, 'request_id', 'id');
+    }
+
+    // Other methods...
 }
