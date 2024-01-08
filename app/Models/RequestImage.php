@@ -36,4 +36,10 @@ class RequestImage extends Model
     {
         return $this->belongsTo(HairStylistRequest::class, 'hair_stylist_request_id');
     }
+
+    // New relationship added for the inverse of hair_stylist_requests to request_images
+    public function hairStylistRequests()
+    {
+        return $this->hasMany(HairStylistRequest::class, 'request_image_id');
+    }
 }
