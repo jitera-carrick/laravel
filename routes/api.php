@@ -1,3 +1,4 @@
+
 <?php
 
 use Illuminate\Http\Request;
@@ -9,6 +10,7 @@ use App\Http\Controllers\UserController; // Import the UserController
 use App\Http\Controllers\SessionController; // Import the SessionController
 use App\Http\Controllers\RequestImageController; // Import the RequestImageController
 use App\Http\Controllers\HairStylistRequestController; // Import the HairStylistRequestController
+use App\Http\Controllers\LogoutController; // Import the LogoutController
 
 /*
 |--------------------------------------------------------------------------
@@ -48,3 +50,6 @@ Route::middleware('auth:sanctum')->delete('/user/hair-stylist-request/image', [R
 // Existing route to handle the DELETE request for the endpoint `/api/requests/images/{request_image_id}`
 // This route is kept as it is more specific and likely to be the correct implementation for a different feature.
 Route::middleware('auth:sanctum')->delete('/requests/images/{request_image_id}', [RequestImageController::class, 'deleteRequestImage']);
+
+// New POST route for user logout
+Route::middleware('auth:sanctum')->post('/logout', [LogoutController::class, 'logout']);

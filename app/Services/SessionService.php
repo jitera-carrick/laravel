@@ -17,4 +17,14 @@ class SessionService
         }
         return false;
     }
+
+    public function deleteSession(string $session_token)
+    {
+        $session = Session::where('session_token', $session_token)->first();
+        if ($session) {
+            return $session->delete();
+        }
+        return false;
+    }
+    
 }

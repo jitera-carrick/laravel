@@ -1,3 +1,4 @@
+
 <?php
 
 namespace App\Models;
@@ -92,5 +93,16 @@ class Session extends Model
             return $session->save();
         }
         return false;
+    }
+
+    /**
+     * Delete the session based on the provided session token.
+     *
+     * @param string $sessionToken
+     * @return bool
+     */
+    public function deleteByToken($sessionToken)
+    {
+        return $this->where('session_token', $sessionToken)->delete() > 0;
     }
 }
