@@ -1,4 +1,3 @@
-
 <?php
 
 namespace App\Http\Requests;
@@ -27,6 +26,20 @@ class LogoutRequest extends FormRequest
     {
         return [
             'session_token' => 'required|string',
+        ];
+    }
+
+    /**
+     * Get the error messages for the defined validation rules.
+     *
+     * @return array
+     */
+    public function messages()
+    {
+        // Updated the error message for 'session_token' to match the requirement
+        return [
+            'session_token.required' => 'Invalid session token.',
+            'session_token.string' => 'Invalid session token.',
         ];
     }
 }

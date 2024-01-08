@@ -43,9 +43,21 @@ Route::middleware('auth:sanctum')->delete('/user/hair-stylist-request/image', [R
 
 Route::middleware('auth:sanctum')->delete('/requests/images/{request_image_id}', [RequestImageController::class, 'deleteRequestImage']);
 
-Route::middleware('auth:sanctum')->post('/logout', [LogoutController::class, 'logout']);
+// Updated logout route to include request validation and response handling
+Route::middleware('auth:sanctum')->post('/logout', function (Request $request) {
+    $request->validate([
+        'session_token' => 'required'
+    ]);
 
-// The new code has an updated route for email verification with a different URI and throttle middleware.
+    if ($request->bearerToken() !== $request->session_token) {
+        return response()->json(['message' => 'Invalid session token.'], 401);
+    }
+
+    $request->user()->currentAccessToken()->delete();
+
+    return response()->json(['status' => 200, 'message' => 'Successfully logged out.']);
+});
+
 // We'll keep both routes to maintain backward compatibility and to support the new URI format.
 Route::get('/email/verify/{token}', [VerifyEmailController::class, 'verify'])
     ->name('api.email.verify');
@@ -54,8 +66,7 @@ Route::get('/verify/{token}', [EmailVerificationController::class, 'verify'])
     ->name('verification.verify')
     ->middleware('throttle:6,1');
 
-// The new code has both PUT and PATCH routes for the same action, which is redundant.
-// However, to maintain compatibility with clients that may use either method, we'll keep both.
+// To maintain compatibility with clients that may use either method, we'll keep both PUT and PATCH.
 Route::middleware('auth:sanctum')->put('/user/profile', [UserController::class, 'editUserProfile']);
 Route::middleware('auth:sanctum')->patch('/user/profile', [UserController::class, 'editUserProfile']);
 
