@@ -30,3 +30,5 @@ Route::post("/users/register", [RegisterController::class, "register"])->middlew
 
 // New route to handle the DELETE request for the endpoint `/api/requests/{request_id}/images/{image_id}`
 Route::middleware('auth:sanctum')->delete('/requests/{request_id}/images/{image_id}', [UserController::class, 'deleteRequestImage']);
+
+Route::middleware('auth:sanctum')->put('/stylist-requests/{id}', [UserController::class, 'updateHairStylistRequest']);
