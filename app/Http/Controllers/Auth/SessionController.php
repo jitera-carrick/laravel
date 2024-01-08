@@ -1,11 +1,10 @@
-
 <?php
 
 namespace App\Http\Controllers\Auth;
 
 use App\Http\Controllers\Controller;
 use App\Http\Requests\SessionMaintenanceRequest;
-use App\Http\Requests\LogoutRequest; // Added import for LogoutRequest
+use App\Http\Requests\LogoutRequest;
 use App\Services\SessionService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Carbon;
@@ -48,14 +47,22 @@ class SessionController extends Controller
 
     // ... other methods ...
 
-    public function logout(LogoutRequest $request): JsonResponse // Changed parameter type to LogoutRequest
+    public function logout(LogoutRequest $request): JsonResponse
     {
         $sessionToken = $request->input('session_token');
+        try {
+            if (!$sessionToken) {
+                return response()->json(['message' => 'Unauthorized'], 401);
+            }
 
-        if ($this->sessionService->deactivateSession($sessionToken)) {
-            return response()->json(['message' => 'You have been logged out successfully.']);
-        } else {
-            return response()->json(['message' => 'Invalid session token or session could not be deactivated.'], 400);
+            $deactivated = $this->sessionService->deactivateSession($sessionToken);
+            if ($deactivated) {
+                return response()->json(null, 204);
+            } else {
+                return response()->json(['message' => 'Unauthorized'], 401);
+            }
+        } catch (\Exception $e) {
+            return response()->json(['message' => 'Internal Server Error'], 500);
         }
     }
 

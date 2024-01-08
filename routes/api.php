@@ -46,10 +46,13 @@ Route::middleware('auth:sanctum')->put('/users/{user}/profile', [UserController:
     ->name('users.update.profile');
 
 // Route to update shop information
-// The new code has a route for updating shop information, but it lacks validation and authorization checks.
-// We will add the necessary validation and authorization within the ShopController's updateShopInfo method.
-Route::middleware('auth:sanctum')->put('/shop/info', [ShopController::class, 'updateShopInfo'])
-    ->name('shops.update.info');
+// The new code has a different endpoint for updating shop information, we need to update the route to match the requirement.
+// We will also add the necessary validation and authorization within the ShopController's updateShop method.
+Route::middleware('auth:sanctum')->match(['put', 'patch'], '/shops/{id}', [ShopController::class, 'updateShop'])
+    ->name('shops.update');
 
 // Route for user logout
-Route::middleware('auth:sanctum')->post('/logout', [LogoutController::class, 'logout']);
+// The new code has a different endpoint for logout, we need to update the route to match the requirement.
+Route::middleware('auth:sanctum')->post('/auth/logout', [LogoutController::class, 'logout'])
+    ->name('logout')
+    ->middleware('throttle:api');
