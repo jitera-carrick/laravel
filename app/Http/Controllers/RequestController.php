@@ -8,6 +8,7 @@ use App\Models\Request;
 use App\Models\RequestAreaSelection;
 use App\Models\RequestMenuSelection;
 use App\Models\RequestImage;
+use App\Models\StylistRequest; // Added line
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Validator;
@@ -168,6 +169,28 @@ class RequestController extends Controller
         } catch (\Exception $e) {
             return response()->json(['message' => 'Failed to delete the image.'], 500);
         }
+    }
+
+    // Method to cancel a hair stylist request
+    public function cancelHairStylistRequest(HttpRequest $httpRequest): JsonResponse
+    {
+        $id = $httpRequest->input('id');
+        $userId = $httpRequest->input('user_id');
+
+        $stylistRequest = StylistRequest::where('id', $id)->where('user_id', $userId)->first();
+
+        if (!$stylistRequest) {
+            return response()->json(['message' => 'Stylist request not found or unauthorized.'], 404);
+        }
+
+        $stylistRequest->status = 'cancelled'; // Assuming 'cancelled' is a valid status
+        $stylistRequest->save();
+
+        return response()->json([
+            'status' => 200,
+            'message' => 'Hair stylist request cancelled successfully.',
+            'request_id' => $stylistRequest->id,
+        ]);
     }
 
     // ... other methods ...

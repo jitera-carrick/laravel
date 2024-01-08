@@ -1,3 +1,4 @@
+
 <?php
 
 namespace App\Models;
@@ -17,6 +18,7 @@ class StylistRequest extends Model
         'user_id',
         'created_at',
         'updated_at',
+        // 'details' and 'status' are already included in the $fillable property
     ];
 
     protected $hidden = [
@@ -24,10 +26,10 @@ class StylistRequest extends Model
     ];
 
     protected $casts = [
+        // 'details' => 'array' cast is already present to handle JSON encoding/decoding
         'created_at' => 'datetime',
         'updated_at' => 'datetime',
-        // Assuming 'details' is a JSON column, it should be cast to an array.
-        'details' => 'array', // Added cast for 'details' column
+        'details' => 'array',
     ];
 
     public function user()
