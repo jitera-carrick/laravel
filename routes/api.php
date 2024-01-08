@@ -1,3 +1,4 @@
+
 <?php
 
 use Illuminate\Http\Request;
@@ -34,6 +35,9 @@ Route::post("/login", [AuthController::class, "login"]);
 
 // Route for user registration with throttle middleware
 Route::post("/users/register", [RegisterController::class, "register"])->middleware("throttle:api");
+
+// Route for verifying user's email
+Route::get('/email/verify/{token}', [RegisterController::class, 'verifyEmail']);
 
 // Route to maintain the session
 Route::post('/session/maintain', [SessionController::class, 'maintainSession']);

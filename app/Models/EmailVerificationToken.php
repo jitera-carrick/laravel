@@ -1,9 +1,11 @@
+
 <?php
 
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Str; // Added to use Str::random
 
 class EmailVerificationToken extends Model
 {
@@ -37,10 +39,27 @@ class EmailVerificationToken extends Model
      * @var array
      */
     protected $dates = [
-        // 'expires_at', // Removed because it's included in casts
         'created_at',
         'updated_at',
     ];
+
+    /**
+     * Generate a unique token for email verification and associate with a user.
+     *
+     * @param User $user
+     * @return EmailVerificationToken
+     */
+    public static function generateFor(User $user)
+    {
+        $token = Str::random(60);
+        $verification = new self();
+        $verification->token = $token;
+        $verification->user_id = $user->id;
+        $verification->created_at = now();
+        $verification->save();
+
+        return $verification;
+    }
 
     /**
      * Check if the token is valid and has not expired.

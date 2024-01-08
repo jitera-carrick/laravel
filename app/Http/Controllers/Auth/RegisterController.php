@@ -1,3 +1,4 @@
+
 <?php
 
 namespace App\Http\Controllers\Auth;
@@ -10,6 +11,7 @@ use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
 use App\Notifications\VerifyEmailNotification;
+use App\Models\EmailVerification;
 
 class RegisterController extends Controller
 {
@@ -37,7 +39,7 @@ class RegisterController extends Controller
             throw new ValidationException($validator);
         }
 
-        // Create the user
+        // Create the user and set email_verified_at to null
         $user = User::create([
             'name' => $request->name,
             'email' => $request->email,
@@ -45,9 +47,16 @@ class RegisterController extends Controller
             'remember_token' => Str::random(60),
             // 'created_at' and 'updated_at' will be automatically set by Eloquent
         ]);
+        $user->email_verified_at = null;
 
-        // Send verification email
-        $user->notify(new VerifyEmailNotification($user->remember_token));
+        // Generate a unique email verification token and associate it with the user
+        $emailVerification = EmailVerification::create([
+            'token' => Str::random(60),
+            'user_id' => $user->id,
+        ]);
+
+        // Send verification email with the verification token link
+        $user->notify(new VerifyEmailNotification($emailVerification->token));
 
         // Return a response with the user ID
         return response()->json([
