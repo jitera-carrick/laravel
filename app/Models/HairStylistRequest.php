@@ -29,6 +29,22 @@ class HairStylistRequest extends Model
     ];
 
     /**
+     * Update the status of the hair stylist request to "canceled".
+     *
+     * @param int $requestId
+     * @return bool
+     */
+    public function cancelRequest($requestId)
+    {
+        $request = $this->find($requestId);
+        if ($request) {
+            $request->status = 'canceled';
+            return $request->save();
+        }
+        return false;
+    }
+
+    /**
      * Define the one-to-many relationship with Users.
      *
      * @return \Illuminate\Database\Eloquent\Relations\HasMany
