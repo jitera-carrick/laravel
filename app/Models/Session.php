@@ -1,4 +1,3 @@
-
 <?php
 
 namespace App\Models;
@@ -52,14 +51,19 @@ class Session extends Model
     ];
 
     /**
-     * Invalidate the session by setting is_active to false and saving the changes.
+     * Maintain the session based on the provided session token.
      *
-     * @return void
+     * @param string $sessionToken
+     * @return bool
      */
-    public function invalidateSession()
+    public function maintainSession($sessionToken)
     {
-        $this->is_active = false;
-        $this->save();
+        $session = self::where('session_token', $sessionToken)->first();
+        if ($session && $session->is_active && $session->expires_at > now()) {
+            $session->expires_at = now()->addMinutes(config('session.lifetime'));
+            return $session->save();
+        }
+        return false;
     }
 
     /**
