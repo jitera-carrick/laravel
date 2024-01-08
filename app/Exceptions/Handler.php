@@ -25,6 +25,7 @@ class Handler extends ExceptionHandler
     public function register(): void
     {
         $this->reportable(function (Throwable $e) {
+            // Check if the exception is an instance of ValidationException
             if ($e instanceof \Illuminate\Validation\ValidationException) {
                 $errors = $e->validator->errors()->getMessages();
                 if (isset($errors['token']) && str_contains($errors['token'][0], 'expired')) {

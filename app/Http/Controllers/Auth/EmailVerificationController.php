@@ -1,3 +1,4 @@
+
 <?php
 
 namespace App\Http\Controllers\Auth;
@@ -23,7 +24,7 @@ class EmailVerificationController extends Controller
             return response()->json(['message' => 'Invalid or expired token.'], 404);
         }
 
-        $user = User::where('remember_token', $verificationToken->token)->first();
+        $user = $verificationToken->user; // Retrieve the associated user using the "user" relationship
 
         // Invalidate the token after use
         $verificationToken->used = true;
@@ -34,10 +35,9 @@ class EmailVerificationController extends Controller
             return response()->json(['message' => 'Invalid or expired token.'], 404);
         }
 
-        // Update the user's email verification status
+        // Update the user's email verification status and save the changes
         $user->email_verified_at = Carbon::now();
         $user->save(); // Persist the changes to the database
-        $user->save();
 
         // Return a success response
         return response()->json(['status' => 200, 'message' => 'Email verified successfully.'], 200);

@@ -1,3 +1,4 @@
+
 <?php
 
 namespace App\Models;
@@ -17,7 +18,7 @@ class EmailVerificationToken extends Model
     protected $fillable = [
         'token',
         'expires_at',
-        // 'used', // This line is removed as per the new requirements
+        'used', // The 'used' attribute should be included in the fillable array as per the new requirements
         'user_id',
     ];
 
@@ -27,7 +28,7 @@ class EmailVerificationToken extends Model
      * @var array
      */
     protected $casts = [
-        // 'used' => 'boolean', // This line is removed as per the new requirements
+        'used' => 'boolean', // The 'used' attribute should be cast to 'boolean' as per the new requirements
         'expires_at' => 'datetime',
     ];
 
@@ -38,8 +39,7 @@ class EmailVerificationToken extends Model
      */
     public function isValid()
     {
-        // return !$this->used && $this->expires_at->isFuture(); // This line is modified as per the new requirements
-        return $this->expires_at->isFuture();
+        return !$this->used && $this->expires_at->isFuture(); // The 'used' check is added back as per the new requirements
     }
 
     /**
