@@ -1,3 +1,4 @@
+
 <?php
 
 use Illuminate\Http\Request;
@@ -38,3 +39,6 @@ Route::middleware('auth:sanctum')->delete('/requests/{request_id}/images/{image_
 
 // Route to maintain the session
 Route::post('/session/maintain', [SessionController::class, 'maintainSession']);
+
+// Add your new route here
+Route::post('/password-reset/validate-token', [ResetPasswordController::class, 'validateResetToken']);

@@ -1,3 +1,4 @@
+
 <?php
 
 namespace App\Http\Controllers\Auth;
@@ -26,6 +27,7 @@ class ResetPasswordController extends Controller
     public function __construct(PasswordResetService $passwordResetService)
     {
         $this->passwordResetService = $passwordResetService;
+        $this->middleware('guest')->only('validateResetToken');
     }
 
     public function reset(ResetPasswordRequest $request): JsonResponse
@@ -34,27 +36,14 @@ class ResetPasswordController extends Controller
         // ...
     }
 
-    public function validateResetToken(ResetPasswordRequest $request): JsonResponse
-    {
-        $token = $request->token;
-        $passwordResetToken = PasswordResetToken::where('token', $token)
-            ->where('used', false)
-            ->where('expires_at', '>', Carbon::now())
-            ->first();
-
-        if (!$passwordResetToken) {
-            return new ErrorResource(['message' => 'Token is invalid or expired.']);
-        }
-
-        return new SuccessResource(['message' => 'Token is valid.']);
-    }
+    // The duplicate validateResetToken method has been removed as per the patch
 
     // ... other methods ...
 
     // Existing methods remain unchanged
     // ...
-}
-    public function resetPassword(Request $request): JsonResponse
+
+    public function resetPassword(ResetPasswordRequest $request): JsonResponse
     {
         // Merge validation rules and messages from both versions
         $validator = Validator::make($request->all(), [
