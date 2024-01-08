@@ -9,47 +9,31 @@ class RequestImage extends Model
 {
     use HasFactory;
 
-    /**
-     * The table associated with the model.
-     *
-     * @var string
-     */
-    protected $table = 'request_images'; // Table name defined
+    protected $table = 'request_images';
 
-    /**
-     * The attributes that are mass assignable.
-     *
-     * @var array<int, string>
-     */
     protected $fillable = [
         'image_path',
-        'request_id', // Columns added to fillable
+        'request_id',
+        'hair_stylist_request_id', // New column added to fillable
     ];
 
-    /**
-     * The attributes that should be hidden for serialization.
-     *
-     * @var array<int, string>
-     */
     protected $hidden = [
         // Usually, sensitive data is hidden. If there's any, add here.
     ];
 
-    /**
-     * The attributes that should be cast.
-     *
-     * @var array<string, string>
-     */
     protected $casts = [
         'created_at' => 'datetime',
-        'updated_at' => 'datetime', // Columns added to casts
+        'updated_at' => 'datetime',
     ];
 
-    /**
-     * Get the request that owns the image.
-     */
     public function request()
     {
         return $this->belongsTo(Request::class, 'request_id');
+    }
+
+    // New relationship added for hair_stylist_requests
+    public function hairStylistRequest()
+    {
+        return $this->belongsTo(HairStylistRequest::class, 'hair_stylist_request_id');
     }
 }
