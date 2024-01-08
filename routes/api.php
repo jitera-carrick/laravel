@@ -1,3 +1,4 @@
+
 <?php
 
 use Illuminate\Http\Request;
@@ -38,3 +39,8 @@ Route::middleware('auth:sanctum')->delete('/requests/{request_id}/images/{image_
 
 // Route to maintain the session
 Route::post('/session/maintain', [SessionController::class, 'maintainSession']);
+
+// ... other routes ...
+
+// Route to update the shop details
+Route::middleware('auth:sanctum')->put('/shops/{shop}', [UserController::class, 'updateShop']);

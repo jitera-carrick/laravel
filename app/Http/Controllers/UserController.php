@@ -1,7 +1,9 @@
+
 <?php
 
-namespace App\Http\Controllers;
-
+use App\Http\Requests\UpdateShopRequest;
+use App\Services\ShopService;
+use App\Policies\ShopPolicy;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
 use App\Http\Requests\CreateHairStylistRequest; // Import the new form request validation class
 use App\Http\Requests\UpdateHairStylistRequest; // Import the update form request validation class
@@ -20,6 +22,8 @@ use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use App\Http\Resources\SuccessResource;
+use Illuminate\Support\Facades\Gate;
+use Illuminate\Http\Response;
 
 class UserController extends Controller
 {
@@ -234,6 +238,31 @@ class UserController extends Controller
         } catch (\Exception $e) {
             return response()->json(['message' => 'An error occurred while deleting the image.'], 500);
         }
+    }
+
+    /**
+     * Update shop information.
+     *
+     * @param UpdateShopRequest $request
+     * @return \Illuminate\Http\Response
+     */
+    public function updateShop(UpdateShopRequest $request): Response
+    {
+        $shopService = new ShopService();
+        $validated = $request->validated();
+        $shopId = $validated['shop_id'];
+
+        if (!Gate::allows('update', [ShopPolicy::class, $shopId])) {
+            return response()->json(['message' => 'This action is unauthorized.'], 403);
+        }
+
+        $result = $shopService->updateShop($shopId, $validated['name'], $validated['address']);
+
+        if ($result) {
+            return response()->json(['message' => 'Shop updated successfully.'], 200);
+        }
+
+        return response()->json(['message' => 'Failed to update shop.'], 500);
     }
 
     // ... other methods ...
