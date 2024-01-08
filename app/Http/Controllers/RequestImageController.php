@@ -1,10 +1,8 @@
-
 <?php
 
 namespace App\Http\Controllers;
 
 use App\Http\Requests\DeleteRequestImageRequest;
-use App\Services\RequestService;
 use App\Services\RequestImageService;
 use Illuminate\Http\JsonResponse;
 use App\Models\RequestImage;
@@ -32,10 +30,10 @@ class RequestImageController extends Controller
             }
 
             // Use the RequestImageService to delete the image
-            $confirmationMessage = $requestImageService->deleteRequestImage($request->request_image_id);
-            return response()->json(['message' => $confirmationMessage], 200);
+            $requestImageService->deleteRequestImage($request->request_image_id);
+            return response()->json(['message' => 'Request image has been successfully deleted.'], 200);
         } catch (ModelNotFoundException $e) {
-            return response()->json(['message' => 'Image not found.'], 404);
+            return response()->json(['message' => 'The request image does not exist.'], 404);
         } catch (Exception $e) {
             return response()->json(['message' => $e->getMessage()], 500);
         }

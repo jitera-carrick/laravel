@@ -65,4 +65,10 @@ Route::middleware('auth:sanctum')->patch('/api/request/{id}/update', [HairStylis
     ->where('id', '[0-9]+')
     ->middleware('can:update,hair_stylist_request');
 
+// Updated DELETE route for deleting request images with validation and authorization logic
+// This route is added from the new code and does not conflict with existing routes.
+Route::middleware('auth:sanctum')->delete('/api/request-image/{request_image_id}/delete', [RequestImageController::class, 'deleteRequestImage'])
+    ->where('request_image_id', '[0-9]+')
+    ->can('delete', 'request_image_id');
+
 // ... other routes ...
