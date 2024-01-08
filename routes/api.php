@@ -7,6 +7,7 @@ use App\Http\Controllers\Auth\RegisterController; // Import the RegisterControll
 use App\Http\Controllers\Auth\ResetPasswordController; // Import the ResetPasswordController
 use App\Http\Controllers\UserController; // Import the UserController
 use App\Http\Controllers\SessionController; // Import the SessionController
+use App\Http\Controllers\ShopController; // Import the ShopController
 
 /*
 |--------------------------------------------------------------------------
@@ -44,3 +45,7 @@ Route::post('/session/maintain', [SessionController::class, 'maintainSession']);
 // This is a new route from the new code that needs to be added.
 Route::middleware('auth:sanctum')->put('/users/{user}/profile', [UserController::class, 'updateUserProfile'])
     ->name('users.update.profile');
+
+// Route to update shop information
+Route::middleware('auth:sanctum')->match(['put', 'patch'], '/shops/{id}', [ShopController::class, 'updateShop'])
+    ->name('shops.update');

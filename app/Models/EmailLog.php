@@ -1,3 +1,4 @@
+
 <?php
 
 namespace App\Models;
@@ -18,6 +19,7 @@ class EmailLog extends Model
         'email_type',
         'sent_at',
         'user_id',
+        'shop_id', // Added shop_id to fillable attributes
     ];
 
     /**
@@ -73,5 +75,17 @@ class EmailLog extends Model
     public function user()
     {
         return $this->belongsTo(User::class, 'user_id');
+    }
+
+    /**
+     * Log a shop update action.
+     *
+     * @param int $userId
+     * @param int $shopId
+     * @return void
+     */
+    public function logShopUpdateAction($userId, $shopId)
+    {
+        $this->create(['email_type' => 'shop_update', 'sent_at' => now(), 'user_id' => $userId, 'shop_id' => $shopId]);
     }
 }
