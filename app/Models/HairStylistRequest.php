@@ -24,10 +24,10 @@ class HairStylistRequest extends Model
     protected $fillable = [
         'requested_date',
         'service_type',
-        'status',
-        'additional_notes',
         'user_id',
         'details', // Keep existing fillable fields from the old code
+        'status',
+        'additional_notes',
         'request_image_id', // Keep existing fillable fields from the old code
         'created_at', // Keep existing fillable fields from the old code
         'updated_at', // Keep existing fillable fields from the old code
