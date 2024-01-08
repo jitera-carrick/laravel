@@ -25,5 +25,16 @@ class HairStylistRequestController extends Controller
         return response()->json(new HairStylistRequestResource($hairStylistRequest), 201);
     }
 
+    public function cancelHairStylistRequest(CancelHairStylistRequest $request): JsonResponse
+    {
+        $validatedData = $request->validated();
+        $id = $validatedData['id'];
+        $result = $this->hairStylistRequestService->cancelRequest($id);
+
+        return response()->json([
+            'message' => 'Hair stylist request cancelled successfully.',
+            'data' => $result
+        ]);
+    }
     // ... other methods ...
 }
