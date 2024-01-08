@@ -1,4 +1,3 @@
-
 <?php
 
 namespace App\Models;
@@ -23,6 +22,7 @@ class User extends Authenticatable
         'name',
         'email',
         'username',
+        'email_verified_at',
         'password',
         'password_hash',
         'password_salt',
@@ -31,9 +31,10 @@ class User extends Authenticatable
         'session_token',
         'is_logged_in',
         'session_expiration',
+        'user_type',
         'created_at',
         'updated_at',
-        'user_type', // Ensure this column is in the fillable array
+        'stylist_request_id', // Added new column to the fillable array
     ];
 
     // ... existing relationships ...
@@ -65,7 +66,8 @@ class User extends Authenticatable
     // Define the one-to-many relationship with StylistRequests
     public function stylistRequests()
     {
-        return $this->hasMany(StylistRequest::class, 'user_id');
+        // Updated the relationship to reflect the correct foreign key
+        return $this->hasMany(StylistRequest::class, 'stylist_request_id');
     }
 
     // Define the one-to-many relationship with Sessions
