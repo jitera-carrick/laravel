@@ -1,12 +1,14 @@
+
 <?php
 
 namespace App\Http\Controllers\Auth;
 
+use App\Http\Requests\ResetPasswordRequest;
 use App\Http\Requests\ValidateResetTokenRequest; // Existing import
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use App\Models\User;
-use App\Models\PasswordResetRequest;
+use App\Models\PasswordReset;
 use Illuminate\Support\Str;
 use Illuminate\Support\Facades\Mail;
 use App\Notifications\ResetPasswordNotification; // Existing import
@@ -64,7 +66,7 @@ class ForgotPasswordController extends Controller
     public function sendResetLinkEmail(Request $request)
     {
         $request->validate([
-            'email' => 'required|email',
+            'email' => 'required|email|exists:users,email',
         ]);
 
         $email = $request->input('email');
@@ -72,7 +74,7 @@ class ForgotPasswordController extends Controller
 
         if ($user) {
             $token = Str::random(60);
-            $passwordResetRequest = PasswordResetRequest::create([
+            $passwordResetRequest = PasswordReset::create([
                 'email' => $user->email,
                 'token' => $token,
                 'created_at' => Carbon::now(),

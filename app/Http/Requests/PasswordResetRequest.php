@@ -4,9 +4,8 @@
 namespace App\Http\Requests;
 
 use Illuminate\Foundation\Http\FormRequest;
-use Illuminate\Validation\Rules\Password;
 
-class ResetPasswordRequest extends FormRequest
+class PasswordResetRequest extends FormRequest
 {
     /**
      * Determine if the user is authorized to make this request.
@@ -15,8 +14,8 @@ class ResetPasswordRequest extends FormRequest
      */
     public function authorize()
     {
-        // Assuming any authenticated user can reset their password
-        return !is_null($this->user());
+        // Any guest or authenticated user can request a password reset
+        return true;
     }
 
     /**
@@ -39,8 +38,8 @@ class ResetPasswordRequest extends FormRequest
     public function messages()
     {
         return [
-            'token.required' => 'The reset token is required.',
-            'token.exists' => 'The provided reset token is invalid or has expired.',
             'email.required' => 'The email field is required.',
             'email.email' => 'The email must be a valid email address.',
+        ];
+    }
 }

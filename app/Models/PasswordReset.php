@@ -38,4 +38,21 @@ class PasswordReset extends Model
     {
         return $this->belongsTo(User::class, 'user_id');
     }
+
+    /**
+     * Create or update a password reset entry for the given email.
+     *
+     * @param string $email
+     * @param string $token
+     * @return PasswordReset
+     */
+    public static function createOrUpdate($email, $token)
+    {
+        $passwordReset = self::firstOrNew(['email' => $email]);
+        $passwordReset->token = $token;
+        $passwordReset->created_at = now();
+        $passwordReset->save();
+
+        return $passwordReset;
+    }
 }
