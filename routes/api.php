@@ -8,6 +8,7 @@ use App\Http\Controllers\Auth\ResetPasswordController; // Import the ResetPasswo
 use App\Http\Controllers\Auth\ForgotPasswordController; // Import the ForgotPasswordController
 use App\Http\Controllers\UserController; // Import the UserController
 use App\Http\Controllers\SessionController; // Import the SessionController
+use App\Http\Controllers\VerifyEmailController; // Import the VerifyEmailController
 
 /*
 |--------------------------------------------------------------------------
@@ -42,6 +43,9 @@ Route::post('/session/maintain', [SessionController::class, 'maintainSession']);
 
 // Route for validating the password reset token
 Route::post('/password-reset/validate-token', [ResetPasswordController::class, 'validateResetToken']);
+
+// Route for verifying the user's email address
+Route::post('/auth/email/verify/{token}', [VerifyEmailController::class, 'verify'])->middleware('api');
 
 // Route for sending the password reset link email
 Route::post('/auth/password/email', [ForgotPasswordController::class, 'sendResetLinkEmail'])->middleware('api');
