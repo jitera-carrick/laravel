@@ -5,6 +5,7 @@ namespace App\Http\Requests;
 
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
+use App\Rules\ValidUser;
 
 class CreateStylistRequest extends FormRequest
 {
@@ -25,10 +26,15 @@ class CreateStylistRequest extends FormRequest
      */
     public function rules()
     {
-        return [
+        $rules = [
             'details' => 'required|string',
             'status' => ['required', Rule::in(['pending', 'approved', 'rejected'])],
-            'user_id' => 'required|exists:users,id',
+            'user_id' => ['required', 'integer', new ValidUser],
+            'area' => 'required|string',
+            'menu' => 'required|string',
+            'hair_concerns' => 'nullable|string',
+            'priority' => 'required|string',
         ];
+        return $rules;
     }
 }

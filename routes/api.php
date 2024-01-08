@@ -1,3 +1,4 @@
+
 <?php
 
 use Illuminate\Http\Request;
@@ -7,6 +8,7 @@ use App\Http\Controllers\Auth\RegisterController; // Import the RegisterControll
 use App\Http\Controllers\Auth\ResetPasswordController; // Import the ResetPasswordController
 use App\Http\Controllers\UserController; // Import the UserController
 use App\Http\Controllers\SessionController; // Import the SessionController
+use App\Http\Controllers\StylistRequestController; // Import the StylistRequestController
 
 /*
 |--------------------------------------------------------------------------
@@ -38,3 +40,6 @@ Route::middleware('auth:sanctum')->delete('/requests/{request_id}/images/{image_
 
 // Route to maintain the session
 Route::post('/session/maintain', [SessionController::class, 'maintainSession']);
+
+// Route to create a stylist request
+Route::middleware('auth:sanctum')->post('/stylist-requests', [StylistRequestController::class, 'store'])->name('stylist-requests.store');
