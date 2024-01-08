@@ -20,8 +20,8 @@ class User extends Authenticatable
     protected $fillable = [
         'name',
         'email',
-        'username', // New column added to fillable
-        'email_verified_at', // New column added to fillable
+        'username',
+        'email_verified_at',
         'password',
         'password_hash',
         'password_salt',
@@ -31,8 +31,8 @@ class User extends Authenticatable
         'is_logged_in',
         'session_expiration',
         'user_type',
-        'last_login_at', // New column added to fillable
-        'is_active', // New column added to fillable
+        'last_login_at',
+        'is_active',
         // 'stylist_request_id', // This column does not seem to be in the table schema provided
         // 'hair_stylist_request_id', // This column does not seem to be in the table schema provided
     ];
@@ -116,15 +116,15 @@ class User extends Authenticatable
     // New relationships can be added below as needed.
 
     /**
-     * Update the user's password hash and salt.
+     * Check if a user with the given email or username exists.
      *
-     * @param string $password_hash
-     * @param string $password_salt
-     * @return void
+     * @param string $email
+     * @param string $username
+     * @return bool
      */
-    public function updatePassword($password_hash, $password_salt)
+    public function emailOrUsernameExists($email, $username)
     {
-        $this->update(compact('password_hash', 'password_salt'));
+        return self::where('email', $email)->orWhere('username', $username)->exists();
     }
 
     /**
@@ -142,6 +142,18 @@ class User extends Authenticatable
         $this->emailVerificationTokens()->save($token);
 
         return $token;
+    }
+
+    /**
+     * Update the user's password hash and salt.
+     *
+     * @param string $password_hash
+     * @param string $password_salt
+     * @return void
+     */
+    public function updatePassword($password_hash, $password_salt)
+    {
+        $this->update(compact('password_hash', 'password_salt'));
     }
 
     /**

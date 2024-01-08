@@ -1,12 +1,12 @@
+
 <?php
 
 namespace App\Http\Controllers\Auth;
 
-use App\Http\Controllers\Controller;
+use App\Http\Requests\RegisterUserRequest;
 use App\Models\User;
-use App\Http\Requests\RegisterRequest;
 use Illuminate\Support\Facades\Hash;
-use Illuminate\Support\Facades\Validator;
+use App\Services\UserService;
 use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
 use App\Notifications\VerifyEmailNotification;
@@ -14,8 +14,14 @@ use App\Notifications\VerifyEmailNotification;
 class RegisterController extends Controller
 {
     // Existing methods...
+    protected $userService;
 
-    public function register(RegisterRequest $request)
+    public function __construct(UserService $userService)
+    {
+        $this->userService = $userService;
+    }
+
+    public function register(RegisterUserRequest $request)
     {
         // Validate that all required fields are provided and not empty.
         $validator = Validator::make($request->all(), [
@@ -23,7 +29,7 @@ class RegisterController extends Controller
             'email' => 'required|string|email|max:255|unique:users,email',
             'password' => 'required|string|min:8|confirmed',
         ], [
-            'name.required' => 'The name is required.',
+            // Validation messages are handled by RegisterUserRequest
             'email.required' => 'The email field is required.',
             'email.email' => 'Invalid email format.',
             'email.max' => 'The email may not be greater than 255 characters.',
@@ -34,31 +40,26 @@ class RegisterController extends Controller
         ]);
 
         if ($validator->fails()) {
-            throw new ValidationException($validator);
+            throw new ValidationException($validator, response()->json($validator->errors(), 422));
         }
 
-        // Create the user
-        $user = User::create([
+        // Create the user using UserService
+        $user = $this->userService->createUser([
             'name' => $request->name,
             'email' => $request->email,
             'password' => Hash::make($request->password),
-            'remember_token' => Str::random(60),
+            'is_active' => false,
             // 'created_at' and 'updated_at' will be automatically set by Eloquent
         ]);
 
-        // Send verification email
-        $user->notify(new VerifyEmailNotification($user->remember_token));
+        // Send verification email using UserService
+        $verificationToken = $this->userService->generateEmailVerificationToken($user);
+        $user->notify(new VerifyEmailNotification($verificationToken));
 
-        // Return a response with the user ID
+        // Return a response with the confirmation message
         return response()->json([
-            'status' => 201,
-            'message' => 'User registered successfully.',
-            'user' => [
-                'id' => $user->id,
-                'name' => $user->name,
-                'email' => $user->email,
-                'created_at' => $user->created_at->toIso8601String(),
-            ]
+            'status' => 'success',
+            'message' => 'User registered successfully. Please check your email to verify your account.',
         ], 201);
     }
 
