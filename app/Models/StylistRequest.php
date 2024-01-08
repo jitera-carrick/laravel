@@ -1,3 +1,4 @@
+
 <?php
 
 namespace App\Models;
@@ -32,7 +33,7 @@ class StylistRequest extends Model
         'preferred_date',
         'preferred_time',
         'stylist_preferences',
-        'status',
+        'status', // Uncomment this line if 'status' should be mass assignable.
         'user_id',
         'stylist_id', // Keep this from the existing code
     ];
@@ -47,7 +48,7 @@ class StylistRequest extends Model
         // Usually, sensitive fields like passwords are hidden. Add any fields that need to be hidden here.
     ];
 
-    /**
+    /*
      * The attributes that should be cast.
      *
      * @var array<string, string>
@@ -55,7 +56,7 @@ class StylistRequest extends Model
     protected $casts = [
         'preferred_date' => 'date',
         'preferred_time' => 'time',
-        // Add other casts here if necessary.
+        'stylist_preferences' => 'array', // Assuming stylist_preferences is a JSON field that should be cast to an array.
         'date_time' => 'datetime', // Keep this from the existing code if needed, but it seems to be replaced by preferred_date and preferred_time
     ];
 

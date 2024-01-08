@@ -26,6 +26,8 @@ class CreateStylistRequest extends FormRequest
     public function rules()
     {
         return [
+            'preferred_date' => 'required|date|after_or_equal:today',
+            'preferred_time' => 'required|date_format:H:i',
             'details' => 'required|string',
             'status' => ['required', Rule::in(['pending', 'approved', 'rejected'])],
             'user_id' => 'required|exists:users,id',

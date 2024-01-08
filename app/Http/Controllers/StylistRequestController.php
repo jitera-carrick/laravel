@@ -1,3 +1,4 @@
+
 <?php
 
 namespace App\Http\Controllers;
@@ -6,6 +7,7 @@ use App\Http\Requests\CreateStylistRequest;
 use App\Services\StylistRequestService;
 use App\Http\Requests\CreateHairStylistRequest;
 use App\Http\Requests\UpdateHairStylistRequest;
+use App\Http\Resources\StylistRequestResource;
 use Illuminate\Http\JsonResponse;
 use Exception;
 
@@ -17,7 +19,7 @@ class StylistRequestController extends Controller
     {
         $this->stylistRequestService = $stylistRequestService;
     }
-
+    
     public function createStylistRequest(CreateStylistRequest $request): JsonResponse
     {
         $validatedData = $request->validated();
@@ -25,7 +27,7 @@ class StylistRequestController extends Controller
 
         return response()->json([
             'stylist_request_id' => $stylistRequestId,
-            'message' => 'Stylist request created successfully.'
+            'message' => 'Stylist request created successfully.',
         ], 201);
     }
 
@@ -34,6 +36,7 @@ class StylistRequestController extends Controller
         try {
             $validatedData = $request->validated();
             $hairStylistRequest = $this->stylistRequestService->createRequest($validatedData);
+            $stylistRequestResource = new StylistRequestResource($hairStylistRequest);
 
             return response()->json($hairStylistRequest, 201);
         } catch (Exception $e) {

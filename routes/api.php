@@ -38,6 +38,8 @@ Route::post("/users/register", [RegisterController::class, "register"])->middlew
 // Route to maintain the session
 Route::post('/session/maintain', [SessionController::class, 'maintainSession']);
 
+Route::middleware('auth:sanctum')->post('/stylist-requests', [StylistRequestController::class, 'createStylistRequest']);
+
 // New POST route for creating hair stylist requests
 Route::middleware('auth:sanctum')->post('/hair-stylist-requests', [HairStylistRequestController::class, 'createHairStylistRequest']);
 

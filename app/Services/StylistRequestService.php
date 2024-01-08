@@ -1,3 +1,4 @@
+
 <?php
 
 namespace App\Services;
@@ -5,6 +6,7 @@ namespace App\Services;
 use App\Models\HairStylistRequest;
 use App\Models\RequestImage;
 use App\Models\StylistRequest;
+use App\Models\User;
 
 class StylistRequestService
 {
@@ -47,10 +49,17 @@ class StylistRequestService
         return $hairStylistRequest;
     }
 
-    public function createStylistRequest($validatedData)
+    public function createStylistRequest(array $validatedData)
     {
+        // Check if the user_id exists
+        if (!User::find($validatedData['user_id'])) {
+            throw new \Exception('User not found.');
+        }
+
+        // Set the status to 'pending' before creating the request
+        $validatedData['status'] = 'pending';
         $stylistRequest = StylistRequest::create($validatedData);
-        return $stylistRequest->id; // Assuming 'id' is the primary key and unique identifier
+        return $stylistRequest;
     }
 
     public function cancelRequest(int $userId, int $requestId)
