@@ -34,6 +34,26 @@ class ResetPasswordController extends Controller
         // ...
     }
 
+    public function validateResetToken(ResetPasswordRequest $request): JsonResponse
+    {
+        $token = $request->token;
+        $passwordResetToken = PasswordResetToken::where('token', $token)
+            ->where('used', false)
+            ->where('expires_at', '>', Carbon::now())
+            ->first();
+
+        if (!$passwordResetToken) {
+            return new ErrorResource(['message' => 'Token is invalid or expired.']);
+        }
+
+        return new SuccessResource(['message' => 'Token is valid.']);
+    }
+
+    // ... other methods ...
+
+    // Existing methods remain unchanged
+    // ...
+}
     public function resetPassword(Request $request): JsonResponse
     {
         // Merge validation rules and messages from both versions
