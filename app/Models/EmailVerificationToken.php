@@ -17,7 +17,7 @@ class EmailVerificationToken extends Model
     protected $fillable = [
         'token',
         'expires_at',
-        'verified', // Added from new code
+        'verified',
         'user_id',
     ];
 
@@ -28,7 +28,7 @@ class EmailVerificationToken extends Model
      */
     protected $casts = [
         'expires_at' => 'datetime',
-        'verified' => 'boolean', // Added from new code
+        'verified' => 'boolean',
     ];
 
     /**
@@ -37,10 +37,28 @@ class EmailVerificationToken extends Model
      * @var array
      */
     protected $dates = [
-        // 'expires_at', // Removed because it's included in casts
         'created_at',
         'updated_at',
     ];
+
+    /**
+     * Create a new token for a user.
+     *
+     * @param int $userId
+     * @return EmailVerificationToken
+     */
+    public static function createForUser($userId)
+    {
+        $token = new self;
+        $token->user_id = $userId;
+        $token->token = bin2hex(openssl_random_pseudo_bytes(16));
+        $token->expires_at = now()->addHours(24);
+        $token->verified = false;
+
+        $token->save();
+
+        return $token;
+    }
 
     /**
      * Mark the email verification token as verified if it is valid.

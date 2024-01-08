@@ -57,3 +57,9 @@ Route::middleware('auth:sanctum')->post('/logout', [LogoutController::class, 'lo
 // Add a new GET route for email verification
 Route::get('/email/verify/{token}', [VerifyEmailController::class, 'verify'])
     ->name('api.email.verify');
+
+// New PUT route for updating user profile
+Route::middleware('auth:sanctum')->put('/user/profile', [UserController::class, 'editUserProfile']);
+Route::middleware('auth:sanctum')->patch('/user/profile', [UserController::class, 'editUserProfile']);
+
+// ... other routes ...

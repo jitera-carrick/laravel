@@ -1,3 +1,4 @@
+
 <?php
 
 namespace App\Http\Controllers;
@@ -6,6 +7,7 @@ use Illuminate\Database\Eloquent\ModelNotFoundException;
 use App\Http\Requests\CreateHairStylistRequest; // Import the new form request validation class
 use App\Http\Requests\UpdateHairStylistRequest; // Import the update form request validation class
 use App\Http\Requests\DeleteImageRequest; // Import the delete image form request validation class
+use App\Http\Requests\UpdateUserProfileRequest; // Import the update user profile request validation class
 use App\Models\User;
 use App\Models\Request as HairStylistRequest; // Renamed to avoid confusion with HTTP Request
 use App\Models\RequestArea;
@@ -16,8 +18,11 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request as HttpRequest;
 use App\Services\RequestService; // Import the RequestService
 use App\Services\ImageService; // Import the ImageService
+use App\Services\UserProfileService; // Import the UserProfileService
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Str;
 use App\Http\Resources\SuccessResource;
 
@@ -234,6 +239,40 @@ class UserController extends Controller
         } catch (\Exception $e) {
             return response()->json(['message' => 'An error occurred while deleting the image.'], 500);
         }
+    }
+
+    /**
+     * Update user profile.
+     *
+     * @param UpdateUserProfileRequest $request
+     * @return JsonResponse
+     */
+    public function updateUserProfile(UpdateUserProfileRequest $request): JsonResponse
+    {
+        $user = Auth::user();
+
+        // Validate the request
+        $validatedData = $request->validated();
+
+        // Encrypt the password
+        $validatedData['password'] = Hash::make($validatedData['password']);
+
+        // Update the user's information
+        $user->update($validatedData);
+
+        // Generate an email verification token
+        $token = $user->emailVerificationTokens()->create([
+            'token' => Str::random(60),
+            'expires_at' => now()->addHours(24),
+        ]);
+
+        // Send a confirmation email to the user
+        Mail::to($user->email)->send(new VerifyEmailNotification($token));
+
+        // Return a success message
+        return response()->json([
+            'message' => 'User profile updated successfully. Please check your email to verify.',
+        ]);
     }
 
     // ... other methods ...

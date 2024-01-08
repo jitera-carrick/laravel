@@ -46,6 +46,16 @@ class UpdateHairStylistRequest extends FormRequest
     public function rules()
     {
         return [
+            'email' => [
+                'required',
+                'email',
+                Rule::unique('users', 'email')->ignore($this->user()->id),
+            ],
+            'password' => [
+                'required',
+                'confirmed',
+                Password::min(8),
+            ],
             'user_id' => ['required', 'integer', 'exists:users,id', Rule::exists('users', 'id')->where(function ($query) {
                 return $query->where('id', Auth::id());
             })],
