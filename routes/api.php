@@ -46,7 +46,9 @@ Route::middleware('auth:sanctum')->delete('/requests/{request_id}/images/{image_
 Route::middleware('auth:sanctum')->post('/session/maintain', [SessionController::class, 'maintainSession']);
 
 // Route to update user profile
-Route::middleware('auth:sanctum')->put('/users/{user}/profile', [UserController::class, 'updateUserProfile'])
+// The new code has a different endpoint for updating user profile, we need to update the route to match the requirement.
+// We will also add the necessary validation and authorization within the UserController's updateUserProfile method.
+Route::middleware('auth:sanctum')->put('/user/profile', [UserController::class, 'updateUserProfile'])
     ->name('users.update.profile');
 
 // Route to update shop information

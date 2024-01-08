@@ -1,9 +1,9 @@
-
 <?php
 
 namespace App\Http\Requests;
 
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Validation\Rule;
 
 class UpdateUserProfileRequest extends FormRequest
 {
@@ -26,10 +26,14 @@ class UpdateUserProfileRequest extends FormRequest
     public function rules()
     {
         return [
-            'user_id' => 'required|integer',
-            'email' => 'required|string|email',
-            'password_hash' => 'required|string|confirmed',
-            'password_confirmation' => 'required|string',
+            'email' => [
+                'sometimes',
+                'required',
+                'string',
+                'email',
+                Rule::unique('users', 'email')->ignore($this->user()->id),
+            ],
+            'password' => 'sometimes|required|string|min:8',
         ];
     }
 
@@ -41,13 +45,11 @@ class UpdateUserProfileRequest extends FormRequest
     public function messages()
     {
         return [
-            'user_id.required' => 'The user ID is required.',
-            'user_id.integer' => 'The user ID must be an integer.',
             'email.required' => 'The email address is required.',
-            'email.email' => 'The email address must be a valid email format.',
-            'password_hash.required' => 'The password is required.',
-            'password_hash.confirmed' => 'The password confirmation does not match.',
-            'password_confirmation.required' => 'The password confirmation is required.',
+            'email.email' => 'Invalid email format.',
+            'email.unique' => 'Email already registered.',
+            'password.required' => 'The password is required.',
+            'password.min' => 'Password must be at least 8 characters long.',
         ];
     }
 }
