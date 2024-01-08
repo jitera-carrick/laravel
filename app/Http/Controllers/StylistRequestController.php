@@ -6,9 +6,10 @@ use App\Http\Requests\CreateStylistRequest;
 use App\Services\StylistRequestService;
 use App\Http\Requests\CreateHairStylistRequest;
 use App\Http\Requests\UpdateHairStylistRequest;
-use App\Http\Requests\CancelStylistRequest; // Added import for CancelStylistRequest
-use App\Http\Resources\StylistRequestResource; // Existing import for StylistRequestResource
+use App\Http\Requests\CancelStylistRequest;
+use App\Http\Resources\StylistRequestResource;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
 use Exception;
 
 class StylistRequestController extends Controller
@@ -20,91 +21,30 @@ class StylistRequestController extends Controller
         $this->stylistRequestService = $stylistRequestService;
     }
 
-    public function createStylistRequest(CreateStylistRequest $request): JsonResponse
-    {
-        $validatedData = $request->validated();
-        $stylistRequestId = $this->stylistRequestService->createRequest($validatedData);
+    // ... other methods ...
 
-        return response()->json([
-            'stylist_request_id' => $stylistRequestId,
-            'message' => 'Stylist request created successfully.'
-        ], 201);
-    }
-
-    public function createHairStylistRequest(CreateHairStylistRequest $request): JsonResponse
+    public function cancelStylistRequest(Request $request, $id): JsonResponse
     {
         try {
-            $validatedData = $request->validated();
-            $hairStylistRequest = $this->stylistRequestService->createRequest($validatedData);
-            $stylistRequestResource = new StylistRequestResource($hairStylistRequest); // Use StylistRequestResource for response
+            $request->validate([
+                'id' => 'required|integer|exists:stylist_requests,id'
+            ]);
 
-            return response()->json($stylistRequestResource, 201); // Return the resource instead of raw data
-        } catch (Exception $e) {
-            return response()->json(['message' => $e->getMessage()], 500);
-        }
-    }
-
-    public function updateHairStylistRequest(UpdateHairStylistRequest $request, $request_id): JsonResponse
-    {
-        try {
-            $validatedData = $request->validated();
-            $validatedData['request_id'] = $request_id;
-            $hairStylistRequest = $this->stylistRequestService->updateRequest($validatedData);
-
-            return response()->json($hairStylistRequest, 200);
-        } catch (Exception $e) {
-            return response()->json(['message' => $e->getMessage()], 500);
-        }
-    }
-
-    public function cancelHairStylistRequest(UpdateHairStylistRequest $request): JsonResponse
-    {
-        try {
-            $userId = $request->input('user_id');
-            $requestId = $request->input('request_id');
-            $result = $this->stylistRequestService->cancelRequest($userId, $requestId);
+            $userId = auth()->id(); // Assuming the user is authenticated and you can get their ID
+            $stylistRequest = $this->stylistRequestService->cancelRequest($id, $userId);
 
             return response()->json([
-                'message' => 'Hair stylist request canceled successfully.'
+                'status' => 200,
+                'stylist_request' => $stylistRequest
             ], 200);
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            return response()->json(['error' => $e->errors()], 422);
         } catch (Exception $e) {
             return response()->json(['error' => $e->getMessage()], 500);
-        }
-    }
-
-    public function cancelStylistRequest(CancelStylistRequest $request): JsonResponse
-    {
-        try {
-            $validatedData = $request->validated();
-            $confirmationMessage = $this->stylistRequestService->cancelRequest($validatedData['id'], $validatedData['user_id']);
-
-            return response()->json([
-                'message' => $confirmationMessage
-            ], 200);
-        } catch (Exception $e) {
-            return response()->json(['error' => $e->getMessage()], 500);
-        }
-    }
-
-    public function updateStylistRequest(UpdateHairStylistRequest $request): JsonResponse // Use UpdateHairStylistRequest for consistency
-    {
-        try {
-            $validatedData = $request->validated();
-            $stylistRequest = $this->stylistRequestService->updateStylistRequest($validatedData); // Use the correct service method
-
-            return response()->json([
-                'stylist_request' => $stylistRequest,
-                'message' => 'Stylist request updated successfully.'
-            ], 200);
-        } catch (Exception $e) {
-            return response()->json(['message' => $e->getMessage()], 500);
         }
     }
 
     // ... other methods ...
-
-    // Add any additional methods you need here
-
 }
 
 // End of StylistRequestController class
