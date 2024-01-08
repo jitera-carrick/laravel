@@ -27,6 +27,9 @@ class CreateHairStylistRequest extends FormRequest
     public function rules()
     {
         return [
+            'details' => 'required|string',
+            'status' => 'required|string|in:pending,approved,rejected',
+            'user_id' => 'required|exists:users,id',
             'area_id' => 'required|array|min:1',
             'menu_id' => 'required|array|min:1',
             'hair_concerns' => 'required|string|max:3000',
@@ -43,6 +46,9 @@ class CreateHairStylistRequest extends FormRequest
     public function messages()
     {
         return [
+            'details.required' => 'The details field is required.',
+            'status.required' => 'The status field is required and must be one of the valid options: pending, approved, rejected.',
+            'user_id.required' => 'The user_id field is required and must exist in the users table.',
             'area_id.required' => 'The area selection is required.',
             'area_id.array' => 'The area selection must be an array.',
             'area_id.min' => 'At least one area must be selected.',
