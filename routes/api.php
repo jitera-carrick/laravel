@@ -30,7 +30,9 @@ Route::middleware('auth:sanctum')->get('/user', function (Request $request) {
 });
 
 // Route for resetting the user's password
+// The new code has a different URI for password reset, we need to keep both URIs
 Route::post("/users/reset-password", [ResetPasswordController::class, "resetPassword"]);
+Route::post("/api/auth/password/reset", [ResetPasswordController::class, "resetPassword"])->middleware('throttle:api');
 
 // Route for user login
 // The new code has a different URI for login, we need to keep both URIs

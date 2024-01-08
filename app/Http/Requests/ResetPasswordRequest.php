@@ -27,8 +27,12 @@ class ResetPasswordRequest extends FormRequest
     {
         return [
             'email' => 'required|email|exists:users,email',
-            'token' => 'required|string|exists:password_resets,token',
-            'password' => ['required', 'confirmed', Password::defaults()],
+            'token' => 'required|string|exists:password_resets,token|max:255',
+            'password' => [
+                'required',
+                'confirmed',
+                Password::min(8)->mixedCase()->numbers()->symbols(),
+            ],
             'password_confirmation' => 'required_with:password',
         ];
     }
@@ -41,12 +45,13 @@ class ResetPasswordRequest extends FormRequest
     public function messages()
     {
         return [
-            'email.required' => 'The email field is required.',
-            'email.email' => 'The email must be a valid email address.',
+            'email.required' => 'Invalid email address.',
+            'email.email' => 'Invalid email address.',
             'email.exists' => 'The email does not exist in our records.',
-            'token.required' => 'The reset token is required.',
-            'token.exists' => 'The provided reset token is invalid or has expired.',
-            'password.required' => 'The password field is required.',
+            'token.required' => 'Invalid or expired token.',
+            'token.exists' => 'Invalid or expired token.',
+            'token.max' => 'Invalid or expired token.',
+            'password.required' => 'Invalid password. Password must be at least 8 characters long and include a number, a letter, and a special character.',
             'password.confirmed' => 'The password confirmation does not match.',
             'password_confirmation.required_with' => 'The password confirmation is required when password is present.',
         ];
