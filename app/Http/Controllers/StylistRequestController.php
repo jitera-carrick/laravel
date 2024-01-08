@@ -16,6 +16,14 @@ class StylistRequestController extends Controller
         $this->stylistRequestService = $stylistRequestService;
     }
 
+    public function createHairStylistRequest(CreateStylistRequest $request): JsonResponse
+    {
+        $validatedData = $request->validated();
+        $stylistRequestId = $this->stylistRequestService->createRequest($validatedData);
+
+        return response()->json(['stylist_request_id' => $stylistRequestId], 201);
+    }
+
     public function createStylistRequest(CreateStylistRequest $request): JsonResponse
     {
         $validatedData = $request->validated();

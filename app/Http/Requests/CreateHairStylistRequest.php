@@ -5,6 +5,7 @@ namespace App\Http\Requests;
 
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Validation\Rule;
 
 class CreateHairStylistRequest extends FormRequest
 {
@@ -28,7 +29,7 @@ class CreateHairStylistRequest extends FormRequest
     {
         return [
             'details' => 'required|string',
-            'status' => 'required|string|in:pending,approved,rejected',
+            'status' => ['required', Rule::in(['pending', 'approved', 'rejected'])],
             'user_id' => 'required|exists:users,id',
             'area_id' => 'required|array|min:1',
             'menu_id' => 'required|array|min:1',
