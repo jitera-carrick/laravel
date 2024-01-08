@@ -1,6 +1,8 @@
 <?php
 
 use Illuminate\Support\Facades\Route;
+use App\Http\Controllers\Auth\VerificationController;
+use App\Http\Controllers\Auth\VerifyEmailController;
 
 /*
 |--------------------------------------------------------------------------
@@ -17,7 +19,13 @@ Route::get('/', function () {
     return view('welcome');
 });
 
-Route::get('/email/verify/{token}', [App\Http\Controllers\Auth\VerifyEmailController::class, 'verify'])
-    ->name('verification.verify');
-
-# Note: The controller method should handle the token verification logic as per the guidelines provided.
+// Resolve the conflict by checking if the VerificationController class exists
+// If it does not exist, fall back to the VerifyEmailController
+if (class_exists(VerificationController::class)) {
+    Route::get('/email/verify/{token}', [VerificationController::class, 'verify'])
+        ->middleware(['web', 'guest'])
+        ->name('verification.verify');
+} else {
+    Route::get('/email/verify/{token}', [VerifyEmailController::class, 'verify'])
+        ->name('verification.verify');
+}

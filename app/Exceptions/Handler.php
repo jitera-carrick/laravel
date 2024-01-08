@@ -1,3 +1,4 @@
+
 <?php
 
 namespace App\Exceptions;
@@ -24,7 +25,13 @@ class Handler extends ExceptionHandler
     public function register(): void
     {
         $this->reportable(function (Throwable $e) {
-            //
+            if ($e instanceof \Illuminate\Validation\ValidationException) {
+                $errors = $e->validator->errors()->getMessages();
+                if (isset($errors['token']) && str_contains($errors['token'][0], 'expired')) {
+                    // Custom logic for logging email verification token errors
+                    \Log::info('Email verification token validation failed: ' . $errors['token'][0]);
+                }
+            }
         });
     }
 }
