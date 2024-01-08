@@ -49,3 +49,9 @@ Route::post('/auth/email/verify/{token}', [VerifyEmailController::class, 'verify
 
 // Route for sending the password reset link email
 Route::post('/auth/password/email', [ForgotPasswordController::class, 'sendResetLinkEmail'])->middleware('api');
+
+// New route for resetting the password with middleware
+// Note: This route is similar to the existing "/users/reset-password" route.
+// If the middleware 'ResetPasswordRequest' is required for the new reset password functionality,
+// it should be added to the existing route instead of creating a duplicate route.
+Route::post('/users/reset-password', [ResetPasswordController::class, 'resetPassword'])->middleware('ResetPasswordRequest');
