@@ -1,3 +1,4 @@
+
 <?php
 
 namespace App\Services;
@@ -8,6 +9,7 @@ use App\Models\HairStylistRequest;
 use App\Models\Request;
 use App\Models\RequestImage;
 use App\Models\PasswordResetRequest;
+use App\Models\PasswordResetToken; // Added for the validateResetToken method
 use Exception;
 
 class RequestService
@@ -82,6 +84,20 @@ class RequestService
             // Handle the exception as needed, possibly logging or rethrowing
             throw $e;
         }
+    }
+
+    public function validateResetToken(string $token): bool
+    {
+        $passwordResetToken = PasswordResetToken::where('token', $token)
+            ->where('used', false)
+            ->where('expires_at', '>', now())
+            ->first();
+
+        if (!$passwordResetToken) {
+            throw new Exception("Invalid or expired reset token.");
+        }
+
+        return true;
     }
 
     // Rest of the RequestService class...

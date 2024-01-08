@@ -19,6 +19,7 @@ use Illuminate\Support\Facades\Validator;
 use Illuminate\Http\Request;
 use App\Http\Resources\SuccessResource;
 use App\Http\Resources\ErrorResource;
+use App\Http\Requests\ValidateResetTokenRequest;
 
 class ResetPasswordController extends Controller
 {
@@ -28,6 +29,12 @@ class ResetPasswordController extends Controller
     {
         $this->passwordResetService = $passwordResetService;
         $this->middleware('guest')->only('validateResetToken');
+    }
+
+    public function reset(ResetPasswordRequest $request): JsonResponse
+    {
+        // Existing code remains unchanged
+        // ...
     }
 
     public function resetPassword(Request $request): JsonResponse
@@ -77,9 +84,34 @@ class ResetPasswordController extends Controller
         }
     }
 
-    public function validateResetToken(ValidateResetTokenRequest $request): JsonResponse
+    public function validateResetToken(Request $request): JsonResponse
     {
-        // ... existing validateResetToken method ...
+        $validator = Validator::make($request->all(), [
+            'token' => 'required|string',
+        ]);
+
+        if ($validator->fails()) {
+            return ApiResponse::error($validator->errors(), 422);
+        }
+
+        $token = $request->input('token');
+        $passwordResetToken = PasswordResetToken::where('token', $token)
+            ->where('used', false)
+            ->first();
+
+        if (!$passwordResetToken) {
+            return ApiResponse::error(['message' => 'Invalid reset token.'], 404);
+        }
+
+        $tokenLifetime = config('auth.passwords.users.expire') * 60;
+        $tokenCreatedAt = Carbon::parse($passwordResetToken->created_at);
+        $tokenExpired = $tokenCreatedAt->addSeconds($tokenLifetime)->isPast();
+
+        if ($tokenExpired) {
+            return ApiResponse::error(['message' => 'The reset token has expired.'], 400);
+        }
+
+        return ApiResponse::success(['message' => 'Reset token is valid.'], 200);
     }
 
     // ... other methods ...

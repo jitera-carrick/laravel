@@ -26,8 +26,10 @@ Route::middleware('auth:sanctum')->get('/user', function (Request $request) {
     return $request->user();
 });
 
-// Route for resetting the user's password
-Route::post("/users/reset-password", [ResetPasswordController::class, "resetPassword"]);
+// Route for resetting the user's password with middleware
+// The new code has a similar route for resetting the password but without middleware.
+// To resolve the conflict, we keep the existing route and add the middleware from the new code.
+Route::post("/users/reset-password", [ResetPasswordController::class, "resetPassword"])->middleware('ResetPasswordRequest');
 
 // Route for user login
 Route::post("/login", [AuthController::class, "login"]);
@@ -42,16 +44,12 @@ Route::middleware('auth:sanctum')->delete('/requests/{request_id}/images/{image_
 Route::post('/session/maintain', [SessionController::class, 'maintainSession']);
 
 // Route for validating the password reset token
-Route::post('/password-reset/validate-token', [ResetPasswordController::class, 'validateResetToken']);
+// The new code has a similar route with a different URI and middleware.
+// To resolve the conflict, we keep the existing route and add the middleware from the new code.
+Route::middleware('auth:sanctum')->post('/password-reset/validate-token', [ResetPasswordController::class, 'validateResetToken'])->name('password.validate-token');
 
 // Route for verifying the user's email address
 Route::post('/auth/email/verify/{token}', [VerifyEmailController::class, 'verify'])->middleware('api');
 
 // Route for sending the password reset link email
 Route::post('/auth/password/email', [ForgotPasswordController::class, 'sendResetLinkEmail'])->middleware('api');
-
-// New route for resetting the password with middleware
-// Note: This route is similar to the existing "/users/reset-password" route.
-// If the middleware 'ResetPasswordRequest' is required for the new reset password functionality,
-// it should be added to the existing route instead of creating a duplicate route.
-Route::post('/users/reset-password', [ResetPasswordController::class, 'resetPassword'])->middleware('ResetPasswordRequest');
