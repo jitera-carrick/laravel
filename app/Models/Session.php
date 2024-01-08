@@ -1,12 +1,11 @@
-
 <?php
 
-use Illuminate\Support\Facades\Config;
-use Illuminate\Support\Str; // Added to use Str::random
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Facades\Config;
+use Illuminate\Support\Str; // Added to use Str::random
 
 class Session extends Model
 {
@@ -54,24 +53,24 @@ class Session extends Model
     ];
 
     /**
-     * Create a new session for a user.
+     * Create a new session record.
      *
      * @param int $userId
-     * @return string
+     * @param string|null $sessionToken Optional session token, if not provided a random one will be generated.
+     * @param \DateTime|null $expiresAt Optional expiration time, if not provided the default will be used.
+     * @return Session
      */
-    public function createNewSession($userId)
+    public function createNewSession($userId, $sessionToken = null, $expiresAt = null)
     {
-        $sessionToken = Str::random(60);
-        $expiresAt = now()->addMinutes(Config::get('session.lifetime'));
+        $sessionToken = $sessionToken ?: Str::random(60);
+        $expiresAt = $expiresAt ?: now()->addMinutes(Config::get('session.lifetime'));
 
-        $this->create([
+        return $this->create([
             'user_id' => $userId,
             'session_token' => $sessionToken,
             'expires_at' => $expiresAt,
             'is_active' => true,
         ]);
-
-        return $sessionToken;
     }
 
     /**
@@ -85,6 +84,22 @@ class Session extends Model
         $session = $this->where('session_token', $sessionToken)->first();
         if ($session && $session->is_active && $session->expires_at > now()) {
             $session->expires_at = now()->addMinutes(Config::get('session.lifetime'));
+            return $session->save();
+        }
+        return false;
+    }
+
+    /**
+     * Deactivate the session if it is expired.
+     *
+     * @param string $sessionToken
+     * @return bool
+     */
+    public function deactivateExpiredSession($sessionToken)
+    {
+        $session = $this->where('session_token', $sessionToken)->first();
+        if ($session && $session->expires_at < now()) {
+            $session->is_active = false;
             return $session->save();
         }
         return false;

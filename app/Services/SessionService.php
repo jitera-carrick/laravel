@@ -1,4 +1,3 @@
-
 <?php
 
 namespace App\Services;
@@ -6,6 +5,7 @@ namespace App\Services;
 use App\Models\Session;
 use Illuminate\Support\Facades\Config;
 use Illuminate\Support\Str;
+use Carbon\Carbon;
 
 class SessionService
 {
@@ -13,8 +13,16 @@ class SessionService
     {
         $session = Session::where('session_token', $session_token)->first();
         if ($session && $session->is_active && $session->expires_at > now()) {
+            // Update the expiration time of the session
+            $session->expires_at = now()->addMinutes(Config::get('session.lifetime'));
             $session->updated_at = now();
-            return $session->save();
+            $session->save();
+            return true;
+        } elseif ($session && (!$session->is_active || $session->expires_at <= now())) {
+            // Deactivate the session if it's not active or expired
+            $session->is_active = false;
+            $session->save();
+            return false;
         }
         return false;
     }
