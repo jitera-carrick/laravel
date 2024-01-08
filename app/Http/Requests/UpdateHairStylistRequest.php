@@ -1,4 +1,3 @@
-
 <?php
 
 namespace App\Http\Requests;
@@ -47,13 +46,18 @@ class UpdateHairStylistRequest extends FormRequest
     public function rules()
     {
         return [
-            'user_id' => 'required|integer|exists:users,id',
+            'user_id' => ['required', 'integer', 'exists:users,id', Rule::exists('users', 'id')->where(function ($query) {
+                return $query->where('id', Auth::id());
+            })],
             'request_id' => 'required|integer|exists:requests,id',
             'area' => 'required|string',
             'menu' => 'required|string',
             'hair_concerns' => 'nullable|string|max:3000',
             'image_paths' => 'nullable|array',
             'image_paths.*' => 'nullable|file|mimes:png,jpg,jpeg|max:5120',
+            'details' => 'required|string',
+            'status' => 'required|string',
+            'request_image_id' => 'sometimes|exists:request_images,id',
         ];
     }
 
@@ -78,6 +82,9 @@ class UpdateHairStylistRequest extends FormRequest
             'image_paths.*.file' => 'Each image path must be a file.',
             'image_paths.*.mimes' => 'Each file must be of type: png, jpg, jpeg.',
             'image_paths.*.max' => 'Each file may not be greater than 5MB.',
+            'details.required' => 'The details field is required.',
+            'status.required' => 'The status field is required.',
+            'request_image_id.exists' => 'The selected request image ID is invalid.',
         ];
     }
 }

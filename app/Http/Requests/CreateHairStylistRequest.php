@@ -14,13 +14,8 @@ class CreateHairStylistRequest extends FormRequest
      */
     public function authorize()
     {
-        // Check if the user is authenticated
-        if (!Auth::check()) {
-            return false;
-        }
-
-        // Check if the user_id matches the authenticated user's id
-        return Auth::id() == $this->get('user_id');
+        // Check if the user is authenticated and if the user_id matches the authenticated user's id
+        return Auth::check() && Auth::id() == $this->get('user_id');
     }
 
     /**
@@ -31,15 +26,16 @@ class CreateHairStylistRequest extends FormRequest
     public function rules()
     {
         return [
-            'details' => 'required|string', // Changed from 'required|text' to 'required|string'
-            'status' => 'required|string|in:pending,approved,rejected', // Changed from 'sometimes' to 'required'
+            'request_id' => 'sometimes|exists:hair_stylist_requests,id', // Retained from new code
+            'details' => 'required|string',
+            'status' => 'required|string|in:pending,approved,rejected',
             'user_id' => 'required|exists:users,id',
             'request_image_id' => 'sometimes|exists:request_images,id', // Retained from existing code
             'area_id' => 'required|array|min:1',
             'menu_id' => 'required|array|min:1',
             'hair_concerns' => 'required|string|max:3000',
             'image_paths' => 'array|max:3',
-            'image_paths.*' => 'sometimes|file|mimes:png,jpg,jpeg|max:5120', // Added 'sometimes' from existing code
+            'image_paths.*' => 'sometimes|file|mimes:png,jpg,jpeg|max:5120', // Combined 'sometimes' from existing code and validation rules from new code
         ];
     }
 
@@ -51,6 +47,7 @@ class CreateHairStylistRequest extends FormRequest
     public function messages()
     {
         return [
+            'request_id.exists' => 'The selected request ID is invalid.', // Retained from new code
             'details.required' => 'The details field is required.',
             'status.required' => 'The status field is required and must be one of the valid options: pending, approved, rejected.',
             'user_id.required' => 'The user_id field is required and must exist in the users table.',

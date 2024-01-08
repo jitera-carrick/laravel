@@ -1,12 +1,13 @@
-
 <?php
 
 namespace App\Http\Controllers;
 
 use App\Http\Requests\CreateStylistRequest;
 use App\Services\StylistRequestService;
-use Illuminate\Http\JsonResponse;
+use App\Http\Requests\CreateHairStylistRequest;
 use App\Http\Requests\UpdateHairStylistRequest;
+use Illuminate\Http\JsonResponse;
+use Exception;
 
 class StylistRequestController extends Controller
 {
@@ -28,6 +29,31 @@ class StylistRequestController extends Controller
         ], 201);
     }
 
+    public function createHairStylistRequest(CreateHairStylistRequest $request): JsonResponse
+    {
+        try {
+            $validatedData = $request->validated();
+            $hairStylistRequest = $this->stylistRequestService->createRequest($validatedData);
+
+            return response()->json($hairStylistRequest, 201);
+        } catch (Exception $e) {
+            return response()->json(['message' => $e->getMessage()], 500);
+        }
+    }
+
+    public function updateHairStylistRequest(UpdateHairStylistRequest $request, $request_id): JsonResponse
+    {
+        try {
+            $validatedData = $request->validated();
+            $validatedData['request_id'] = $request_id;
+            $hairStylistRequest = $this->stylistRequestService->updateRequest($validatedData);
+
+            return response()->json($hairStylistRequest, 200);
+        } catch (Exception $e) {
+            return response()->json(['message' => $e->getMessage()], 500);
+        }
+    }
+
     public function cancelHairStylistRequest(UpdateHairStylistRequest $request): JsonResponse
     {
         try {
@@ -38,10 +64,15 @@ class StylistRequestController extends Controller
             return response()->json([
                 'message' => 'Hair stylist request canceled successfully.'
             ], 200);
-        } catch (\Exception $e) {
+        } catch (Exception $e) {
             return response()->json(['error' => $e->getMessage()], 500);
         }
     }
 
     // ... other methods ...
+
+    // Add any additional methods you need here
+
 }
+
+// End of StylistRequestController class
