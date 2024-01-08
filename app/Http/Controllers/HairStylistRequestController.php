@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Http\Requests\CreateHairStylistRequest;
+use App\Http\Requests\CancelHairStylistRequest;
 use App\Services\HairStylistRequestService;
 use App\Http\Resources\HairStylistRequestResource;
 use Illuminate\Http\JsonResponse;
@@ -10,6 +11,9 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Validation\Rule;
+use Illuminate\Database\Eloquent\ModelNotFoundException;
+use Illuminate\Auth\Access\AuthorizationException;
+use Exception;
 
 class HairStylistRequestController extends Controller
 {
@@ -28,16 +32,29 @@ class HairStylistRequestController extends Controller
             return response()->json(['error' => 'Unauthorized'], 401);
         }
 
-        // Check if the user has permission to create a hair stylist request
-        // This is a placeholder for actual permission checking logic
-        // if (!Auth::user()->can('create_hair_stylist_request')) {
-        //     return response()->json(['error' => 'Forbidden'], 403);
-        // }
-
         $validatedData = $request->validated();
         $hairStylistRequest = $this->hairStylistRequestService->createRequest($validatedData);
 
         return response()->json(new HairStylistRequestResource($hairStylistRequest), 201);
+    }
+
+    public function cancelHairStylistRequest(CancelHairStylistRequest $request): JsonResponse
+    {
+        try {
+            $validatedData = $request->validated();
+            $hairStylistRequest = $this->hairStylistRequestService->cancelRequest($validatedData['request_id']);
+
+            return response()->json([
+                'status' => 200,
+                'message' => 'Hair stylist request canceled successfully.'
+            ], 200);
+        } catch (ModelNotFoundException $e) {
+            return response()->json(['error' => 'Request not found.'], 404);
+        } catch (AuthorizationException $e) {
+            return response()->json(['error' => 'User is not authorized to cancel this request.'], 403);
+        } catch (Exception $e) {
+            return response()->json(['error' => $e->getMessage()], 500);
+        }
     }
 
     public function createOrUpdateHairStylistRequest(Request $request): JsonResponse
