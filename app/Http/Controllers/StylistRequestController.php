@@ -10,6 +10,7 @@ use App\Http\Requests\CancelStylistRequest;
 use App\Http\Resources\StylistRequestResource;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 use Exception;
 
 class StylistRequestController extends Controller
@@ -19,17 +20,24 @@ class StylistRequestController extends Controller
     public function __construct(StylistRequestService $stylistRequestService)
     {
         $this->stylistRequestService = $stylistRequestService;
+        $this->middleware('auth'); // Ensure user is authenticated
     }
 
     public function createStylistRequest(CreateStylistRequest $request): JsonResponse
     {
-        $validatedData = $request->validated();
-        $stylistRequestId = $this->stylistRequestService->createRequest($validatedData);
+        try {
+            $validatedData = $request->validated();
+            $validatedData['user_id'] = Auth::id(); // Ensure the user_id is the authenticated user's ID
+            $stylistRequest = $this->stylistRequestService->createStylistRequest($validatedData);
 
-        return response()->json([
-            'stylist_request_id' => $stylistRequestId,
-            'message' => 'Stylist request created successfully.'
-        ], 201);
+            return response()->json([
+                'status' => 201,
+                'stylist_request' => $stylistRequest
+            ], 201);
+        } catch (Exception $e) {
+            $status = $e->getCode() == 0 ? 500 : $e->getCode();
+            return response()->json(['message' => $e->getMessage()], $status);
+        }
     }
 
     public function createHairStylistRequest(CreateHairStylistRequest $request): JsonResponse
@@ -103,7 +111,7 @@ class StylistRequestController extends Controller
         }
     }
 
-    public function updateStylistRequest(UpdateStylistRequest $request, $id): JsonResponse
+    public function updateStylistRequest(UpdateHairStylistRequest $request, $id): JsonResponse
     {
         try {
             $validatedData = $request->validated();

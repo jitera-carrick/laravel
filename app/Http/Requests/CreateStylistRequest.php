@@ -1,4 +1,3 @@
-
 <?php
 
 namespace App\Http\Requests;
@@ -26,11 +25,29 @@ class CreateStylistRequest extends FormRequest
     public function rules()
     {
         return [
+            'stylist_preferences' => 'required|string',
             'preferred_date' => 'required|date|after_or_equal:today',
             'preferred_time' => 'required|date_format:H:i',
-            'details' => 'required|string',
             'status' => ['required', Rule::in(['pending', 'approved', 'rejected'])],
             'user_id' => 'required|exists:users,id',
+        ];
+    }
+
+    /**
+     * Get custom messages for validator errors.
+     *
+     * @return array
+     */
+    public function messages()
+    {
+        return [
+            'user_id.required' => 'User not found.',
+            'user_id.exists' => 'User not found.',
+            'preferred_date.required' => 'Invalid date format.',
+            'preferred_date.date' => 'Invalid date format.',
+            'preferred_time.required' => 'Invalid time format.',
+            'preferred_time.date_format' => 'Invalid time format.',
+            'stylist_preferences.required' => 'Stylist preferences are required.',
         ];
     }
 }
