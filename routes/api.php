@@ -5,6 +5,7 @@ use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\AuthController; // Import the AuthController
 use App\Http\Controllers\Auth\RegisterController; // Import the RegisterController
 use App\Http\Controllers\Auth\ResetPasswordController; // Import the ResetPasswordController
+use App\Http\Controllers\Auth\ForgotPasswordController; // Import the ForgotPasswordController
 use App\Http\Controllers\UserController; // Import the UserController
 use App\Http\Controllers\SessionController; // Import the SessionController
 use App\Http\Controllers\RequestImageController; // Import the RequestImageController
@@ -44,17 +45,16 @@ Route::post('/session/maintain', [SessionController::class, 'maintainSession']);
 Route::middleware('auth:sanctum')->post('/hair-stylist-requests', [HairStylistRequestController::class, 'createHairStylistRequest']);
 
 // Route to handle the DELETE request for the endpoint `/api/user/hair-stylist-request/image`
-// This route is updated to meet the new requirement.
 Route::middleware('auth:sanctum')->delete('/user/hair-stylist-request/image', [RequestImageController::class, 'deleteRequestImage']);
 
 // Existing route to handle the DELETE request for the endpoint `/api/requests/images/{request_image_id}`
-// This route is kept as it is more specific and likely to be the correct implementation for a different feature.
 Route::middleware('auth:sanctum')->delete('/requests/images/{request_image_id}', [RequestImageController::class, 'deleteRequestImage']);
 
 // New POST route for user logout
 Route::middleware('auth:sanctum')->post('/logout', [LogoutController::class, 'logout']);
 
+// New POST route for sending a password reset link email
+Route::post('/auth/password/email', [ForgotPasswordController::class, 'sendResetLinkEmail']);
+
 // New GET route for email verification
-// The new code has introduced a separate EmailVerificationController for handling email verification.
-// We will use this new controller instead of the RegisterController for the email verification route.
 Route::get('/email/verify/{token}', [EmailVerificationController::class, 'verifyEmail'])->name('email.verify');
