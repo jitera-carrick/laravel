@@ -16,8 +16,8 @@ class HairStylistRequest extends Model
         'user_id',
         'request_image_id',
         'status',
-        'created_at', // Retained from existing code
-        'updated_at', // Retained from existing code
+        'created_at',
+        'updated_at',
     ];
 
     protected $hidden = [
@@ -30,16 +30,17 @@ class HairStylistRequest extends Model
         // Add new date/time columns to the $casts array if needed
     ];
 
+    /**
+     * Get the user that owns the hair stylist request.
+     */
     public function user()
     {
         return $this->belongsTo(User::class, 'user_id');
     }
 
-    public function requestImage()
-    {
-        return $this->belongsTo(RequestImage::class, 'request_image_id');
-    }
-
+    /**
+     * Get the request images for the hair stylist request.
+     */
     public function requestImages()
     {
         return $this->hasMany(RequestImage::class, 'hair_stylist_request_id');

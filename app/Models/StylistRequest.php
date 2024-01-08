@@ -10,28 +10,54 @@ class StylistRequest extends Model
 {
     use HasFactory;
 
+    /**
+     * The table associated with the model.
+     *
+     * @var string
+     */
     protected $table = 'stylist_requests';
 
+    /**
+     * The primary key associated with the table.
+     *
+     * @var string
+     */
+    protected $primaryKey = 'id';
+
+    /**
+     * The attributes that are mass assignable.
+     *
+     * @var array<int, string>
+     */
     protected $fillable = [
-        'details',
+        'date_time',
         'status',
         'user_id',
-        'created_at',
-        'updated_at',
-        // Add new column names to the $fillable array if needed
+        'stylist_id',
     ];
 
+    /**
+     * The attributes that should be hidden for serialization.
+     *
+     * @var array<int, string>
+     */
     protected $hidden = [
-        // If there are any columns that should be hidden for arrays, add them here.
+        // Usually, sensitive fields like passwords are hidden. Add any fields that need to be hidden here.
     ];
 
+    /**
+     * The attributes that should be cast.
+     *
+     * @var array<string, string>
+     */
     protected $casts = [
-        'created_at' => 'datetime',
-        'updated_at' => 'datetime',
-        'details' => 'array',
-        // Add new date/time columns to the $casts array if needed
+        'date_time' => 'datetime',
+        // Add other casts here if necessary
     ];
 
+    /**
+     * Get the user that owns the stylist request.
+     */
     public function user()
     {
         return $this->belongsTo(User::class, 'user_id');
@@ -42,6 +68,4 @@ class StylistRequest extends Model
     {
         return $this->hasMany(User::class, 'stylist_request_id');
     }
-
-    // Other relationships can be added here as needed.
 }
