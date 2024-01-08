@@ -1,4 +1,3 @@
-
 <?php
 
 namespace App\Services;
@@ -7,13 +6,14 @@ use App\Models\HairStylistRequest;
 use App\Models\RequestImage;
 use App\Models\StylistRequest;
 use App\Models\User;
+use Exception;
 
 class StylistRequestService
 {
     public function createHairStylistRequest($details, $status, $user_id, $request_image_id = null)
     {
         if ($request_image_id && !RequestImage::find($request_image_id)) {
-            throw new \Exception('Invalid request_image_id provided.');
+            throw new Exception('Invalid request_image_id provided.');
         }
 
         $hairStylistRequest = new HairStylistRequest([
@@ -33,11 +33,11 @@ class StylistRequestService
         $hairStylistRequest = HairStylistRequest::find($request_id);
 
         if (!$hairStylistRequest || $hairStylistRequest->user_id !== $user_id) {
-            throw new \Exception('Invalid request_id or user_id provided.');
+            throw new Exception('Invalid request_id or user_id provided.');
         }
 
         if ($request_image_id && !RequestImage::find($request_image_id)) {
-            throw new \Exception('Invalid request_image_id provided.');
+            throw new Exception('Invalid request_image_id provided.');
         }
 
         $hairStylistRequest->update([
@@ -49,30 +49,35 @@ class StylistRequestService
         return $hairStylistRequest;
     }
 
-    public function createStylistRequest(array $validatedData)
+    public function createStylistRequest($validatedData)
     {
         // Check if the user_id exists
         if (!User::find($validatedData['user_id'])) {
-            throw new \Exception('User not found.');
+            throw new Exception('User not found.');
         }
 
         // Set the status to 'pending' before creating the request
         $validatedData['status'] = 'pending';
         $stylistRequest = StylistRequest::create($validatedData);
-        return $stylistRequest;
+        return $stylistRequest->id; // Assuming 'id' is the primary key and unique identifier
     }
 
     public function cancelRequest(int $userId, int $requestId)
     {
-        $request = HairStylistRequest::where('id', $requestId)->where('user_id', $userId)->first();
+        // Correct the model used to find the request from HairStylistRequest to StylistRequest
+        $request = StylistRequest::where('id', $requestId)->where('user_id', $userId)->first();
 
         if (!$request) {
             return false;
         }
 
-        $request->status = 'canceled';
+        $request->status = 'canceled'; // Update the status to "canceled"
+        $request->updated_at = now(); // Update the "updated_at" timestamp
         $request->save();
 
-        return true;
+        return [
+            'message' => 'Request canceled successfully.',
+            'request_id' => $requestId,
+        ];
     }
 }

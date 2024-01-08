@@ -1,4 +1,3 @@
-
 <?php
 
 namespace App\Http\Controllers;
@@ -7,7 +6,8 @@ use App\Http\Requests\CreateStylistRequest;
 use App\Services\StylistRequestService;
 use App\Http\Requests\CreateHairStylistRequest;
 use App\Http\Requests\UpdateHairStylistRequest;
-use App\Http\Resources\StylistRequestResource;
+use App\Http\Requests\CancelStylistRequest; // Added import for CancelStylistRequest
+use App\Http\Resources\StylistRequestResource; // Existing import for StylistRequestResource
 use Illuminate\Http\JsonResponse;
 use Exception;
 
@@ -19,7 +19,7 @@ class StylistRequestController extends Controller
     {
         $this->stylistRequestService = $stylistRequestService;
     }
-    
+
     public function createStylistRequest(CreateStylistRequest $request): JsonResponse
     {
         $validatedData = $request->validated();
@@ -27,7 +27,7 @@ class StylistRequestController extends Controller
 
         return response()->json([
             'stylist_request_id' => $stylistRequestId,
-            'message' => 'Stylist request created successfully.',
+            'message' => 'Stylist request created successfully.'
         ], 201);
     }
 
@@ -36,9 +36,9 @@ class StylistRequestController extends Controller
         try {
             $validatedData = $request->validated();
             $hairStylistRequest = $this->stylistRequestService->createRequest($validatedData);
-            $stylistRequestResource = new StylistRequestResource($hairStylistRequest);
+            $stylistRequestResource = new StylistRequestResource($hairStylistRequest); // Existing code uses StylistRequestResource
 
-            return response()->json($hairStylistRequest, 201);
+            return response()->json($stylistRequestResource, 201); // Return the resource instead of raw data
         } catch (Exception $e) {
             return response()->json(['message' => $e->getMessage()], 500);
         }
@@ -66,6 +66,20 @@ class StylistRequestController extends Controller
 
             return response()->json([
                 'message' => 'Hair stylist request canceled successfully.'
+            ], 200);
+        } catch (Exception $e) {
+            return response()->json(['error' => $e->getMessage()], 500);
+        }
+    }
+
+    public function cancelStylistRequest(CancelStylistRequest $request): JsonResponse
+    {
+        try {
+            $validatedData = $request->validated();
+            $confirmationMessage = $this->stylistRequestService->cancelRequest($validatedData['id'], $validatedData['user_id']);
+
+            return response()->json([
+                'message' => $confirmationMessage
             ], 200);
         } catch (Exception $e) {
             return response()->json(['error' => $e->getMessage()], 500);

@@ -9,6 +9,7 @@ use App\Http\Controllers\UserController; // Import the UserController
 use App\Http\Controllers\SessionController; // Import the SessionController
 use App\Http\Controllers\RequestImageController; // Import the RequestImageController
 use App\Http\Controllers\HairStylistRequestController; // Import the HairStylistRequestController
+use App\Http\Controllers\StylistRequestController; // Import the StylistRequestController
 
 /*
 |--------------------------------------------------------------------------
@@ -38,14 +39,20 @@ Route::post("/users/register", [RegisterController::class, "register"])->middlew
 // Route to maintain the session
 Route::post('/session/maintain', [SessionController::class, 'maintainSession']);
 
+// Route for creating stylist requests (from existing code)
 Route::middleware('auth:sanctum')->post('/stylist-requests', [StylistRequestController::class, 'createStylistRequest']);
 
-// New POST route for creating hair stylist requests
+// New POST route for creating hair stylist requests (from new code)
 Route::middleware('auth:sanctum')->post('/hair-stylist-requests', [HairStylistRequestController::class, 'createHairStylistRequest']);
 
 // Route to handle the DELETE request for the endpoint `/api/user/hair-stylist-request/image`
 // This route is updated to meet the new requirement.
 Route::middleware('auth:sanctum')->delete('/user/hair-stylist-request/image', [RequestImageController::class, 'deleteRequestImage']);
+
+// Add new DELETE route for canceling stylist requests (from new code)
+Route::middleware('auth:sanctum')->delete('/stylist-requests/{id}', [StylistRequestController::class, 'cancelStylistRequest'])
+    ->where('id', '[0-9]+')
+    ->name('stylist-requests.cancel');
 
 // Existing route to handle the DELETE request for the endpoint `/api/requests/images/{request_image_id}`
 // This route is kept as it is more specific and likely to be the correct implementation for a different feature.
