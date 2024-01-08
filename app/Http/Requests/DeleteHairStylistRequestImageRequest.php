@@ -1,3 +1,4 @@
+
 <?php
 
 namespace App\Http\Requests;
@@ -5,7 +6,7 @@ namespace App\Http\Requests;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 
-class DeleteRequestImageRequest extends FormRequest
+class DeleteHairStylistRequestImageRequest extends FormRequest
 {
     /**
      * Determine if the user is authorized to make this request.
@@ -14,8 +15,7 @@ class DeleteRequestImageRequest extends FormRequest
      */
     public function authorize()
     {
-        // The user must be authenticated and must be the owner of the hair stylist request.
-        // This logic is assumed to be handled elsewhere, e.g., in a policy or middleware.
+        // Authorization logic can be added here if needed
         return true;
     }
 
@@ -27,11 +27,7 @@ class DeleteRequestImageRequest extends FormRequest
     public function rules()
     {
         return [
-            'hair_stylist_request_id' => [
-                'required',
-                'integer',
-                'exists:hair_stylist_requests,id',
-            ],
+            'hair_stylist_request_id' => 'required|integer|exists:hair_stylist_requests,id',
             'image_path' => [
                 'required',
                 'string',
@@ -42,15 +38,20 @@ class DeleteRequestImageRequest extends FormRequest
         ];
     }
 
+    /**
+     * Get the custom messages for validation errors.
+     *
+     * @return array
+     */
     public function messages()
     {
         return [
             'hair_stylist_request_id.required' => 'The hair stylist request ID is required.',
-            'hair_stylist_request_id.integer' => 'The hair stylist request ID must be a valid integer.',
-            'hair_stylist_request_id.exists' => 'The hair stylist request does not exist.',
+            'hair_stylist_request_id.integer' => 'The hair stylist request ID must be an integer.',
+            'hair_stylist_request_id.exists' => 'The selected hair stylist request does not exist.',
             'image_path.required' => 'The image path is required.',
             'image_path.string' => 'The image path must be a string.',
-            'image_path.exists' => 'The image path is invalid or does not belong to the specified request.',
+            'image_path.exists' => 'The selected image does not exist or is not associated with the given hair stylist request.',
         ];
     }
 }

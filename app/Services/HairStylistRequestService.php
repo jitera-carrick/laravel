@@ -68,5 +68,20 @@ class HairStylistRequestService
         }
     }
 
+    public function deleteImageByPath($hairStylistRequestId, $imagePath)
+    {
+        $requestImage = RequestImage::where('hair_stylist_request_id', $hairStylistRequestId)
+                                    ->where('image_path', $imagePath)
+                                    ->first();
+
+        if (!$requestImage) {
+            throw new \Exception('Image not found or does not belong to the specified hair stylist request');
+        }
+
+        if (!$requestImage->delete()) {
+            throw new \Exception('Failed to delete the image');
+        }
+    }
+
     // Other methods in the HairStylistRequestService class...
 }
