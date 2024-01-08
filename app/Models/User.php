@@ -1,3 +1,4 @@
+
 <?php
 
 namespace App\Models;
@@ -17,7 +18,7 @@ class User extends Authenticatable
      * @var array<int, string>
      */
     protected $fillable = [
-        'name',
+        'name', // Added from new code
         'email',
         'email_verified_at',
         'password',
@@ -42,28 +43,30 @@ class User extends Authenticatable
         return $this->hasMany(EmailVerificationToken::class, 'user_id');
     }
 
-    /**
-     * Get the stylist requests for the user.
-     */
+    // Define the one-to-many relationship with stylist_requests
     public function stylistRequests()
     {
         return $this->hasMany(StylistRequest::class, 'user_id');
     }
 
-    /**
-     * Get the comments for the user.
-     */
+    // Define the one-to-many relationship with comments
     public function comments()
     {
         return $this->hasMany(Comment::class, 'user_id');
     }
 
-    /**
-     * Get the hair stylist requests for the user.
-     */
+    // Define the one-to-many relationship with hair_stylist_requests
     public function hairStylistRequests()
     {
         return $this->hasMany(HairStylistRequest::class, 'user_id');
+    }
+
+    /**
+     * Send the email verification notification.
+     */
+    public function sendVerificationEmail() 
+    { 
+        $this->notify(new \App\Notifications\VerifyEmail); 
     }
 
     // Other existing relationships...
