@@ -39,10 +39,12 @@ Route::post("/users/register", [RegisterController::class, "register"])->middlew
 Route::post('/session/maintain', [SessionController::class, 'maintainSession']);
 
 // New POST route for creating hair stylist requests
-Route::middleware('auth:sanctum')->post('/hair-stylist-requests', [HairStylistRequestController::class, 'createHairStylistRequest']);
+// The new code has a different endpoint and middleware, so we will update the existing route to match the new requirement.
+Route::middleware('auth:sanctum')->post('/hair-stylist-request/create', [HairStylistRequestController::class, 'create']);
 
 // Route to handle the DELETE request for the endpoint `/api/user/hair-stylist-request/image`
 // This route is updated to meet the new requirement.
+// The existing code has a different endpoint, but since the new code does not include it, we will keep the existing route.
 Route::middleware('auth:sanctum')->delete('/user/hair-stylist-request/image', [RequestImageController::class, 'deleteRequestImage']);
 
 // Existing route to handle the DELETE request for the endpoint `/api/requests/images/{request_image_id}`
