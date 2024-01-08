@@ -46,12 +46,18 @@ class UpdateHairStylistRequest extends FormRequest
     public function rules()
     {
         return [
+            'user_id' => ['required', 'integer', 'exists:users,id', Rule::exists('users', 'id')->where(function ($query) {
+                return $query->where('id', Auth::id());
+            })],
             'request_id' => 'required|integer|exists:requests,id',
-            'area' => 'required|string', // Updated to be required and a string
-            'menu' => 'required|string', // Updated to be required and a string
+            'area' => 'required|string',
+            'menu' => 'required|string',
             'hair_concerns' => 'nullable|string|max:3000',
-            'image_paths' => 'nullable|array', // Updated to be nullable
-            'image_paths.*' => 'nullable|file|mimes:png,jpg,jpeg|max:5120', // Updated to validate each file in the array
+            'image_paths' => 'nullable|array',
+            'image_paths.*' => 'nullable|file|mimes:png,jpg,jpeg|max:5120',
+            'details' => 'required|string',
+            'status' => 'required|string',
+            'request_image_id' => 'sometimes|exists:request_images,id',
         ];
     }
 
@@ -63,7 +69,11 @@ class UpdateHairStylistRequest extends FormRequest
     public function messages()
     {
         return [
+            'user_id.required' => 'The user ID is required.',
+            'user_id.integer' => 'The user ID must be an integer.',
+            'user_id.exists' => 'The selected user ID does not exist.',
             'request_id.required' => 'The request ID is required.',
+            'request_id.integer' => 'The request ID must be an integer.',
             'request_id.exists' => 'The selected request ID is invalid.',
             'area.required' => 'The area field is required.',
             'menu.required' => 'The menu field is required.',
@@ -72,6 +82,9 @@ class UpdateHairStylistRequest extends FormRequest
             'image_paths.*.file' => 'Each image path must be a file.',
             'image_paths.*.mimes' => 'Each file must be of type: png, jpg, jpeg.',
             'image_paths.*.max' => 'Each file may not be greater than 5MB.',
+            'details.required' => 'The details field is required.',
+            'status.required' => 'The status field is required.',
+            'request_image_id.exists' => 'The selected request image ID is invalid.',
         ];
     }
 }
