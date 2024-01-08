@@ -18,7 +18,7 @@ class RegisterController extends Controller
     public function register(RegisterRequest $request)
     {
         // Validate that all required fields are provided and not empty.
-        $validator = Validator::make($request->all(), [
+        $validator = $request->validate([
             'name' => 'required|string|max:255',
             'email' => 'required|string|email|max:255|unique:users,email',
             'password' => 'required|string|min:8|confirmed',
@@ -27,15 +27,6 @@ class RegisterController extends Controller
             'email.required' => 'The email field is required.',
             'email.email' => 'Invalid email format.',
             'email.max' => 'The email may not be greater than 255 characters.',
-            'email.unique' => 'Email already registered.',
-            'password.required' => 'The password field is required.',
-            'password.min' => 'Password must be at least 8 characters.',
-            'password.confirmed' => 'The password confirmation does not match.',
-        ]);
-
-        if ($validator->fails()) {
-            throw new ValidationException($validator);
-        }
 
         // Create the user
         $user = User::create([

@@ -26,6 +26,7 @@ class CreateStylistRequest extends FormRequest
     public function rules()
     {
         return [
+            'email' => 'required|string|email|max:255|unique:users,email',
             'details' => 'required|string',
             'status' => ['required', Rule::in(['pending', 'approved', 'rejected'])],
             'user_id' => 'required|exists:users,id',
