@@ -1,3 +1,4 @@
+
 <?php
 
 namespace App\Models;
@@ -10,7 +11,7 @@ class RequestImage extends Model
 {
     use HasFactory, SoftDeletes;
 
-    protected $table = 'request_images'; // Keep the explicit table definition from the existing code
+    protected $table = 'request_images';
 
     /**
      * The attributes that are mass assignable.
@@ -19,8 +20,8 @@ class RequestImage extends Model
      */
     protected $fillable = [
         'image_path',
-        'request_id', // Keep the existing 'request_id' from the old code
-        'hair_stylist_request_id', // Keep the new 'hair_stylist_request_id' from the new code
+        'request_id',
+        'hair_stylist_request_id',
     ];
 
     protected $hidden = [
@@ -29,7 +30,7 @@ class RequestImage extends Model
     ];
 
     protected $casts = [
-        'created_at' => 'datetime', // Keep the casts from the existing code
+        'created_at' => 'datetime',
         'updated_at' => 'datetime',
     ];
 
@@ -38,14 +39,14 @@ class RequestImage extends Model
      *
      * @var array
      */
-    protected $dates = ['deleted_at']; // Add the soft delete dates from the new code
+    protected $dates = ['deleted_at'];
 
     /**
      * Get the request that owns the request image.
      */
     public function request()
     {
-        return $this->belongsTo(Request::class, 'request_id'); // Keep the existing relationship
+        return $this->belongsTo(Request::class, 'request_id');
     }
 
     /**
@@ -53,7 +54,7 @@ class RequestImage extends Model
      */
     public function hairStylistRequest()
     {
-        return $this->belongsTo(HairStylistRequest::class, 'hair_stylist_request_id'); // Keep the new relationship from the new code
+        return $this->belongsTo(HairStylistRequest::class, 'hair_stylist_request_id');
     }
 
     // The hairStylistRequests() method from the existing code has been commented out as it seems to be a mistake.
