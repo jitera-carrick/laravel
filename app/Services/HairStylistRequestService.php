@@ -30,4 +30,24 @@ class HairStylistRequestService
 
         return $hairStylistRequest;
     }
+
+    public function deleteImagesByHairStylistRequestId(int $hairStylistRequestId)
+    {
+        $hairStylistRequest = HairStylistRequest::find($hairStylistRequestId);
+        if (!$hairStylistRequest) {
+            throw new \Exception('Hair stylist request not found');
+        }
+
+        $images = $hairStylistRequest->requestImages;
+        if ($images->isEmpty()) {
+            throw new \Exception('No images found for the specified hair stylist request');
+        }
+
+        foreach ($images as $image) {
+            $image->delete(); // Soft delete the image
+        }
+    }
+
+    // Other methods in the HairStylistRequestService class...
+
 }
