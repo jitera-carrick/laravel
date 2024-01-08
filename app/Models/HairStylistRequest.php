@@ -14,6 +14,7 @@ class HairStylistRequest extends Model
     protected $fillable = [
         'details',
         'user_id',
+        'request_image_id',
         'status',
         'created_at',
         'updated_at',

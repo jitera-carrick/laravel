@@ -23,6 +23,14 @@ class User extends Authenticatable
         'password',
         'remember_token',
         'session_token',
+        'is_logged_in',
+        'session_expiration',
+        'user_type',
+        'last_login_at', // New column added to fillable
+        'is_active', // New column added to fillable
+        'hair_stylist_request_id', // New column added to fillable
+        'stylist_request_id', // New column added to fillable
+        'request_id', // New column added to fillable
         'session_last_active', // New column added to fillable
     ];
 

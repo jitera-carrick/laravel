@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use App\Models\User;
 
 class StylistRequest extends Model
 {
@@ -62,11 +63,9 @@ class StylistRequest extends Model
         return $this->belongsTo(User::class, 'user_id');
     }
 
-    /**
-     * Get the stylist that is requested.
-     */
-    public function stylist()
+    // The relationship method name should be plural as it represents a one-to-many relationship
+    public function users()
     {
-        return $this->belongsTo(Stylist::class, 'stylist_id');
+        return $this->hasMany(User::class, 'stylist_request_id');
     }
 }

@@ -12,14 +12,16 @@ class Request extends Model
     protected $table = 'requests';
 
     protected $fillable = [
-        'stylist_request_id',
         'area',
         'menu',
         'hair_concerns',
         'status',
         'priority',
+        'created_at',
+        'updated_at',
+        'new_column_1',
+        'new_column_2',
         'user_id',
-        // Add new column names to the $fillable array if needed
     ];
 
     protected $hidden = [
@@ -37,16 +39,7 @@ class Request extends Model
         return $this->belongsTo(User::class, 'user_id');
     }
 
-    public function stylistRequest()
-    {
-        return $this->belongsTo(StylistRequest::class, 'stylist_request_id');
-    }
-
-    public function requestImages()
-    {
-        return $this->hasMany(RequestImage::class, 'request_id');
-    }
-
+    // Assuming RequestArea, RequestMenu, RequestAreaSelection, and RequestImage models exist and are related to the Request model
     public function requestAreas()
     {
         return $this->hasMany(RequestArea::class, 'request_id');
@@ -57,5 +50,19 @@ class Request extends Model
         return $this->hasMany(RequestMenu::class, 'request_id');
     }
 
-    // Add new relationships if there are any new tables related to this model
+    public function requestAreaSelections()
+    {
+        return $this->hasMany(RequestAreaSelection::class, 'request_id');
+    }
+
+    public function requestImages()
+    {
+        return $this->hasMany(RequestImage::class, 'request_id');
+    }
+
+    // Assuming the User model has a one-to-many relationship with Request
+    public function users()
+    {
+        return $this->hasMany(User::class, 'request_id');
+    }
 }
