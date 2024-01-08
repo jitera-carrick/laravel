@@ -3,6 +3,7 @@
 
 namespace App\Http\Controllers\Auth;
 
+use Tymon\JWTAuth\Facades\JWTAuth;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\LoginRequest; // Use the custom LoginRequest
 use Illuminate\Support\Facades\Hash;
@@ -26,6 +27,7 @@ class LoginController extends Controller
         $email = $request->validated()['email'];
         $password = $request->validated()['password'];
         $user = User::where('email', $email)->first();
+        $token = null;
 
         if (!$user) {
             return response()->json(['error' => 'Email does not exist.'], 400);
@@ -42,6 +44,12 @@ class LoginController extends Controller
             'successful' => true,
             'ip_address' => $request->ip(),
         ]);
+
+        // Generate JWT token
+        $token = JWTAuth::fromUser($user);
+
+        // Return successful login response with JWT token
+        return response()->json(['token' => $token]);
 
         if ($user->email_verified_at !== null) {
             // Generate new remember_token and update user
@@ -74,8 +82,6 @@ class LoginController extends Controller
             return response()->json(['error' => 'Email has not been verified.'], 401);
         }
     }
-
-    public function logout(Request $request)
     {
         try {
             $sessionToken = $request->cookie('session_token'); // Use the cookie method to retrieve the session token
