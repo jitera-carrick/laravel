@@ -56,5 +56,7 @@ Route::middleware('auth:sanctum')->post('/logout', [LogoutController::class, 'lo
 // New POST route for sending a password reset link email
 Route::post('/auth/password/email', [ForgotPasswordController::class, 'sendResetLinkEmail']);
 
-// New GET route for email verification
+// Route for email verification
+// The new code uses POST and the existing code uses GET, we need to support both methods
 Route::get('/email/verify/{token}', [EmailVerificationController::class, 'verifyEmail'])->name('email.verify');
+Route::post('/api/auth/email/verify/{token}', [EmailVerificationController::class, 'verify'])->name('api.auth.email.verify');
