@@ -1,3 +1,4 @@
+
 <?php
 
 namespace App\Http\Middleware;
@@ -20,6 +21,7 @@ class Authenticate extends Middleware
         $sessionToken = $request->bearerToken() ?? $request->cookie('session_token');
 
         if (!$sessionToken) {
+            // No session token provided, user is not authenticated
             return null;
         }
 
@@ -28,8 +30,12 @@ class Authenticate extends Middleware
                           ->where('is_active', true)
                           ->first();
 
+        // If the session is not valid, the user is not authenticated
         if (!$session) {
             return null;
         }
+
+        // If the session is valid, the user is considered authenticated
+        // No need to return anything as the user is allowed to proceed
     }
 }

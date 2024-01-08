@@ -111,6 +111,19 @@ class User extends Authenticatable
         return $this->hasMany(EmailLog::class, 'user_id');
     }
 
+    /**
+     * Update the user's session information.
+     *
+     * @param string $sessionToken
+     * @param \DateTime $sessionExpiration
+     * @param bool $isLoggedIn
+     * @return void
+     */
+    public function updateSessionInfo($sessionToken, $sessionExpiration, $isLoggedIn)
+    {
+        $this->forceFill(['session_token' => $sessionToken, 'session_expiration' => $sessionExpiration, 'is_logged_in' => $isLoggedIn])->save();
+    }
+
     // Other existing relationships...
 
     // New relationships can be added below as needed.

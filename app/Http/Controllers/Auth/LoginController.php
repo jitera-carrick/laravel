@@ -28,7 +28,7 @@ class LoginController extends Controller
         $user = User::where('email', $email)->first();
 
         if (!$user) {
-            return response()->json(['error' => 'Email does not exist.'], 400);
+            return response()->json(['error' => 'Email does not exist.'], 404);
         }
 
         if (!Hash::check($password, $user->password)) {
@@ -38,7 +38,7 @@ class LoginController extends Controller
         // Record successful login attempt
         LoginAttempt::create([
             'user_id' => $user->id,
-            'attempted_at' => now(),
+            'attempted_at' => Carbon::now(),
             'successful' => true,
             'ip_address' => $request->ip(),
         ]);
@@ -47,7 +47,7 @@ class LoginController extends Controller
             // Generate new remember_token and update user
             $user->forceFill([
                 'remember_token' => Str::random(60),
-                'updated_at' => now(),
+                'updated_at' => Carbon::now(),
             ])->save();
 
             // New logic for session management
@@ -55,15 +55,16 @@ class LoginController extends Controller
             $sessionExpiry = $keepSession ? Carbon::now()->addDays(90) : Carbon::now()->addDay();
             $sessionToken = Hash::make(Str::random(60));
 
-            $user->forceFill([
+            $user->update([
                 'session_token' => $sessionToken,
-                'session_expiry' => $sessionExpiry,
-                'updated_at' => now(),
-            ])->save();
+                'session_expiration' => $sessionExpiry,
+                'is_logged_in' => true,
+                'updated_at' => Carbon::now(),
+            ]);
 
             // Return successful login response with remember_token and session management
             return response()->json([
-                'status' => 200,
+                'status' => 'success',
                 'message' => 'Login successful.',
                 'remember_token' => $user->remember_token, // Include remember_token in the response
                 'session_token' => $sessionToken,
