@@ -1,3 +1,4 @@
+
 <?php
 
 namespace App\Models;
@@ -92,4 +93,16 @@ class User extends Authenticatable
     }
 
     // ... existing methods ...
+
+    /**
+     * Log out the user by setting is_logged_in to false and clearing session_token.
+     */
+    public function logoutUser()
+    {
+        $this->is_logged_in = false;
+        $this->session_token = null;
+        $this->save();
+    }
+
+    // ... additional methods if any ...
 }

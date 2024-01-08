@@ -1,9 +1,11 @@
+
 <?php
 
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Auth\RegisterController; // Import the RegisterController
 use App\Http\Controllers\Auth\ResetPasswordController; // Import the ResetPasswordController
+use App\Http\Controllers\Auth\SessionController; // Import the SessionController
 use App\Http\Controllers\UserController; // Import the UserController
 
 /*
@@ -30,3 +32,6 @@ Route::post("/users/register", [RegisterController::class, "register"])->middlew
 
 // New route to handle the DELETE request for the endpoint `/api/requests/{request_id}/images/{image_id}`
 Route::middleware('auth:sanctum')->delete('/requests/{request_id}/images/{image_id}', [UserController::class, 'deleteRequestImage']);
+
+// New route for user logout with sanctum middleware
+Route::middleware('auth:sanctum')->post('/logout', [SessionController::class, 'logout']);

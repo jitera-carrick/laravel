@@ -8,6 +8,8 @@ use App\Http\Requests\SessionMaintenanceRequest;
 use App\Services\SessionService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Carbon;
+use Illuminate\Http\Request;
+use App\Models\Session;
 
 class SessionController extends Controller
 {
@@ -40,6 +42,28 @@ class SessionController extends Controller
             ]);
         } catch (\Exception $e) {
             return response()->json(['message' => 'An error occurred while maintaining the session.'], 500);
+        }
+    }
+
+    public function logout(Request $request): JsonResponse
+    {
+        $sessionToken = $request->input('session_token');
+
+        try {
+            $session = Session::where('session_token', $sessionToken)->first();
+
+            if (!$session) {
+                return response()->json(['message' => 'Session not found.'], 404);
+            }
+
+            $session->invalidateSession();
+
+            $user = $session->user;
+            $user->logoutUser();
+
+            return response()->json(['message' => 'User has been logged out successfully.']);
+        } catch (\Exception $e) {
+            return response()->json(['message' => 'An error occurred during logout.'], 500);
         }
     }
 
