@@ -1,12 +1,11 @@
+
 <?php
 
 namespace App\Http\Controllers\Auth;
 
-use App\Http\Controllers\Controller;
+use App\Http\Requests\RegisterUserRequest;
 use App\Models\User;
-use App\Http\Requests\RegisterRequest;
 use Illuminate\Support\Facades\Hash;
-use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
 use App\Notifications\VerifyEmailNotification;
@@ -15,7 +14,7 @@ class RegisterController extends Controller
 {
     // Existing methods...
 
-    public function register(RegisterRequest $request)
+    public function register(RegisterUserRequest $request)
     {
         // Validate that all required fields are provided and not empty.
         $validator = Validator::make($request->all(), [
@@ -34,7 +33,7 @@ class RegisterController extends Controller
         ]);
 
         if ($validator->fails()) {
-            throw new ValidationException($validator);
+            throw new ValidationException($validator, response()->json($validator->errors(), 422));
         }
 
         // Create the user
@@ -42,23 +41,18 @@ class RegisterController extends Controller
             'name' => $request->name,
             'email' => $request->email,
             'password' => Hash::make($request->password),
-            'remember_token' => Str::random(60),
+            'is_active' => false,
             // 'created_at' and 'updated_at' will be automatically set by Eloquent
         ]);
 
         // Send verification email
-        $user->notify(new VerifyEmailNotification($user->remember_token));
+        $verificationToken = $user->generateEmailConfirmationToken();
+        $user->notify(new VerifyEmailNotification($verificationToken));
 
-        // Return a response with the user ID
+        // Return a response with the confirmation message
         return response()->json([
-            'status' => 201,
-            'message' => 'User registered successfully.',
-            'user' => [
-                'id' => $user->id,
-                'name' => $user->name,
-                'email' => $user->email,
-                'created_at' => $user->created_at->toIso8601String(),
-            ]
+            'status' => 'success',
+            'message' => 'User registered successfully. Please check your email to verify your account.',
         ], 201);
     }
 

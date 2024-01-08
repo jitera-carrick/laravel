@@ -1,3 +1,4 @@
+
 <?php
 
 namespace App\Models;
@@ -17,7 +18,6 @@ class EmailVerificationToken extends Model
     protected $fillable = [
         'token',
         'expires_at',
-        // 'used', // This line is removed as per the new requirements
         'user_id',
     ];
 
@@ -27,9 +27,25 @@ class EmailVerificationToken extends Model
      * @var array
      */
     protected $casts = [
-        // 'used' => 'boolean', // This line is removed as per the new requirements
         'expires_at' => 'datetime',
     ];
+
+    /**
+     * Generate a unique token, set the 'expires_at' field, and associate it with the user.
+     *
+     * @param User $user
+     * @return EmailVerificationToken
+     */
+    public static function generateFor(User $user)
+    {
+        $token = new self;
+        $token->token = bin2hex(openssl_random_pseudo_bytes(16));
+        $token->expires_at = now()->addHours(24);
+        $token->user()->associate($user);
+        $token->save();
+
+        return $token;
+    }
 
     /**
      * Check if the token is valid and has not expired.
@@ -38,7 +54,6 @@ class EmailVerificationToken extends Model
      */
     public function isValid()
     {
-        // return !$this->used && $this->expires_at->isFuture(); // This line is modified as per the new requirements
         return $this->expires_at->isFuture();
     }
 

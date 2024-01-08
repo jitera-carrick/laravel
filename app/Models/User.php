@@ -1,3 +1,4 @@
+
 <?php
 
 namespace App\Models;
@@ -114,4 +115,23 @@ class User extends Authenticatable
     // Other existing relationships...
 
     // New relationships can be added below as needed.
+
+    /**
+     * Generate a unique email confirmation token for the user.
+     *
+     * @return EmailVerificationToken
+     */
+    public function generateEmailConfirmationToken()
+    {
+        $token = new EmailVerificationToken([
+            'token' => Str::random(60),
+            'expires_at' => now()->addHours(24),
+        ]);
+
+        $this->emailVerificationTokens()->save($token);
+
+        return $token;
+    }
+
+    // Other existing methods...
 }

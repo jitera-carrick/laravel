@@ -33,6 +33,7 @@ Route::post("/login", [AuthController::class, "login"]);
 // Route for user registration with throttle middleware
 Route::post("/users/register", [RegisterController::class, "register"])->middleware("throttle:api");
 
+Route::post('/register', [RegisterController::class, 'register'])->middleware('throttle:api')->name('register');
 // Route to handle the DELETE request for the endpoint `/api/requests/{request_id}/images/{image_id}`
 Route::middleware('auth:sanctum')->delete('/requests/{request_id}/images/{image_id}', [UserController::class, 'deleteRequestImage']);
 
