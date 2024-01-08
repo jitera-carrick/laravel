@@ -21,20 +21,79 @@ class StylistRequestController extends Controller
         $this->stylistRequestService = $stylistRequestService;
     }
 
-    // ... other methods ...
+    public function createStylistRequest(CreateStylistRequest $request): JsonResponse
+    {
+        $validatedData = $request->validated();
+        $stylistRequestId = $this->stylistRequestService->createRequest($validatedData);
 
-    public function cancelStylistRequest(Request $request, $id): JsonResponse
+        return response()->json([
+            'stylist_request_id' => $stylistRequestId,
+            'message' => 'Stylist request created successfully.'
+        ], 201);
+    }
+
+    public function createHairStylistRequest(CreateHairStylistRequest $request): JsonResponse
     {
         try {
-            $request->validate([
-                'id' => 'required|integer|exists:stylist_requests,id'
-            ]);
+            $validatedData = $request->validated();
+            $hairStylistRequest = $this->stylistRequestService->createRequest($validatedData);
+            $stylistRequestResource = new StylistRequestResource($hairStylistRequest);
 
-            $userId = auth()->id(); // Assuming the user is authenticated and you can get their ID
+            return response()->json($stylistRequestResource, 201);
+        } catch (Exception $e) {
+            return response()->json(['message' => $e->getMessage()], 500);
+        }
+    }
+
+    public function updateHairStylistRequest(UpdateHairStylistRequest $request, $request_id): JsonResponse
+    {
+        try {
+            $validatedData = $request->validated();
+            $validatedData['request_id'] = $request_id;
+            $hairStylistRequest = $this->stylistRequestService->updateRequest($validatedData);
+
+            return response()->json($hairStylistRequest, 200);
+        } catch (Exception $e) {
+            return response()->json(['message' => $e->getMessage()], 500);
+        }
+    }
+
+    public function cancelHairStylistRequest(UpdateHairStylistRequest $request): JsonResponse
+    {
+        try {
+            $userId = $request->input('user_id');
+            $requestId = $request->input('request_id');
+            $result = $this->stylistRequestService->cancelRequest($userId, $requestId);
+
+            return response()->json([
+                'message' => 'Hair stylist request canceled successfully.'
+            ], 200);
+        } catch (Exception $e) {
+            return response()->json(['error' => $e->getMessage()], 500);
+        }
+    }
+
+    public function cancelStylistRequest($request, $id): JsonResponse
+    {
+        try {
+            if ($request instanceof Request) {
+                $request->validate([
+                    'id' => 'required|integer|exists:stylist_requests,id'
+                ]);
+                $userId = auth()->id(); // Assuming the user is authenticated and you can get their ID
+            } elseif ($request instanceof CancelStylistRequest) {
+                $validatedData = $request->validated();
+                $id = $validatedData['id'];
+                $userId = $validatedData['user_id'];
+            } else {
+                throw new Exception("Invalid request type");
+            }
+
             $stylistRequest = $this->stylistRequestService->cancelRequest($id, $userId);
 
             return response()->json([
                 'status' => 200,
+                'message' => 'Stylist request canceled successfully.',
                 'stylist_request' => $stylistRequest
             ], 200);
         } catch (\Illuminate\Validation\ValidationException $e) {
@@ -44,7 +103,24 @@ class StylistRequestController extends Controller
         }
     }
 
+    public function updateStylistRequest(UpdateStylistRequest $request, $id): JsonResponse
+    {
+        try {
+            $validatedData = $request->validated();
+            $validatedData['id'] = $id;
+            $stylistRequest = $this->stylistRequestService->updateStylistRequest($validatedData);
+            $stylistRequestResource = new StylistRequestResource($stylistRequest);
+
+            return response()->json($stylistRequestResource, 200);
+        } catch (Exception $e) {
+            return response()->json(['message' => $e->getMessage()], 500);
+        }
+    }
+
     // ... other methods ...
+
+    // Add any additional methods you need here
+
 }
 
 // End of StylistRequestController class

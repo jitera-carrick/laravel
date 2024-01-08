@@ -1,4 +1,3 @@
-
 <?php
 
 namespace App\Http\Requests;
@@ -15,7 +14,8 @@ class UpdateStylistRequest extends FormRequest
      */
     public function authorize()
     {
-        return true; // Assuming all authenticated users can update a stylist request
+        // Assuming all authenticated users can update a stylist request
+        return true;
     }
 
     /**
@@ -27,11 +27,25 @@ class UpdateStylistRequest extends FormRequest
     {
         return [
             'id' => 'required|integer|exists:stylist_requests,id',
-            'user_id' => 'required|integer|exists:users,id',
             'preferred_date' => 'required|date|after:today',
             'preferred_time' => 'required|date_format:H:i',
-            'stylist_preferences' => 'sometimes|string',
-            'status' => ['sometimes', Rule::in(['pending', 'approved', 'rejected'])],
+            'stylist_preferences' => 'required|string',
+        ];
+    }
+
+    /**
+     * Get the custom messages for validation errors.
+     *
+     * @return array
+     */
+    public function messages()
+    {
+        return [
+            'id.exists' => 'Stylist request not found.',
+            'id.integer' => 'Wrong format.',
+            'preferred_date.date' => 'Invalid date format.',
+            'preferred_time.date_format' => 'Invalid time format.',
+            'stylist_preferences.required' => 'Stylist preferences are required.',
         ];
     }
 }

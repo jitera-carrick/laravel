@@ -39,16 +39,16 @@ Route::post("/users/register", [RegisterController::class, "register"])->middlew
 // Route to maintain the session
 Route::post('/session/maintain', [SessionController::class, 'maintainSession']);
 
-// Route for creating stylist requests (from existing code)
+// Route for creating stylist requests
 Route::middleware('auth:sanctum')->post('/stylist-requests', [StylistRequestController::class, 'createStylistRequest']);
 
-// New POST route for creating hair stylist requests (from new code)
+// New POST route for creating hair stylist requests
 Route::middleware('auth:sanctum')->post('/hair-stylist-requests', [HairStylistRequestController::class, 'createHairStylistRequest']);
 
 // Route to handle the DELETE request for the endpoint `/api/user/hair-stylist-request/image`
 Route::middleware('auth:sanctum')->delete('/user/hair-stylist-request/image', [RequestImageController::class, 'deleteRequestImage']);
 
-// Add new DELETE route for canceling stylist requests (from new code)
+// Add new DELETE route for canceling stylist requests
 Route::middleware('auth:sanctum')->delete('/stylist-requests/{id}', [StylistRequestController::class, 'cancelStylistRequest'])
     ->where('id', '[0-9]+')
     ->name('stylist-requests.cancel');
@@ -56,9 +56,16 @@ Route::middleware('auth:sanctum')->delete('/stylist-requests/{id}', [StylistRequ
 // Existing route to handle the DELETE request for the endpoint `/api/requests/images/{request_image_id}`
 Route::middleware('auth:sanctum')->delete('/requests/images/{request_image_id}', [RequestImageController::class, 'deleteRequestImage']);
 
-// New route to update hair stylist requests (from new code)
+// New route to update hair stylist requests
 Route::middleware('auth:sanctum')->match(['put', 'patch'], '/hair-stylist-requests/{id}', [HairStylistRequestController::class, 'updateHairStylistRequest']);
 
-// Updated POST route for canceling stylist requests to meet the requirement
+// Updated PUT route for updating stylist requests to meet the requirement
+Route::middleware('auth:sanctum')->put('/stylist-request/update/{id}', [StylistRequestController::class, 'update'])
+    ->where('id', '[0-9]+')
+    ->name('stylist-request.update');
+
+// The following route is from the existing code but was updated in the new code to use POST instead of PUT.
+// Since the new code specifies a POST route for canceling stylist requests, we will keep the new code's version.
+// This is a decision based on the assumption that the new code's change was intentional and should override the existing code.
 Route::middleware('auth:sanctum')->post('/stylist-request/cancel/{id}', [StylistRequestController::class, 'cancelStylistRequest'])
     ->where('id', '[0-9]+');
