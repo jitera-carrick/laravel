@@ -6,7 +6,7 @@ namespace App\Http\Requests;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 
-class DeleteImageRequest extends FormRequest
+class DeleteRequestImageRequest extends FormRequest
 {
     /**
      * Determine if the user is authorized to make this request.
@@ -27,15 +27,14 @@ class DeleteImageRequest extends FormRequest
     public function rules()
     {
         return [
-            // No changes to existing rules
             'request_id' => [
                 'required',
                 'integer',
-                Rule::exists('requests', 'id')
+                Rule::exists('stylist_requests', 'id')
             ],
             'image_id' => [
                 'required',
-                'integer', // No change to this line
+                'integer',
                 Rule::exists('request_images', 'id')->where(function ($query) {
                     $query->where('request_id', $this->request_id);
                 }),
