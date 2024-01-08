@@ -9,21 +9,44 @@ class HairStylistRequest extends Model
 {
     use HasFactory;
 
+    /**
+     * The table associated with the model.
+     *
+     * @var string
+     */
     protected $table = 'hair_stylist_requests';
 
+    /**
+     * The attributes that are mass assignable.
+     *
+     * @var array<int, string>
+     */
     protected $fillable = [
-        'details',
-        'user_id',
-        'request_image_id',
+        'requested_date',
+        'service_type',
         'status',
-        'created_at',
-        'updated_at',
+        'additional_notes',
+        'user_id',
+        'details', // Keep existing fillable fields from the old code
+        'request_image_id', // Keep existing fillable fields from the old code
+        'created_at', // Keep existing fillable fields from the old code
+        'updated_at', // Keep existing fillable fields from the old code
     ];
 
+    /**
+     * The attributes that should be hidden for arrays.
+     *
+     * @var array<int, string>
+     */
     protected $hidden = [
         // If there are any columns that should be hidden for arrays, add them here.
     ];
 
+    /**
+     * The attributes that should be cast.
+     *
+     * @var array<string, string>
+     */
     protected $casts = [
         'created_at' => 'datetime',
         'updated_at' => 'datetime',
@@ -62,5 +85,7 @@ class HairStylistRequest extends Model
         return false;
     }
 
-    // Other relationships can be added here as needed.
+    // Other existing relationships...
+
+    // New relationships can be added below as needed.
 }

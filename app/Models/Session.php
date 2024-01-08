@@ -1,11 +1,10 @@
-
 <?php
 
-use Illuminate\Support\Facades\Config;
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Facades\Config;
 
 class Session extends Model
 {
@@ -24,11 +23,11 @@ class Session extends Model
      * @var array<int, string>
      */
     protected $fillable = [
-        'session_token',
+        'token',
         'expires_at',
-        'is_active',
         'user_id',
-        'token', // New column added to fillable
+        'session_token', // Retained from existing code
+        'is_active', // Retained from existing code
     ];
 
     /**
@@ -37,9 +36,8 @@ class Session extends Model
      * @var array<int, string>
      */
     protected $hidden = [
-        // Usually, session tokens are sensitive and should be hidden by default.
-        'session_token',
-        'token', // New column added to hidden
+        'session_token', // Retained from existing code
+        'token', // Retained from existing code
     ];
 
     /**
@@ -51,6 +49,14 @@ class Session extends Model
         'expires_at' => 'datetime',
         'is_active' => 'boolean',
     ];
+
+    /**
+     * The user that the session belongs to.
+     */
+    public function user()
+    {
+        return $this->belongsTo(User::class, 'user_id');
+    }
 
     /**
      * Create a new session record.
@@ -67,7 +73,8 @@ class Session extends Model
             'session_token' => $sessionToken,
             'created_at' => now(),
             'expires_at' => $expiresAt,
-            'is_active' => true
+            'is_active' => true,
+            'token' => $sessionToken, // Assuming token is the same as session_token
         ]);
     }
 
@@ -85,13 +92,5 @@ class Session extends Model
             return $session->save();
         }
         return false;
-    }
-
-    /**
-     * Get the user that owns the session.
-     */
-    public function user()
-    {
-        return $this->belongsTo(User::class, 'user_id');
     }
 }

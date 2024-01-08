@@ -4,17 +4,18 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\SoftDeletes;
 
 class RequestImage extends Model
 {
-    use HasFactory;
+    use HasFactory, SoftDeletes;
 
-    protected $table = 'request_images'; // Keep the explicit table definition
+    protected $table = 'request_images'; // Keep the explicit table definition from the existing code
 
     /**
      * The attributes that are mass assignable.
      *
-     * @var array<string>
+     * @var array<int, string>
      */
     protected $fillable = [
         'image_path',
@@ -33,6 +34,13 @@ class RequestImage extends Model
     ];
 
     /**
+     * The attributes that should be handled for soft deletes.
+     *
+     * @var array
+     */
+    protected $dates = ['deleted_at']; // Add the soft delete dates from the new code
+
+    /**
      * Get the request that owns the request image.
      */
     public function request()
@@ -48,15 +56,6 @@ class RequestImage extends Model
         return $this->belongsTo(HairStylistRequest::class, 'hair_stylist_request_id'); // Keep the new relationship from the new code
     }
 
-    /**
-     * Get the hair stylist requests associated with the request image.
-     * This seems to be a mistake in the existing code as it implies a one-to-many relationship
-     * from the RequestImage to HairStylistRequest, which doesn't make sense given the foreign key
-     * 'hair_stylist_request_id' on the RequestImage model. This method should be removed or corrected.
-     * For now, we'll comment it out to avoid confusion and potential bugs.
-     */
-    // public function hairStylistRequests()
-    // {
-    //     return $this->hasMany(HairStylistRequest::class, 'request_image_id');
-    // }
+    // The hairStylistRequests() method from the existing code has been commented out as it seems to be a mistake.
+    // If it's needed, it should be corrected to reflect the correct relationship.
 }

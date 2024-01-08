@@ -2,16 +2,12 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
-class PasswordReset extends Model
+class EmailVerification extends Model
 {
-    /**
-     * The table associated with the model.
-     *
-     * @var string
-     */
-    protected $table = 'password_resets';
+    use HasFactory;
 
     /**
      * The attributes that are mass assignable.
@@ -19,10 +15,16 @@ class PasswordReset extends Model
      * @var array<int, string>
      */
     protected $fillable = [
-        'email',
         'token',
         'user_id',
     ];
+
+    /**
+     * The table associated with the model.
+     *
+     * @var string
+     */
+    protected $table = 'email_verifications';
 
     /**
      * Indicates if the model should be timestamped.
@@ -32,7 +34,7 @@ class PasswordReset extends Model
     public $timestamps = true;
 
     /**
-     * Get the user that owns the password reset token.
+     * Get the user that owns the email verification token.
      */
     public function user()
     {
