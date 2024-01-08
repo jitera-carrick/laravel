@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Auth;
 
 use App\Http\Controllers\Controller;
 use App\Http\Requests\SessionMaintenanceRequest;
+use App\Http\Requests\LogoutRequest; // Added import for LogoutRequest
 use App\Services\SessionService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Carbon;
@@ -45,25 +46,16 @@ class SessionController extends Controller
         }
     }
 
-    public function logout(Request $request): JsonResponse
+    // ... other methods ...
+
+    public function logout(LogoutRequest $request): JsonResponse // Changed parameter type to LogoutRequest
     {
         $sessionToken = $request->input('session_token');
 
-        try {
-            $session = Session::where('session_token', $sessionToken)->first();
-
-            if (!$session) {
-                return response()->json(['message' => 'Session not found.'], 404);
-            }
-
-            $session->invalidateSession();
-
-            $user = $session->user;
-            $user->logoutUser();
-
-            return response()->json(['message' => 'User has been logged out successfully.']);
-        } catch (\Exception $e) {
-            return response()->json(['message' => 'An error occurred during logout.'], 500);
+        if ($this->sessionService->deactivateSession($sessionToken)) {
+            return response()->json(['message' => 'You have been logged out successfully.']);
+        } else {
+            return response()->json(['message' => 'Invalid session token or session could not be deactivated.'], 400);
         }
     }
 

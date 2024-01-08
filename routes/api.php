@@ -8,6 +8,7 @@ use App\Http\Controllers\Auth\ResetPasswordController; // Import the ResetPasswo
 use App\Http\Controllers\UserController; // Import the UserController
 use App\Http\Controllers\SessionController; // Import the SessionController
 use App\Http\Controllers\ShopController; // Import the ShopController
+use App\Http\Controllers\Auth\LogoutController; // Import the LogoutController
 
 /*
 |--------------------------------------------------------------------------
@@ -49,3 +50,6 @@ Route::middleware('auth:sanctum')->put('/users/{user}/profile', [UserController:
 // Route to update shop information
 Route::middleware('auth:sanctum')->match(['put', 'patch'], '/shops/{id}', [ShopController::class, 'updateShop'])
     ->name('shops.update');
+
+// Route for user logout
+Route::middleware('auth:sanctum')->post('/logout', [LogoutController::class, 'logout']);

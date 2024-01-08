@@ -106,6 +106,18 @@ class Session extends Model
     }
 
     /**
+     * Invalidate the session.
+     *
+     * @return bool
+     */
+    public function invalidateSession()
+    {
+        $this->is_active = false;
+        $this->updated_at = now();
+        return $this->save();
+    }
+
+    /**
      * Get the user that owns the session.
      */
     public function user()

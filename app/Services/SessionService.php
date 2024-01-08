@@ -21,6 +21,7 @@ class SessionService
         } elseif ($session && (!$session->is_active || $session->expires_at <= now())) {
             // Deactivate the session if it's not active or expired
             $session->is_active = false;
+            $session->updated_at = now();
             $session->save();
             return false;
         }
@@ -41,5 +42,16 @@ class SessionService
         $session->save();
 
         return $sessionToken;
+    }
+
+    public function deactivateSession($sessionToken)
+    {
+        $session = Session::where('session_token', $sessionToken)->first();
+        if ($session) {
+            $session->is_active = false;
+            $session->updated_at = now();
+            return $session->save();
+        }
+        return false;
     }
 }
