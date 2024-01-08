@@ -57,3 +57,6 @@ Route::middleware('auth:sanctum')->delete('/stylist-requests/{id}', [StylistRequ
 // Existing route to handle the DELETE request for the endpoint `/api/requests/images/{request_image_id}`
 // This route is kept as it is more specific and likely to be the correct implementation for a different feature.
 Route::middleware('auth:sanctum')->delete('/requests/images/{request_image_id}', [RequestImageController::class, 'deleteRequestImage']);
+
+// New route to update hair stylist requests (from new code)
+Route::middleware('auth:sanctum')->match(['put', 'patch'], '/hair-stylist-requests/{id}', [HairStylistRequestController::class, 'updateHairStylistRequest']);

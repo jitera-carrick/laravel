@@ -80,4 +80,21 @@ class StylistRequestService
             'request_id' => $requestId,
         ];
     }
+
+    public function updateStylistRequest($validatedData)
+    {
+        $stylistRequest = StylistRequest::find($validatedData['id']);
+
+        if (!$stylistRequest || $stylistRequest->user_id !== $validatedData['user_id']) {
+            throw new Exception('Invalid request_id or user_id provided.');
+        }
+
+        $stylistRequest->fill($validatedData);
+        $stylistRequest->updated_at = now();
+        $stylistRequest->save();
+
+        return $stylistRequest;
+    }
+
+    // Other methods of the service class...
 }

@@ -36,7 +36,7 @@ class StylistRequestController extends Controller
         try {
             $validatedData = $request->validated();
             $hairStylistRequest = $this->stylistRequestService->createRequest($validatedData);
-            $stylistRequestResource = new StylistRequestResource($hairStylistRequest); // Existing code uses StylistRequestResource
+            $stylistRequestResource = new StylistRequestResource($hairStylistRequest); // Use StylistRequestResource for response
 
             return response()->json($stylistRequestResource, 201); // Return the resource instead of raw data
         } catch (Exception $e) {
@@ -83,6 +83,21 @@ class StylistRequestController extends Controller
             ], 200);
         } catch (Exception $e) {
             return response()->json(['error' => $e->getMessage()], 500);
+        }
+    }
+
+    public function updateStylistRequest(UpdateHairStylistRequest $request): JsonResponse // Use UpdateHairStylistRequest for consistency
+    {
+        try {
+            $validatedData = $request->validated();
+            $stylistRequest = $this->stylistRequestService->updateStylistRequest($validatedData); // Use the correct service method
+
+            return response()->json([
+                'stylist_request' => $stylistRequest,
+                'message' => 'Stylist request updated successfully.'
+            ], 200);
+        } catch (Exception $e) {
+            return response()->json(['message' => $e->getMessage()], 500);
         }
     }
 

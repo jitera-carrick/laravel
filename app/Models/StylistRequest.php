@@ -31,11 +31,11 @@ class StylistRequest extends Model
     protected $fillable = [
         'preferred_date',
         'preferred_time',
-        'updated_at', // Added from new code
         'stylist_preferences',
         'status',
         'user_id',
         'stylist_id',
+        // 'updated_at' is not needed in $fillable as it is automatically managed by Eloquent
     ];
 
     /**
@@ -55,7 +55,7 @@ class StylistRequest extends Model
      */
     protected $casts = [
         'preferred_date' => 'date',
-        'preferred_time' => 'time',
+        'preferred_time' => 'datetime', // Corrected the cast type for preferred_time
         'stylist_preferences' => 'array', // Assuming stylist_preferences is a JSON field that should be cast to an array.
         // 'date_time' => 'datetime', // Removed as it seems to be replaced by preferred_date and preferred_time
         // Add other casts here if necessary.
