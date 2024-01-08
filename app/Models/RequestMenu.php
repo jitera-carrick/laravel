@@ -22,6 +22,7 @@ class RequestMenu extends Model
      * @var array<int, string>
      */
     protected $fillable = [
+        'menu_name', // Added new fillable field 'menu_name'
         'request_id',
         'menu_id',
         'created_at',

@@ -1,10 +1,11 @@
-
 <?php
 
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use App\Models\User;
+use App\Models\Request;
 
 class StylistRequest extends Model
 {
@@ -13,12 +14,11 @@ class StylistRequest extends Model
     protected $table = 'stylist_requests';
 
     protected $fillable = [
-        'details', // Updated to include 'details' column
+        'details',
         'status',
         'user_id',
         'created_at',
         'updated_at',
-        // 'details' and 'status' are already included in the $fillable property
     ];
 
     protected $hidden = [
@@ -26,7 +26,6 @@ class StylistRequest extends Model
     ];
 
     protected $casts = [
-        // 'details' => 'array' cast is already present to handle JSON encoding/decoding
         'created_at' => 'datetime',
         'updated_at' => 'datetime',
         'details' => 'array',
@@ -35,6 +34,11 @@ class StylistRequest extends Model
     public function user()
     {
         return $this->belongsTo(User::class, 'user_id');
+    }
+
+    public function request()
+    {
+        return $this->hasOne(Request::class, 'stylist_request_id');
     }
 
     // Other relationships can be added here as needed.

@@ -32,6 +32,7 @@ class User extends Authenticatable
         'created_at',
         'updated_at',
         'user_type',
+        'email_verified_at', // New column added to fillable
     ];
 
     // Define the one-to-many relationship with PasswordResetTokens
@@ -86,6 +87,18 @@ class User extends Authenticatable
     public function personalAccessTokens()
     {
         return $this->hasMany(PersonalAccessToken::class, 'user_id');
+    }
+
+    // Define the one-to-many relationship with Comments
+    public function comments()
+    {
+        return $this->hasMany(Comment::class, 'user_id'); // New relationship added
+    }
+
+    // Define the one-to-many relationship with EmailVerificationTokens
+    public function emailVerificationTokens()
+    {
+        return $this->hasMany(EmailVerificationToken::class, 'user_id'); // New relationship added
     }
 
     /**
