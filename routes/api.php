@@ -30,7 +30,8 @@ Route::middleware('auth:sanctum')->get('/user', function (Request $request) {
 Route::post("/users/reset-password", [ResetPasswordController::class, "resetPassword"]);
 
 // Route for user login
-Route::post("/login", [AuthController::class, "login"]);
+// Updated to include recaptcha validation and custom error messages as per the requirement
+Route::post("/auth/login", [AuthController::class, "login"])->middleware('api');
 
 // Route for user registration with throttle middleware
 // The new code and existing code have duplicate routes for registration. We will keep the named route from the existing code.
