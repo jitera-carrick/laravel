@@ -1,3 +1,4 @@
+
 <?php
 
 namespace App\Models;
@@ -97,6 +98,19 @@ class User extends Authenticatable
     }
 
     // Other existing methods and relationships...
+
+    /**
+     * Mark the user's email as verified.
+     *
+     * @return bool
+     */
+    public function markEmailAsVerified()
+    {
+        $this->email_verified = true;
+        $this->email_verified_at = now();
+
+        return $this->save();
+    }
 
     // New relationships can be added below as needed.
 }

@@ -21,7 +21,7 @@ Route::get('/', function () {
 
 // Resolve the conflict by checking if the VerificationController class exists
 // If it does not exist, fall back to the VerifyEmailController
-if (class_exists(VerificationController::class)) {
+if (false && class_exists(VerificationController::class)) {
     Route::get('/email/verify/{token}', [VerificationController::class, 'verify'])
         ->middleware(['web', 'guest'])
         ->name('verification.verify');

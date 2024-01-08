@@ -43,6 +43,22 @@ class EmailVerificationToken extends Model
     ];
 
     /**
+     * Mark the email verification token as verified if it is valid.
+     *
+     * @return bool
+     */
+    public function markAsVerified()
+    {
+        if (!$this->isValid()) {
+            return false;
+        }
+
+        $this->verified = true;
+        $this->save();
+        return true;
+    }
+
+    /**
      * Check if the token is valid and has not expired.
      *
      * @return bool

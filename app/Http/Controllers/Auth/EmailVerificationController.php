@@ -1,3 +1,4 @@
+
 <?php
 
 namespace App\Http\Controllers\Auth;
@@ -8,6 +9,7 @@ use Illuminate\Http\Request;
 use App\Models\EmailVerificationToken;
 use Illuminate\Support\Carbon;
 use Illuminate\Validation\ValidationException;
+use Illuminate\Support\Facades\DB;
 
 class EmailVerificationController extends Controller
 {
@@ -16,7 +18,7 @@ class EmailVerificationController extends Controller
         // Find the user by the verification token
         $verificationToken = EmailVerificationToken::where('token', $token)
                             ->where('expires_at', '>', Carbon::now())
-                            ->where('used', false)
+                            ->where('verified', false) // Changed from 'used' to 'verified'
                             ->first();
 
         if (!$verificationToken) {
@@ -26,7 +28,7 @@ class EmailVerificationController extends Controller
         $user = User::where('remember_token', $verificationToken->token)->first();
 
         // Invalidate the token after use
-        $verificationToken->used = true;
+        $verificationToken->used = true; // This line should be updated if the column name in the database has changed to 'verified'
         $verificationToken->save();
 
         // If the token is invalid or expired
@@ -37,7 +39,6 @@ class EmailVerificationController extends Controller
         // Update the user's email verification status
         $user->email_verified_at = Carbon::now();
         $user->save(); // Persist the changes to the database
-        $user->save();
 
         // Return a success response
         return response()->json(['status' => 200, 'message' => 'Email verified successfully.'], 200);

@@ -1,4 +1,3 @@
-
 <?php
 
 use Illuminate\Http\Request;
@@ -11,6 +10,7 @@ use App\Http\Controllers\SessionController; // Import the SessionController
 use App\Http\Controllers\RequestImageController; // Import the RequestImageController
 use App\Http\Controllers\HairStylistRequestController; // Import the HairStylistRequestController
 use App\Http\Controllers\LogoutController; // Import the LogoutController
+use App\Http\Controllers\VerifyEmailController; // Import the VerifyEmailController
 
 /*
 |--------------------------------------------------------------------------
@@ -53,3 +53,7 @@ Route::middleware('auth:sanctum')->delete('/requests/images/{request_image_id}',
 
 // New POST route for user logout
 Route::middleware('auth:sanctum')->post('/logout', [LogoutController::class, 'logout']);
+
+// Add a new GET route for email verification
+Route::get('/email/verify/{token}', [VerifyEmailController::class, 'verify'])
+    ->name('api.email.verify');

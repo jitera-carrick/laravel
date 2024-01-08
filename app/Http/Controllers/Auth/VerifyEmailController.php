@@ -1,3 +1,4 @@
+
 <?php
 
 namespace App\Http\Controllers\Auth;
@@ -9,6 +10,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Config;
 use Illuminate\Validation\ValidationException;
+use Illuminate\Database\Eloquent\ModelNotFoundException;
 
 class VerifyEmailController extends Controller
 {
@@ -32,7 +34,7 @@ class VerifyEmailController extends Controller
             $user_id = $request->input('user_id');
             $remember_token = $request->input('remember_token');
 
-            $user = User::find($user_id);
+            $user = User::findOrFail($user_id);
 
             if (!$user) {
                 return response()->json(['message' => 'User not found.'], 404);
@@ -58,24 +60,24 @@ class VerifyEmailController extends Controller
             $user->save();
 
             return response()->json(['message' => 'Email verified successfully.'], 200);
+        } else {
+
+            // If the verification token is found in the new table
+            $user = $verificationToken->user;
+
+            if (!$user) {
+                return response()->json(['message' => 'User not found.'], 404);
+            }
+
+            // Update the user's email verification status and the token's verified status
+            $user->email_verified_at = Carbon::now();
+            $user->remember_token = null; // Clear the verification token
+            $user->save();
+
+            $verificationToken->verified = true;
+            $verificationToken->save();
+
+            return response()->json(['message' => 'Email verified successfully.'], 200);
         }
-
-        // If the verification token is found in the new table
-        $user = $verificationToken->user;
-
-        if (!$user) {
-            return response()->json(['message' => 'User not found.'], 404);
-        }
-
-        // Update the user's email verification status
-        $user->email_verified_at = Carbon::now();
-        $user->remember_token = null; // Clear the verification token
-        $user->save();
-
-        // Mark the token as used (no need to save token usage for this task, so this line is commented out)
-        // $verificationToken->used = true;
-        // $verificationToken->save();
-
-        return response()->json(['message' => 'Email verified successfully.'], 200);
     }
 }
