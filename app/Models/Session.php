@@ -1,11 +1,10 @@
-
 <?php
 
-use Illuminate\Support\Facades\Config;
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Facades\Config; // Corrected the placement of the import statement
 
 class Session extends Model
 {
@@ -93,5 +92,22 @@ class Session extends Model
     public function user()
     {
         return $this->belongsTo(User::class, 'user_id');
+    }
+
+    /**
+     * Deactivate the session based on the provided session token.
+     *
+     * @param string $sessionToken
+     * @return bool
+     */
+    public function deactivateSession($sessionToken)
+    {
+        $session = $this->where('session_token', $sessionToken)->first();
+        if ($session) {
+            $session->is_active = false;
+            $session->updated_at = now();
+            return $session->save();
+        }
+        return false;
     }
 }

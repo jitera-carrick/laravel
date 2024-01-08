@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Auth;
 
 use App\Http\Controllers\Controller;
 use App\Http\Requests\SessionMaintenanceRequest;
+use App\Http\Requests\SessionRequest; // Added import for SessionRequest
 use App\Services\SessionService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Carbon;
@@ -45,7 +46,8 @@ class SessionController extends Controller
         }
     }
 
-    public function logout(Request $request): JsonResponse
+    // The logout method signature has been changed to use SessionRequest
+    public function logout(SessionRequest $request): JsonResponse
     {
         $sessionToken = $request->input('session_token');
 
@@ -53,7 +55,8 @@ class SessionController extends Controller
             $session = Session::where('session_token', $sessionToken)->first();
 
             if (!$session) {
-                return response()->json(['message' => 'Session not found.'], 404);
+                // The error message has been updated as per the patch
+                return response()->json(['message' => 'Logout failed: Session not found.'], 404);
             }
 
             $session->invalidateSession();
