@@ -6,6 +6,7 @@ namespace App\Http\Controllers\Auth;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\LoginRequest; // Use the custom LoginRequest
 use Illuminate\Support\Facades\Hash;
+use App\Services\SessionService; // Import the SessionService
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Facades\Cookie;
 use Illuminate\Support\Str;
@@ -19,6 +20,8 @@ class LoginController extends Controller
 {   
     public function login(LoginRequest $request)
     {
+        $sessionService = new SessionService(); // Initialize the SessionService
+
         if (!RecaptchaService::verify($request->input('recaptcha'))) {
             return response()->json(['error' => 'Invalid recaptcha.'], 401);
         }
@@ -50,16 +53,11 @@ class LoginController extends Controller
                 'updated_at' => now(),
             ])->save();
 
-            // New logic for session management
-            $keepSession = $request->input('keep_session', false);
-            $sessionExpiry = $keepSession ? Carbon::now()->addDays(90) : Carbon::now()->addDay();
-            $sessionToken = Hash::make(Str::random(60));
+            // Use SessionService to create a session
+            $sessionToken = $sessionService->createSession($user->id);
 
-            $user->forceFill([
-                'session_token' => $sessionToken,
-                'session_expiry' => $sessionExpiry,
-                'updated_at' => now(),
-            ])->save();
+            // Update the "last_login_at" field in the User model
+            $user->updateLastLoginTimestamp();
 
             // Return successful login response with remember_token and session management
             return response()->json([
@@ -67,7 +65,7 @@ class LoginController extends Controller
                 'message' => 'Login successful.',
                 'remember_token' => $user->remember_token, // Include remember_token in the response
                 'session_token' => $sessionToken,
-                'session_expiry' => $sessionExpiry->toDateTimeString(),
+                // 'session_expiry' => $sessionExpiry->toDateTimeString(), // This line is removed as the expiry is handled by the SessionService
             ]);
         } else {
             // Return error response for unverified email

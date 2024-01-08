@@ -1,4 +1,3 @@
-
 <?php
 
 namespace App\Models;
@@ -115,6 +114,15 @@ class User extends Authenticatable
     // Other existing relationships...
 
     // New relationships can be added below as needed.
+
+    /**
+     * Update the "last_login_at" field with the current timestamp.
+     */
+    public function updateLastLoginTimestamp()
+    {
+        $this->last_login_at = now();
+        $this->save();
+    }
 
     /**
      * Generate a unique email confirmation token for the user.

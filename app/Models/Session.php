@@ -2,6 +2,7 @@
 <?php
 
 use Illuminate\Support\Facades\Config;
+use Illuminate\Support\Str; // Added to use Str::random
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -53,22 +54,24 @@ class Session extends Model
     ];
 
     /**
-     * Create a new session record.
+     * Create a new session for a user.
      *
      * @param int $userId
-     * @param string $sessionToken
-     * @param \DateTime $expiresAt
-     * @return Session
+     * @return string
      */
-    public function createNewSession($userId, $sessionToken, $expiresAt)
+    public function createNewSession($userId)
     {
-        return $this->create([
+        $sessionToken = Str::random(60);
+        $expiresAt = now()->addMinutes(Config::get('session.lifetime'));
+
+        $this->create([
             'user_id' => $userId,
             'session_token' => $sessionToken,
-            'created_at' => now(),
             'expires_at' => $expiresAt,
-            'is_active' => true
+            'is_active' => true,
         ]);
+
+        return $sessionToken;
     }
 
     /**
