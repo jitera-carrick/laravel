@@ -94,4 +94,15 @@ class Session extends Model
     {
         return $this->belongsTo(User::class, 'user_id');
     }
+
+    /**
+     * Invalidate the session.
+     *
+     * @return bool
+     */
+    public function invalidateSession()
+    {
+        $this->is_active = false;
+        return $this->save();
+    }
 }

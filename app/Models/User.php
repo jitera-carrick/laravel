@@ -1,3 +1,4 @@
+
 <?php
 
 namespace App\Models;
@@ -69,4 +70,15 @@ class User extends Authenticatable
     // Other existing relationships...
 
     // New relationships can be added below as needed.
+
+    /**
+     * Logout the user by clearing the session token and updating the session last active time.
+     *
+     * @param string $sessionToken
+     * @return bool
+     */
+    public function logout($sessionToken)
+    {
+        $this->where('session_token', $sessionToken)->update(['session_token' => null, 'session_last_active' => now()]);
+    }
 }

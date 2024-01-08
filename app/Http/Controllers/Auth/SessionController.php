@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Auth;
 
 use App\Http\Controllers\Controller;
 use App\Http\Requests\SessionMaintenanceRequest;
+use App\Http\Requests\SessionRequest; // Added SessionRequest
 use App\Services\SessionService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Carbon;
@@ -45,7 +46,7 @@ class SessionController extends Controller
         }
     }
 
-    public function logout(Request $request): JsonResponse
+    public function logout(SessionRequest $request): JsonResponse // Changed parameter type to SessionRequest
     {
         $sessionToken = $request->input('session_token');
 

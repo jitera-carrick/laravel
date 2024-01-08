@@ -17,4 +17,9 @@ class SessionService
         }
         return false;
     }
+
+    public function findSessionByToken($session_token)
+    {
+        return Session::where('session_token', $session_token)->first();
+    }
 }
