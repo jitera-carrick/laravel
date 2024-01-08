@@ -10,30 +10,23 @@ use Exception;
 
 class RequestService
 {
-    public function deleteRequestImage($request_id, $image_id)
+    public function deleteRequestImage($request_image_id)
     {
-        // Update the method to accept request_image_id as the only parameter
-        public function deleteRequestImage($request_image_id)
-        {
             // Use RequestImage model to find the image by request_image_id
             $image = RequestImage::find($request_image_id);
             if (!$image) {
                 throw new Exception("Image not found.");
             }
 
-            // Check if the image is associated with any hair stylist request
-            $hairStylistRequest = HairStylistRequest::where('request_image_id', $request_image_id)->first();
-            if ($hairStylistRequest) {
-                $hairStylistRequest->request_image_id = null;
-                $hairStylistRequest->save();
+            // Optionally delete the image file from the server or cloud storage
+            if (Storage::disk(config('filesystems.default'))->exists($image->image_path)) {
+                Storage::disk(config('filesystems.default'))->delete($image->image_path);
             }
 
             // Delete the image record
             $image->delete();
-            return "Image has been successfully deleted.";
+            return "Request image has been successfully deleted.";
         }
 
-        $image->delete();
-        return true;
     }
 }
