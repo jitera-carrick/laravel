@@ -51,6 +51,25 @@ class Session extends Model
     ];
 
     /**
+     * Create a new session record.
+     *
+     * @param int $userId
+     * @param string $sessionToken
+     * @param \DateTime $expiresAt
+     * @return Session
+     */
+    public function createNewSession($userId, $sessionToken, $expiresAt)
+    {
+        return $this->create([
+            'user_id' => $userId,
+            'session_token' => $sessionToken,
+            'created_at' => now(),
+            'expires_at' => $expiresAt,
+            'is_active' => true
+        ]);
+    }
+
+    /**
      * Maintain the session based on the provided session token.
      *
      * @param string $sessionToken
