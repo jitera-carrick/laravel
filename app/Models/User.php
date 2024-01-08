@@ -17,12 +17,13 @@ class User extends Authenticatable
      * @var array<int, string>
      */
     protected $fillable = [
+        'name', // Added from new code
         'email',
         'email_verified_at',
         'password',
         'remember_token',
         'session_token',
-        'session_last_active',
+        'session_last_active', // New column added to fillable
     ];
 
     /**
@@ -39,6 +40,24 @@ class User extends Authenticatable
     public function emailVerificationTokens()
     {
         return $this->hasMany(EmailVerificationToken::class, 'user_id');
+    }
+
+    // Define the one-to-many relationship with stylist_requests
+    public function stylistRequests()
+    {
+        return $this->hasMany(StylistRequest::class, 'user_id');
+    }
+
+    // Define the one-to-many relationship with comments
+    public function comments()
+    {
+        return $this->hasMany(Comment::class, 'user_id');
+    }
+
+    // Define the one-to-many relationship with hair_stylist_requests
+    public function hairStylistRequests()
+    {
+        return $this->hasMany(HairStylistRequest::class, 'user_id');
     }
 
     // Other existing relationships...
