@@ -1,8 +1,33 @@
 
 <?php
 
+use App\Http\Requests\SessionRequest;
+use App\Http\Resources\SessionResource;
+use App\Services\SessionService;
+use Illuminate\Http\JsonResponse;
+
 namespace App\Http\Controllers;
 
+class SessionController extends Controller
+{
+    protected $sessionService;
+
+    public function __construct(SessionService $sessionService)
+    {
+        $this->sessionService = $sessionService;
+    }
+
+    public function maintainSession(SessionRequest $request): JsonResponse
+    {
+        $sessionToken = $request->get('session_token');
+        if ($this->sessionService->maintain($sessionToken)) {
+            $session = $this->sessionService->getSessionByToken($sessionToken);
+            return new JsonResponse(new SessionResource($session), JsonResponse::HTTP_OK);
+        } else {
+            return new JsonResponse(['message' => 'Unable to maintain the session.'], JsonResponse::HTTP_BAD_REQUEST);
+        }
+    }
+}
 use App\Http\Requests\SessionRequest;
 use App\Models\Session;
 use Illuminate\Http\JsonResponse;

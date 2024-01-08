@@ -18,8 +18,8 @@ class Comment extends Model
         'title',
         'status',
         'user_id',
-        'created_at',
-        'updated_at',
+        // 'created_at', // This line should be removed as it's not a fillable attribute but a timestamp managed by Eloquent
+        // 'updated_at', // This line should be removed as it's not a fillable attribute but a timestamp managed by Eloquent
     ];
 
     /**

@@ -19,6 +19,7 @@ class StylistRequest extends Model
         'user_id',
         'created_at',
         'updated_at',
+        // Add new column names to the $fillable array if needed
     ];
 
     protected $hidden = [
@@ -29,6 +30,7 @@ class StylistRequest extends Model
         'created_at' => 'datetime',
         'updated_at' => 'datetime',
         'details' => 'array',
+        // Add new date/time columns to the $casts array if needed
     ];
 
     public function user()
@@ -36,9 +38,9 @@ class StylistRequest extends Model
         return $this->belongsTo(User::class, 'user_id');
     }
 
-    public function request()
+    public function requests()
     {
-        return $this->hasOne(Request::class, 'stylist_request_id');
+        return $this->hasMany(Request::class, 'stylist_request_id');
     }
 
     // Other relationships can be added here as needed.
