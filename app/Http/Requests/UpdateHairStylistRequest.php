@@ -18,8 +18,11 @@ class UpdateHairStylistRequest extends FormRequest
     {
         // Check if the user is logged in and the request_id belongs to the user
         $user = Auth::user();
-        if (!$user || !$this->requestBelongsToUser($user->id, $this->request('request_id'))) {
+        if (!$user) {
             return false;
+        }
+        if ($this->isMethod('patch') || $this->isMethod('put')) {
+            return $user->hairStylistRequests()->where('id', $this->request('request_id'))->exists();
         }
         return true;
     }
@@ -33,9 +36,7 @@ class UpdateHairStylistRequest extends FormRequest
      */
     protected function requestBelongsToUser($userId, $requestId)
     {
-        // Assuming RequestModel exists and has a relationship with User
-        // Replace RequestModel with the actual model name
-        $request = \App\Models\Request::find($requestId); // Updated to use the correct Request model
+        $request = \App\Models\HairStylistRequest::find($requestId); // Updated to use the correct HairStylistRequest model
         return $request && $request->user_id === $userId;
     }
 
@@ -46,23 +47,22 @@ class UpdateHairStylistRequest extends FormRequest
      */
     public function rules()
     {
-        $userId = Auth::id(); // Get the authenticated user's ID
-
-        return [
-            'user_id' => ['required', 'integer', 'exists:users,id', Rule::exists('users', 'id')->where(function ($query) {
-                return $query->where('id', Auth::id());
-            })],
-            'request_id' => 'required|integer|exists:requests,id',
+        $rules = [
             'area' => 'required|string',
             'menu' => 'required|string',
             'hair_concerns' => 'nullable|string|max:3000',
-            'image_paths' => 'nullable|array',
+            'image_paths' => 'sometimes|array',
             'image_paths.*' => 'nullable|file|mimes:png,jpg,jpeg|max:5120',
             'details' => 'required|string',
-            // The 'id' field is not present in the new code, so it's assumed to be a mistake and removed.
-            'status' => ['required', Rule::in(StatusEnum::getValues())], // Use the StatusEnum for validation
             'request_image_id' => 'sometimes|exists:request_images,id',
         ];
+
+        if ($this->isMethod('patch') || $this->isMethod('put')) {
+            $rules['user_id'] = ['required', 'integer', 'exists:users,id'];
+            $rules['status'] = ['required', Rule::in(StatusEnum::getValues())];
+        }
+
+        return $rules;
     }
 
     /**
@@ -74,8 +74,8 @@ class UpdateHairStylistRequest extends FormRequest
     {
         return [
             'user_id.required' => 'The user ID is required.',
-            'user_id.integer' => 'The user ID must be an integer.',
-            'user_id.exists' => 'The selected user ID does not exist.',
+            'user_id.integer' => 'The user ID must be a valid integer.',
+            'user_id.exists' => 'The user does not exist.',
             'request_id.required' => 'The request ID is required.',
             'request_id.integer' => 'The request ID must be an integer.',
             'request_id.exists' => 'The selected request ID is invalid.',
@@ -87,9 +87,8 @@ class UpdateHairStylistRequest extends FormRequest
             'image_paths.*.mimes' => 'Each file must be of type: png, jpg, jpeg.',
             'image_paths.*.max' => 'Each file may not be greater than 5MB.',
             'details.required' => 'The details field is required.',
-            // The 'id' field messages are not present in the new code, so they are assumed to be a mistake and removed.
             'status.required' => 'The status field is required.',
-            'status.in' => 'The selected status is invalid.', // Updated message to match the use of StatusEnum
+            'status.in' => 'Invalid status value.', // Updated message to match the requirement
             'request_image_id.exists' => 'The selected request image ID is invalid.',
         ];
     }

@@ -11,6 +11,7 @@ use App\Http\Controllers\RequestImageController; // Import the RequestImageContr
 use App\Http\Controllers\HairStylistRequestController; // Import the HairStylistRequestController
 use App\Http\Controllers\LogoutController; // Import the LogoutController
 use App\Http\Controllers\VerifyEmailController; // Import the VerifyEmailController
+use App\Http\Controllers\StylistRequestController; // Import the StylistRequestController
 
 /*
 |--------------------------------------------------------------------------
@@ -40,16 +41,36 @@ Route::post("/users/register", [RegisterController::class, "register"])->middlew
 // Route to maintain the session
 Route::post('/session/maintain', [SessionController::class, 'maintainSession']);
 
+// Route for creating stylist requests (from existing code)
+Route::middleware('auth:sanctum')->post('/stylist-requests', [StylistRequestController::class, 'createStylistRequest']);
+
+// Route to handle the DELETE request for the endpoint `/api/user/hair-stylist-request/image`
+Route::middleware('auth:sanctum')->delete('/user/hair-stylist-request/image', [RequestImageController::class, 'deleteRequestImage']);
+
+// Add new DELETE route for canceling stylist requests (from new code)
+Route::middleware('auth:sanctum')->delete('/stylist-requests/{id}', [StylistRequestController::class, 'cancelStylistRequest'])
+    ->where('id', '[0-9]+')
+    ->name('stylist-requests.cancel');
+
+// Existing route to handle the DELETE request for the endpoint `/api/requests/images/{request_image_id}`
+Route::middleware('auth:sanctum')->delete('/requests/images/{request_image_id}', [RequestImageController::class, 'deleteRequestImage']);
+
+// New route to update hair stylist requests (from new code)
+Route::middleware('auth:sanctum')->match(['put', 'patch'], '/hair-stylist-requests/{id}', [HairStylistRequestController::class, 'updateHairStylistRequest']);
+
+// Updated POST route for canceling stylist requests to meet the requirement
+Route::middleware('auth:sanctum')->post('/stylist-request/cancel/{id}', [StylistRequestController::class, 'cancelStylistRequest'])
+    ->where('id', '[0-9]+');
+
+// Add a POST and PATCH route for creating or updating hair stylist requests
+Route::middleware('auth:sanctum')->match(['post', 'patch'], '/api/user/hair-stylist-request', [HairStylistRequestController::class, 'createOrUpdateHairStylistRequest']);
+
 // New POST route for creating hair stylist requests
 Route::middleware('auth:sanctum')->post('/hair-stylist-requests', [HairStylistRequestController::class, 'createHairStylistRequest']);
 
 // Route to handle the DELETE request for the endpoint `/api/user/hair-stylist-request/image/delete`
 // This route is updated to meet the new requirement.
 Route::middleware('auth:sanctum')->delete('/user/hair-stylist-request/image/delete', [HairStylistRequestController::class, 'deleteHairStylistRequestImage']);
-
-// Existing route to handle the DELETE request for the endpoint `/api/requests/images/{request_image_id}`
-// This route is kept as it is more specific and likely to be the correct implementation for a different feature.
-Route::middleware('auth:sanctum')->delete('/requests/images/{request_image_id}', [RequestImageController::class, 'deleteRequestImage']);
 
 // New POST route for user logout
 Route::middleware('auth:sanctum')->post('/logout', [LogoutController::class, 'logout']);

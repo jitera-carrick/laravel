@@ -10,12 +10,14 @@ use Illuminate\Support\Facades\DB;
 
 class HairStylistRequestService
 {
-    public function createRequest($data)
+    public function createOrUpdateRequest(array $data)
     {
         // Check if the user_id corresponds to a valid user
-        $user = User::find($data['user_id']);
-        if (!$user) {
-            throw new \Exception('Invalid user_id provided');
+        if (isset($data['user_id'])) {
+            $user = User::find($data['user_id']);
+            if (!$user) {
+                throw new \Exception('The user does not exist.');
+            }
         }
 
         // If a request_image_id is provided, verify it
@@ -26,27 +28,24 @@ class HairStylistRequestService
             }
         }
 
-        // Create a new HairStylistRequest record
-        $hairStylistRequest = HairStylistRequest::create($data);
-
-        return $hairStylistRequest;
-    }
-
-    public function updateRequest(int $id, int $userId, string $status)
-    {
-        $hairStylistRequest = HairStylistRequest::find($id);
-
-        if (!$hairStylistRequest || $hairStylistRequest->user_id !== $userId) {
-            throw new \Exception('Invalid request or user_id provided');
+        // Check if the status is valid
+        if (isset($data['status']) && !StatusEnum::isValid($data['status'])) {
+            throw new \Exception('Invalid status value.');
         }
 
-        if (!StatusEnum::isValid($status)) {
-            throw new \Exception('Invalid status provided');
-        }
+        // Create or update the HairStylistRequest
+        if (isset($data['id'])) {
+            $hairStylistRequest = HairStylistRequest::findOrFail($data['id']);
 
-        $hairStylistRequest->status = $status;
-        $hairStylistRequest->updated_at = now();
-        $hairStylistRequest->save();
+            if ($hairStylistRequest->user_id !== $data['user_id']) {
+                throw new \Exception('User ID does not match request owner.');
+            }
+
+            $hairStylistRequest->update($data);
+        } else {
+            $hairStylistRequest = new HairStylistRequest($data);
+            $hairStylistRequest->save();
+        }
 
         return $hairStylistRequest;
     }

@@ -14,6 +14,8 @@ use Illuminate\Http\Request as HttpRequest;
 use App\Exceptions\CustomException;
 use App\Models\HairStylistRequest; // Added import for HairStylistRequest model
 use Illuminate\Support\Facades\Auth; // Added import for Auth facade
+use Illuminate\Support\Facades\Validator;
+use Illuminate\Validation\Rule;
 
 class HairStylistRequestController extends Controller
 {
