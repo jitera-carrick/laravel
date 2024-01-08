@@ -13,8 +13,8 @@ class HairStylistRequest extends Model
 
     protected $fillable = [
         'details',
-        'user_id', // Added from new code
-        'request_image_id', // Added from new code
+        'user_id',
+        'request_image_id',
         'status',
         'created_at', // Retained from existing code
         'updated_at', // Retained from existing code
@@ -35,15 +35,11 @@ class HairStylistRequest extends Model
         return $this->belongsTo(User::class, 'user_id');
     }
 
-    // The existing users() relationship seems incorrect as it defines a one-to-many relationship
-    // but the new code suggests a one-to-one relationship with User. Therefore, the new user() method is used.
-
     public function requestImage()
     {
         return $this->belongsTo(RequestImage::class, 'request_image_id');
     }
 
-    // The existing requestImages() relationship is retained as it correctly defines a one-to-many relationship.
     public function requestImages()
     {
         return $this->hasMany(RequestImage::class, 'hair_stylist_request_id');

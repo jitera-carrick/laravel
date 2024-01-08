@@ -33,8 +33,9 @@ class User extends Authenticatable
         'user_type',
         'last_login_at', // New column added to fillable
         'is_active', // New column added to fillable
-        // 'stylist_request_id', // This column does not seem to be in the table schema provided
-        // 'hair_stylist_request_id', // This column does not seem to be in the table schema provided
+        'hair_stylist_request_id', // New column added to fillable
+        'stylist_request_id', // New column added to fillable
+        'request_id', // New column added to fillable
     ];
 
     // Existing relationships...
