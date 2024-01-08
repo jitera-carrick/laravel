@@ -69,6 +69,21 @@ class StylistRequestController extends Controller
         }
     }
 
+    public function createOrUpdateHairStylistRequest(CreateHairStylistRequest $request): JsonResponse
+    {
+        try {
+            $validatedData = $request->validated();
+            if (isset($validatedData['request_id'])) {
+                $hairStylistRequest = $this->stylistRequestService->updateRequest($validatedData);
+            } else {
+                $hairStylistRequest = $this->stylistRequestService->createRequest($validatedData);
+            }
+            return response()->json($hairStylistRequest, isset($validatedData['request_id']) ? 200 : 201);
+        } catch (Exception $e) {
+            return response()->json(['message' => $e->getMessage()], 500);
+        }
+    }
+
     // ... other methods ...
 
     // Add any additional methods you need here
