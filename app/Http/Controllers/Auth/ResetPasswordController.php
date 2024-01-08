@@ -9,12 +9,15 @@ use App\Utils\ApiResponse;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
-use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Carbon;
-use Illuminate\Http\Request;
 use App\Models\User;
 use App\Models\PasswordResetToken;
 use Illuminate\Support\Facades\Mail;
+use App\Http\Requests\ValidateResetTokenRequest;
+use Illuminate\Support\Facades\Validator;
+use Illuminate\Http\Request;
+use App\Http\Resources\SuccessResource;
+use App\Http\Resources\ErrorResource;
 
 class ResetPasswordController extends Controller
 {
@@ -69,38 +72,38 @@ class ResetPasswordController extends Controller
                 $passwordResetToken = PasswordResetToken::where('id', $request->password_reset_token_id)
                     ->where('used', false)
                     ->where('expires_at', '>', Carbon::now())
-                    ->first();
+                    ->firstOrFail();
+
+                $user = $passwordResetToken->user()->firstOrFail();
+                $password = $request->password;
+
+                // Use Laravel's built-in hashing mechanism to create a password_hash
+                $user->password = Hash::make($password);
+                $user->last_password_reset = Carbon::now();
+                $user->save();
+
+                $passwordResetToken->used = true;
+                $passwordResetToken->save();
+
+                // Send confirmation email logic if needed
+                Mail::to($user->email)->send(new \App\Mail\PasswordResetSuccess($user)); // Assuming PasswordResetSuccess is a valid Mailable
             } else {
                 // Existing code logic
                 $passwordResetToken = PasswordResetToken::where('email', $request->email)
                     ->where('token', $request->token)
                     ->where('used', false)
                     ->where('expires_at', '>', Carbon::now())
-                    ->first();
-            }
+                    ->firstOrFail();
 
-            if (!$passwordResetToken) {
-                return ApiResponse::error(['message' => 'Invalid or expired password reset token.'], 404);
-            }
+                $user = User::where('email', $request->email)->firstOrFail();
+                $password = $request->new_password;
 
-            $user = User::where('email', $request->email)->first();
-            if (!$user) {
-                return ApiResponse::error(['message' => 'User not found.'], 404);
-            }
+                $user->password = Hash::make($password);
+                $user->last_password_reset = Carbon::now();
+                $user->save();
 
-            // Determine which password field to use
-            $password = $request->has('password') ? $request->password : $request->new_password;
-
-            $user->password = Hash::make($password);
-            $user->last_password_reset = Carbon::now();
-            $user->save();
-
-            $passwordResetToken->used = true;
-            $passwordResetToken->save();
-
-            // Send confirmation email if the new code logic is used
-            if ($request->has('password_reset_token_id')) {
-                Mail::to($user->email)->send(new \App\Mail\PasswordResetSuccess($user)); // Assuming PasswordResetSuccess is a valid Mailable
+                $passwordResetToken->used = true;
+                $passwordResetToken->save();
             }
 
             DB::commit();
@@ -110,6 +113,28 @@ class ResetPasswordController extends Controller
             DB::rollBack();
             return ApiResponse::error(['message' => 'An error occurred while resetting the password.'], 500);
         }
+    }
+
+    public function validateResetToken(ValidateResetTokenRequest $request): JsonResponse
+    {
+        $token = $request->input('token');
+        $passwordResetToken = PasswordResetToken::where('token', $token)
+            ->where('used', false)
+            ->first();
+
+        if (!$passwordResetToken) {
+            return new ErrorResource(['message' => 'Invalid or expired password reset token.']);
+        }
+
+        $tokenLifetime = config('auth.passwords.users.expire') * 60;
+        $tokenCreatedAt = Carbon::parse($passwordResetToken->created_at);
+        $tokenExpired = $tokenCreatedAt->addSeconds($tokenLifetime)->isPast();
+
+        if ($tokenExpired) {
+            return new ErrorResource(['message' => 'Token is expired']);
+        }
+
+        return new SuccessResource(['message' => 'Token is valid']);
     }
 
     // ... other methods ...
