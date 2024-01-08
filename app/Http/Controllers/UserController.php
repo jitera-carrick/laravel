@@ -1,12 +1,11 @@
-
 <?php
 
-use App\Http\Requests\DeleteImageRequest;
-use App\Services\ImageService;
-use App\Http\Resources\SuccessResource;
+namespace App\Http\Controllers;
+
 use Illuminate\Database\Eloquent\ModelNotFoundException;
 use App\Http\Requests\CreateHairStylistRequest; // Import the new form request validation class
 use App\Http\Requests\UpdateHairStylistRequest; // Import the update form request validation class
+use App\Http\Requests\DeleteImageRequest; // Import the delete image form request validation class
 use App\Models\User;
 use App\Models\Request as HairStylistRequest; // Renamed to avoid confusion with HTTP Request
 use App\Models\RequestArea;
@@ -15,9 +14,12 @@ use App\Models\RequestImage;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request as HttpRequest;
+use App\Services\RequestService; // Import the RequestService
+use App\Services\ImageService; // Import the ImageService
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
+use App\Http\Resources\SuccessResource;
 
 class UserController extends Controller
 {
@@ -204,35 +206,32 @@ class UserController extends Controller
     /**
      * Delete a specific image from a hair stylist request.
      *
-     * @param DeleteImageRequest $request The validated request.
-     * @param int $request_id The ID of the hair stylist request.
-     * @param int $image_id The ID of the image to delete.
+     * @param DeleteImageRequest $request
      * @return JsonResponse
      */
-    public function deleteRequestImage(DeleteImageRequest $request, $request_id, $image_id): JsonResponse
+    public function deleteRequestImage(DeleteImageRequest $request): JsonResponse
     {
+        $requestService = new RequestService();
+        $imageService = new ImageService(); // Use ImageService for deleting the image file
         try {
             // Ensure the request exists
-            $hairStylistRequest = HairStylistRequest::findOrFail($request_id);
+            $hairStylistRequest = HairStylistRequest::findOrFail($request->request_id);
 
             // Find the image associated with the request and image ID
             $requestImage = RequestImage::where('request_id', $hairStylistRequest->id)
-                                        ->where('id', $image_id)->firstOrFail();
+                                        ->where('id', $request->image_id)->firstOrFail();
 
-            // Delete the image file from storage if necessary
-            $imageService = new ImageService();
+            // Delete the image file from storage
             $imageService->delete($requestImage->image_path);
 
-            // Delete the image
-            $requestImage->delete();
+            // Delete the image record
+            $requestService->deleteRequestImage($request->request_id, $request->image_id);
 
             // Return a success response
             return new SuccessResource(['message' => 'Image has been successfully deleted.']);
         } catch (ModelNotFoundException $e) {
-            // Return an error response if the request or image doesn't exist
             return response()->json(['message' => 'Request or image not found.'], 404);
         } catch (\Exception $e) {
-            // Return a generic error response for any other exceptions
             return response()->json(['message' => 'An error occurred while deleting the image.'], 500);
         }
     }

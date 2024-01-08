@@ -1,4 +1,3 @@
-
 <?php
 
 namespace App\Http\Controllers;
@@ -8,8 +7,8 @@ use App\Http\Requests\UpdateHairStylistRequest;
 use App\Models\Request;
 use App\Models\RequestAreaSelection;
 use App\Models\RequestMenuSelection;
-use App\Models\StylistRequest; // Added line
 use App\Models\RequestImage;
+use App\Models\StylistRequest; // Added line
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Validator;
