@@ -16,6 +16,7 @@ class SessionRequest extends FormRequest
     public function authorize()
     {
         // Optionally add authorization logic
+        // Ensure the user is logged in before making the session request
         return Auth::check();
     }
 
@@ -27,6 +28,7 @@ class SessionRequest extends FormRequest
     public function rules()
     {
         return [
+            // Validate that the session_token is required and must be a string
             'session_token' => 'required|string',
         ];
     }

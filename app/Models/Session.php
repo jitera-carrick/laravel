@@ -51,6 +51,18 @@ class Session extends Model
     ];
 
     /**
+     * Invalidate the session.
+     *
+     * @return bool
+     */
+    public function invalidateSession()
+    {
+        $this->is_active = false;
+        $this->updated_at = now();
+        return $this->save();
+    }
+
+    /**
      * Create a new session record.
      *
      * @param int $userId

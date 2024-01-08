@@ -28,6 +28,12 @@ class Authenticate extends Middleware
                           ->where('is_active', true)
                           ->first();
 
+        if ($session && $session->expires_at <= now()) {
+            $session->is_active = false;
+            $session->save();
+            return null;
+        }
+
         if (!$session) {
             return null;
         }

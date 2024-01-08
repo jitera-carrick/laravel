@@ -8,6 +8,7 @@ use App\Models\Session;
 use Illuminate\Http\JsonResponse;
 use App\Http\Resources\SessionResource;
 use Illuminate\Support\Facades\Config;
+use App\Exceptions\SessionExpiredException;
 
 class SessionController extends Controller
 {
@@ -16,12 +17,18 @@ class SessionController extends Controller
         $session = Session::where('session_token', $request->input('session_token'))->first();
 
         if ($session && $session->expires_at > now() && $session->is_active) {
-            $session->expires_at = now()->addMinutes(Config::get('session.lifetime'));
-            $session->save();
+            $session->touch();
 
-            return response()->json(new SessionResource($session));
+            return response()->json(['message' => 'Session is valid.', 'status' => true]);
         }
 
-        return response()->json(['message' => 'Session is invalid or has expired.'], 401);
+        if ($session) {
+            $session->is_active = false;
+            $session->save();
+
+            throw new SessionExpiredException('Session has expired and is now inactive.');
+        }
+
+        return response()->json(['message' => 'Session is invalid or has expired.', 'status' => false], 401);
     }
 }

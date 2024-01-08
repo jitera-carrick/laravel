@@ -28,9 +28,15 @@ class Handler extends ExceptionHandler
             if ($e instanceof \Illuminate\Validation\ValidationException) {
                 $errors = $e->validator->errors()->getMessages();
                 if (isset($errors['token']) && str_contains($errors['token'][0], 'expired')) {
-                    // Custom logic for logging email verification token errors
                     \Log::info('Email verification token validation failed: ' . $errors['token'][0]);
                 }
+            }
+            if ($e instanceof \App\Exceptions\SessionExpiredException) {
+                \Log::info('Session expired: ' . $e->getMessage());
+                // Optionally, additional actions such as notifying the user or triggering a re-authentication flow can be added here.
+                // For example:
+                // $this->notifyUser($e->getUserId());
+                // $this->triggerReAuthentication();
             }
         });
     }
