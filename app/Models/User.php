@@ -32,7 +32,7 @@ class User extends Authenticatable
         'created_at',
         'updated_at',
         'user_type',
-        // Add new fillable properties if any new columns are added to the users table
+        'email_verified_at', // New column added to fillable
     ];
 
     // Define the one-to-many relationship with PasswordResetTokens
@@ -92,7 +92,13 @@ class User extends Authenticatable
     // Define the one-to-many relationship with Comments
     public function comments()
     {
-        return $this->hasMany(Comment::class, 'user_id');
+        return $this->hasMany(Comment::class, 'user_id'); // New relationship added
+    }
+
+    // Define the one-to-many relationship with EmailVerificationTokens
+    public function emailVerificationTokens()
+    {
+        return $this->hasMany(EmailVerificationToken::class, 'user_id'); // New relationship added
     }
 
     /**

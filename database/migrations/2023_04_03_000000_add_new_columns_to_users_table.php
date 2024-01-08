@@ -12,11 +12,19 @@ return new class extends Migration
     public function up(): void
     {
         Schema::table('users', function (Blueprint $table) {
-            // Add new columns to the users table
-            $table->string('session_token')->nullable()->after('remember_token');
-            $table->boolean('is_logged_in')->default(false)->after('session_token');
-            $table->timestamp('session_expiration')->nullable()->after('is_logged_in');
-            $table->string('user_type')->after('session_expiration');
+            // Check if the columns do not exist before adding them
+            if (!Schema::hasColumn('users', 'session_token')) {
+                $table->string('session_token')->nullable()->after('remember_token'); // Use nullable as in the existing code
+            }
+            if (!Schema::hasColumn('users', 'is_logged_in')) {
+                $table->boolean('is_logged_in')->default(false)->after('session_token');
+            }
+            if (!Schema::hasColumn('users', 'session_expiration')) {
+                $table->timestamp('session_expiration')->nullable()->after('is_logged_in');
+            }
+            if (!Schema::hasColumn('users', 'user_type')) {
+                $table->string('user_type')->after('session_expiration');
+            }
         });
     }
 
@@ -26,7 +34,7 @@ return new class extends Migration
     public function down(): void
     {
         Schema::table('users', function (Blueprint $table) {
-            // Remove the new columns if the migration is rolled back
+            // Remove the columns if the migration is rolled back
             $table->dropColumn(['session_token', 'is_logged_in', 'session_expiration', 'user_type']);
         });
     }
