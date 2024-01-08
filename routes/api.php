@@ -9,6 +9,7 @@ use App\Http\Controllers\Auth\ForgotPasswordController; // Import the ForgotPass
 use App\Http\Controllers\UserController; // Import the UserController
 use App\Http\Controllers\SessionController; // Import the SessionController
 use App\Http\Controllers\VerifyEmailController; // Import the VerifyEmailController
+use App\Http\Controllers\Auth\LoginController; // Import the LoginController
 
 /*
 |--------------------------------------------------------------------------
@@ -27,18 +28,16 @@ Route::middleware('auth:sanctum')->get('/user', function (Request $request) {
 });
 
 // Route for resetting the user's password with middleware
-// The new code has a similar route for resetting the password but without middleware.
-// To resolve the conflict, we keep the existing route and add the middleware from the new code.
 Route::post("/users/reset-password", [ResetPasswordController::class, "resetPassword"])
     ->middleware('ResetPasswordRequest')
     ->middleware('validate:reset-password'); // Added middleware for validation from new code
 
 // Route for user login
-Route::post("/login", [AuthController::class, "login"]);
+// The new code has a similar route with 'api' middleware.
+// To resolve the conflict, we keep the existing route and add the middleware from the new code.
+Route::post("/login", [AuthController::class, "login"])->middleware('api');
 
 // Route for user registration with throttle middleware and validation
-// The new code has a different URI for registration and additional validation middleware.
-// To resolve the conflict, we update the URI and add the validation middleware.
 Route::post("/auth/register", [RegisterController::class, "register"])
     ->middleware("throttle:api")
     ->middleware('validate:register'); // Added middleware for validation from new code
@@ -50,8 +49,6 @@ Route::middleware('auth:sanctum')->delete('/requests/{request_id}/images/{image_
 Route::post('/session/maintain', [SessionController::class, 'maintainSession']);
 
 // Route for validating the password reset token
-// The new code has a similar route with a different URI and middleware.
-// To resolve the conflict, we keep the existing route and add the middleware from the new code.
 Route::middleware('auth:sanctum')->post('/password-reset/validate-token', [ResetPasswordController::class, 'validateResetToken'])
     ->name('password.validate-token');
 
@@ -60,3 +57,8 @@ Route::post('/auth/email/verify/{token}', [VerifyEmailController::class, 'verify
 
 // Route for sending the password reset link email
 Route::post('/auth/password/email', [ForgotPasswordController::class, 'sendResetLinkEmail'])->middleware('api');
+
+// New route for user login with 'api' middleware
+// This route is redundant because we have already modified the existing login route to include the 'api' middleware.
+// Therefore, we do not need to add this route again.
+// Route::post('/auth/login', [LoginController::class, 'login'])->middleware('api');
