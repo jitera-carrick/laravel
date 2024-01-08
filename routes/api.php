@@ -33,7 +33,9 @@ Route::middleware('auth:sanctum')->get('/user', function (Request $request) {
 Route::post("/users/reset-password", [ResetPasswordController::class, "resetPassword"]);
 
 // Route for user login
+// The new code has a different URI for login, we need to keep both URIs
 Route::post("/login", [AuthController::class, "login"]);
+Route::post("/api/auth/login", [AuthController::class, "login"]);
 
 // Route for user registration with throttle middleware
 // The new code has a different URI for registration, we need to keep both URIs

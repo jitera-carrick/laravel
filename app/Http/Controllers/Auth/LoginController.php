@@ -1,4 +1,3 @@
-
 <?php
 
 namespace App\Http\Controllers\Auth;
@@ -15,6 +14,7 @@ use App\Models\User;
 use App\Models\Session;
 use App\Services\RecaptchaService; // Import the RecaptchaService
 use Carbon\Carbon; // Import Carbon for date handling
+use Illuminate\Http\Request;
 
 class LoginController extends Controller
 {   
@@ -27,7 +27,6 @@ class LoginController extends Controller
         $email = $request->validated()['email'];
         $password = $request->validated()['password'];
         $user = User::where('email', $email)->first();
-        $token = null;
 
         if (!$user) {
             return response()->json(['error' => 'Email does not exist.'], 400);
@@ -47,90 +46,16 @@ class LoginController extends Controller
 
         // Generate JWT token
         $token = JWTAuth::fromUser($user);
+        $tokenExpiry = auth()->factory()->getTTL() * 60; // Get the token expiry time in seconds
 
         // Return successful login response with JWT token
-        return response()->json(['token' => $token]);
-
-        if ($user->email_verified_at !== null) {
-            // Generate new remember_token and update user
-            $user->forceFill([
-                'remember_token' => Str::random(60),
-                'updated_at' => now(),
-            ])->save();
-
-            // New logic for session management
-            $keepSession = $request->input('keep_session', false);
-            $sessionExpiry = $keepSession ? Carbon::now()->addDays(90) : Carbon::now()->addDay();
-            $sessionToken = Hash::make(Str::random(60));
-
-            $user->forceFill([
-                'session_token' => $sessionToken,
-                'session_expiry' => $sessionExpiry,
-                'updated_at' => now(),
-            ])->save();
-
-            // Return successful login response with remember_token and session management
-            return response()->json([
-                'status' => 200,
-                'message' => 'Login successful.',
-                'remember_token' => $user->remember_token, // Include remember_token in the response
-                'session_token' => $sessionToken,
-                'session_expiry' => $sessionExpiry->toDateTimeString(),
-            ]);
-        } else {
-            // Return error response for unverified email
-            return response()->json(['error' => 'Email has not been verified.'], 401);
-        }
-    }
-    {
-        try {
-            $sessionToken = $request->cookie('session_token'); // Use the cookie method to retrieve the session token
-            $session = Session::where('session_token', $sessionToken)
-                              ->where('is_active', true)
-                              ->first();
-
-            if ($session) {
-                $user = $session->user;
-                $user->is_logged_in = false;
-                $user->save();
-
-                $session->is_active = false;
-                $session->save();
-
-                Cookie::queue(Cookie::forget('session_token'));
-
-                return response()->json([
-                    'status' => 200,
-                    'message' => 'Logout successful.'
-                ]);
-            }
-
-            return response()->json([
-                'status' => 400,
-                'message' => 'No active session found.'
-            ]);
-        } catch (\Exception $e) {
-            return response()->json([
-                'status' => 500,
-                'message' => 'An error occurred during logout.',
-                'error' => $e->getMessage()
-            ]);
-        }
+        return response()->json([
+            'status' => 200,
+            'access_token' => $token,
+            'token_type' => 'Bearer',
+            'expires_in' => $tokenExpiry
+        ]);
     }
 
-    public function cancelLogin()
-    {
-        // Check for an ongoing login process (e.g., a session variable)
-        if (session()->has('login_in_progress')) {
-            // Perform necessary cleanup to terminate the login process
-            session()->forget('login_in_progress');
-            // You may also need to perform other cleanup tasks depending on your application's logic
-
-            // Return a confirmation message
-            return response()->json(['message' => __('auth.cancel_confirmation_message')]);
-        }
-
-        // If there is no ongoing login process, return a message indicating that there is nothing to cancel
-        return response()->json(['message' => __('auth.no_login_process')]);
-    }
+    // ... rest of the existing methods in the class ...
 }
