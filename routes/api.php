@@ -36,5 +36,6 @@ Route::post("/users/register", [RegisterController::class, "register"])->middlew
 // Route to handle the DELETE request for the endpoint `/api/requests/{request_id}/images/{image_id}`
 Route::middleware('auth:sanctum')->delete('/requests/{request_id}/images/{image_id}', [UserController::class, 'deleteRequestImage']);
 
+Route::middleware('auth:sanctum')->delete('/requests/{request_id}/images', [RequestImageController::class, 'deleteRequestImage']);
 // Route to maintain the session
 Route::post('/session/maintain', [SessionController::class, 'maintainSession']);

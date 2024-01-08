@@ -1,19 +1,22 @@
+
 <?php
 
 namespace App\Http\Controllers;
 
 use Illuminate\Http\Request as HttpRequest;
 use App\Http\Requests\UpdateHairStylistRequest;
+use App\Http\Requests\DeleteRequestImageRequest; // Added line
 use App\Models\Request;
 use App\Models\RequestAreaSelection;
 use App\Models\RequestMenuSelection;
 use App\Models\RequestImage;
-use App\Models\StylistRequest; // Added line
+use App\Models\StylistRequest;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\DB;
+use App\Services\RequestService; // Added line
 
 class RequestController extends Controller
 {
@@ -191,6 +194,32 @@ class RequestController extends Controller
             'message' => 'Hair stylist request cancelled successfully.',
             'request_id' => $stylistRequest->id,
         ]);
+    }
+
+    // New method to delete a request image
+    public function deleteRequestImage(DeleteRequestImageRequest $httpRequest): JsonResponse
+    {
+        $requestId = $httpRequest->input('request_id');
+        $imagePath = $httpRequest->input('image_path');
+
+        $request = Request::find($requestId);
+        if (!$request) {
+            return response()->json(['message' => 'Request not found.'], 404);
+        }
+
+        $requestImage = RequestImage::where('request_id', $requestId)
+                                    ->where('image_path', $imagePath)
+                                    ->first();
+
+        if (!$requestImage) {
+            return response()->json(['message' => 'Image not found.'], 404);
+        }
+
+        $requestService = new RequestService();
+        $requestService->deleteRequestImage($requestId, $imagePath);
+        $request->touch(); // Update the "updated_at" field
+
+        return response()->json(['message' => 'Image deleted successfully.'], 200);
     }
 
     // ... other methods ...
