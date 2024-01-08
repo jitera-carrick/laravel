@@ -6,7 +6,6 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Laravel\Sanctum\HasApiTokens;
-use Illuminate\Support\Str;
 
 class User extends Authenticatable
 {
@@ -20,95 +19,51 @@ class User extends Authenticatable
     protected $fillable = [
         'name',
         'email',
-        'username', // New column added to fillable
-        'email_verified_at', // New column added to fillable
+        'email_verified_at',
         'password',
-        'password_hash',
-        'password_salt',
-        'last_password_reset',
         'remember_token',
         'session_token',
-        'is_logged_in',
-        'session_expiration',
-        'user_type',
-        'last_login_at', // New column added to fillable
-        'is_active', // New column added to fillable
-        // 'stylist_request_id', // This column does not seem to be in the table schema provided
-        // 'hair_stylist_request_id', // This column does not seem to be in the table schema provided
+        'session_last_active', // New column added to fillable
     ];
 
-    // Existing relationships...
-
-    // Define the one-to-many relationship with password_reset_tokens
-    public function passwordResetTokens()
+    /**
+     * Get the password resets for the user.
+     */
+    public function passwordResets()
     {
-        return $this->hasMany(PasswordResetToken::class, 'user_id');
+        return $this->hasMany(PasswordReset::class, 'user_id');
     }
 
-    // Define the one-to-many relationship with personal_access_tokens
-    public function personalAccessTokens()
-    {
-        return $this->hasMany(PersonalAccessToken::class, 'user_id');
-    }
-
-    // Define the one-to-many relationship with login_attempts
-    public function loginAttempts()
-    {
-        return $this->hasMany(LoginAttempt::class, 'user_id');
-    }
-
-    // Define the one-to-many relationship with email_verification_tokens
+    /**
+     * Get the email verification tokens for the user.
+     */
     public function emailVerificationTokens()
     {
         return $this->hasMany(EmailVerificationToken::class, 'user_id');
     }
 
-    // Define the one-to-many relationship with hair_stylist_requests
-    public function hairStylistRequests()
-    {
-        return $this->hasMany(HairStylistRequest::class, 'user_id');
-    }
-
-    // Define the one-to-many relationship with password_reset_requests
-    public function passwordResetRequests()
-    {
-        return $this->hasMany(PasswordResetRequest::class, 'user_id');
-    }
-
-    // Define the one-to-many relationship with requests
-    public function requests()
-    {
-        return $this->hasMany(Request::class, 'user_id');
-    }
-
-    // Define the one-to-many relationship with sessions
-    public function sessions()
-    {
-        return $this->hasMany(Session::class, 'user_id');
-    }
-
-    // Define the one-to-many relationship with stylist_requests
+    /**
+     * Get the stylist requests for the user.
+     */
     public function stylistRequests()
     {
         return $this->hasMany(StylistRequest::class, 'user_id');
     }
 
-    // Define the one-to-many relationship with password_policies
-    public function passwordPolicies()
-    {
-        return $this->hasMany(PasswordPolicy::class, 'user_id');
-    }
-
-    // Define the one-to-many relationship with comments
+    /**
+     * Get the comments for the user.
+     */
     public function comments()
     {
         return $this->hasMany(Comment::class, 'user_id');
     }
 
-    // Define the one-to-many relationship with email_logs
-    public function emailLogs()
+    /**
+     * Get the hair stylist requests for the user.
+     */
+    public function hairStylistRequests()
     {
-        return $this->hasMany(EmailLog::class, 'user_id');
+        return $this->hasMany(HairStylistRequest::class, 'user_id');
     }
 
     // Other existing relationships...
