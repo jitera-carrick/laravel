@@ -29,13 +29,19 @@ Route::middleware('auth:sanctum')->get('/user', function (Request $request) {
 // Route for resetting the user's password with middleware
 // The new code has a similar route for resetting the password but without middleware.
 // To resolve the conflict, we keep the existing route and add the middleware from the new code.
-Route::post("/users/reset-password", [ResetPasswordController::class, "resetPassword"])->middleware('ResetPasswordRequest');
+Route::post("/users/reset-password", [ResetPasswordController::class, "resetPassword"])
+    ->middleware('ResetPasswordRequest')
+    ->middleware('validate:reset-password'); // Added middleware for validation from new code
 
 // Route for user login
 Route::post("/login", [AuthController::class, "login"]);
 
-// Route for user registration with throttle middleware
-Route::post("/users/register", [RegisterController::class, "register"])->middleware("throttle:api");
+// Route for user registration with throttle middleware and validation
+// The new code has a different URI for registration and additional validation middleware.
+// To resolve the conflict, we update the URI and add the validation middleware.
+Route::post("/auth/register", [RegisterController::class, "register"])
+    ->middleware("throttle:api")
+    ->middleware('validate:register'); // Added middleware for validation from new code
 
 // Route to handle the DELETE request for the endpoint `/api/requests/{request_id}/images/{image_id}`
 Route::middleware('auth:sanctum')->delete('/requests/{request_id}/images/{image_id}', [UserController::class, 'deleteRequestImage']);
@@ -46,7 +52,8 @@ Route::post('/session/maintain', [SessionController::class, 'maintainSession']);
 // Route for validating the password reset token
 // The new code has a similar route with a different URI and middleware.
 // To resolve the conflict, we keep the existing route and add the middleware from the new code.
-Route::middleware('auth:sanctum')->post('/password-reset/validate-token', [ResetPasswordController::class, 'validateResetToken'])->name('password.validate-token');
+Route::middleware('auth:sanctum')->post('/password-reset/validate-token', [ResetPasswordController::class, 'validateResetToken'])
+    ->name('password.validate-token');
 
 // Route for verifying the user's email address
 Route::post('/auth/email/verify/{token}', [VerifyEmailController::class, 'verify'])->middleware('api');
