@@ -12,13 +12,14 @@ class Request extends Model
     protected $table = 'requests';
 
     protected $fillable = [
+        'stylist_request_id',
         'area',
         'menu',
         'hair_concerns',
         'status',
+        'priority',
         'user_id',
-        // Assuming there are new columns to be added, they should be listed here.
-        // 'new_column_name', // Add new column names to the $fillable array
+        // Add new column names to the $fillable array if needed
     ];
 
     protected $hidden = [
@@ -28,8 +29,7 @@ class Request extends Model
     protected $casts = [
         'created_at' => 'datetime',
         'updated_at' => 'datetime',
-        // Assuming there are new columns with date/time to be cast, they should be listed here.
-        // 'new_date_column' => 'datetime', // Add new date/time columns to the $casts array
+        // Add new date/time columns to the $casts array if needed
     ];
 
     public function user()
@@ -37,29 +37,25 @@ class Request extends Model
         return $this->belongsTo(User::class, 'user_id');
     }
 
+    public function stylistRequest()
+    {
+        return $this->belongsTo(StylistRequest::class, 'stylist_request_id');
+    }
+
     public function requestImages()
     {
         return $this->hasMany(RequestImage::class, 'request_id');
     }
 
-    // Define the relationship with RequestAreaSelections
-    public function requestAreaSelections()
+    public function requestAreas()
     {
-        return $this->hasMany(RequestAreaSelection::class, 'request_id');
+        return $this->hasMany(RequestArea::class, 'request_id');
     }
 
-    // Define the relationship with RequestMenuSelections
-    public function requestMenuSelections()
+    public function requestMenus()
     {
-        return $this->hasMany(RequestMenuSelection::class, 'request_id');
+        return $this->hasMany(RequestMenu::class, 'request_id');
     }
 
-    // Assuming there are new relationships to be added, they should be defined here.
-    // For example, if there's a new one-to-many relationship with a new table 'request_details':
-    /*
-    public function requestDetails()
-    {
-        return $this->hasMany(RequestDetail::class, 'request_id');
-    }
-    */
+    // Add new relationships if there are any new tables related to this model
 }

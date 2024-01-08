@@ -22,6 +22,7 @@ class RequestArea extends Model
      * @var array<int, string>
      */
     protected $fillable = [
+        'area_name', // Updated to include 'area_name'
         'request_id',
         'area_id',
         'created_at',
