@@ -1,10 +1,10 @@
-
 <?php
 
 namespace App\Http\Requests;
 
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Validation\Rule;
 
 class CreateHairStylistRequest extends FormRequest
 {
@@ -28,6 +28,7 @@ class CreateHairStylistRequest extends FormRequest
     {
         return [
             'email' => 'required|email|unique:users,email',
+            'password' => ['required', 'string', 'min:8', 'confirmed', Rule::regex('/[A-Za-z]/'), Rule::regex('/[0-9]/'), Rule::regex('/[@$!%*#?&]/')],
             'details' => 'required|string',
             'status' => 'required|string|in:pending,approved,rejected',
             'user_id' => 'required|exists:users,id',
@@ -47,6 +48,14 @@ class CreateHairStylistRequest extends FormRequest
     public function messages()
     {
         return [
+            'email.required' => 'The email field is required.',
+            'email.email' => 'The email must be a valid email address.',
+            'email.unique' => 'The email has already been taken.',
+            'password.required' => 'The password field is required.',
+            'password.string' => 'The password must be a string.',
+            'password.min' => 'The password must be at least 8 characters.',
+            'password.confirmed' => 'The password confirmation does not match.',
+            'password.regex' => 'The password format is invalid.',
             'details.required' => 'The details field is required.',
             'status.required' => 'The status field is required and must be one of the valid options: pending, approved, rejected.',
             'user_id.required' => 'The user_id field is required and must exist in the users table.',

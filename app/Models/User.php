@@ -1,3 +1,4 @@
+
 <?php
 
 namespace App\Models;
@@ -6,6 +7,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Laravel\Sanctum\HasApiTokens;
+use Illuminate\Support\Facades\Hash;
 
 class User extends Authenticatable
 {
@@ -95,6 +97,17 @@ class User extends Authenticatable
     }
 
     // ... existing methods ...
+
+    /**
+     * Automatically hash the password when it is set.
+     *
+     * @param  string  $value
+     * @return void
+     */
+    public function setPasswordAttribute($value)
+    {
+        $this->attributes['password'] = Hash::make($value);
+    }
 
     /**
      * Log out the user by setting is_logged_in to false and clearing session_token.
