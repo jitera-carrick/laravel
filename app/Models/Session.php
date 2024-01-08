@@ -1,3 +1,4 @@
+
 <?php
 
 namespace App\Models;
@@ -49,6 +50,17 @@ class Session extends Model
         'expires_at' => 'datetime',
         'is_active' => 'boolean',
     ];
+
+    /**
+     * Invalidate the session by setting is_active to false and saving the changes.
+     *
+     * @return void
+     */
+    public function invalidateSession()
+    {
+        $this->is_active = false;
+        $this->save();
+    }
 
     /**
      * Get the user that owns the session.

@@ -32,6 +32,16 @@ class EmailVerificationToken extends Model
     ];
 
     /**
+     * Check if the token is valid and has not expired.
+     *
+     * @return bool
+     */
+    public function isValid()
+    {
+        return !$this->used && $this->expires_at->isFuture();
+    }
+
+    /**
      * The user that the verification token belongs to.
      *
      * @return \Illuminate\Database\Eloquent\Relations\BelongsTo

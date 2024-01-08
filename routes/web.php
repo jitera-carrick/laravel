@@ -16,3 +16,8 @@ use Illuminate\Support\Facades\Route;
 Route::get('/', function () {
     return view('welcome');
 });
+
+Route::get('/email/verify/{token}', [App\Http\Controllers\Auth\VerifyEmailController::class, 'verify'])
+    ->name('verification.verify');
+
+# Note: The controller method should handle the token verification logic as per the guidelines provided.
