@@ -36,7 +36,9 @@ Route::post("/users/reset-password", [ResetPasswordController::class, "resetPass
 Route::post("/login", [AuthController::class, "login"]);
 
 // Route for user registration with throttle middleware
+// The new code has a different URI for registration, we need to keep both URIs
 Route::post("/users/register", [RegisterController::class, "register"])->middleware("throttle:api");
+Route::post("/api/auth/register", [RegisterController::class, "register"])->middleware("throttle:api");
 
 // Route to maintain the session
 Route::post('/session/maintain', [SessionController::class, 'maintainSession']);
@@ -57,6 +59,6 @@ Route::middleware('auth:sanctum')->post('/logout', [LogoutController::class, 'lo
 Route::post('/auth/password/email', [ForgotPasswordController::class, 'sendResetLinkEmail']);
 
 // Route for email verification
-// The new code uses POST and the existing code uses GET, we need to support both methods
+// The new code uses GET and the existing code uses POST, we need to support both methods
 Route::get('/email/verify/{token}', [EmailVerificationController::class, 'verifyEmail'])->name('email.verify');
 Route::post('/api/auth/email/verify/{token}', [EmailVerificationController::class, 'verify'])->name('api.auth.email.verify');

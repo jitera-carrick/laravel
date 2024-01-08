@@ -1,4 +1,3 @@
-
 <?php
 
 namespace App\Http\Controllers\Auth;
@@ -16,23 +15,28 @@ use App\Models\EmailVerification;
 class RegisterController extends Controller
 {
     // Existing methods...
-
+    
     public function register(RegisterRequest $request)
     {
         // Validate that all required fields are provided and not empty.
         $validator = Validator::make($request->all(), [
-            'name' => 'required|string|max:255',
             'email' => 'required|string|email|max:255|unique:users,email',
-            'password' => 'required|string|min:8|confirmed',
+            'password' => [
+                'required',
+                'string',
+                'min:8',
+                'confirmed',
+                'regex:/^(?=.*[a-zA-Z])(?=.*\d)(?=.*[^a-zA-Z\d]).+$/'
+            ],
         ], [
-            'name.required' => 'The name is required.',
-            'email.required' => 'The email field is required.',
-            'email.email' => 'Invalid email format.',
-            'email.max' => 'The email may not be greater than 255 characters.',
-            'email.unique' => 'Email already registered.',
-            'password.required' => 'The password field is required.',
-            'password.min' => 'Password must be at least 8 characters.',
+            'email.required' => 'Invalid email address.',
+            'email.email' => 'Invalid email address.',
+            'email.max' => 'Invalid email address.',
+            'email.unique' => 'The email is already in use.',
+            'password.required' => 'Invalid password. Password must be at least 8 characters long and include a number, a letter, and a special character.',
+            'password.min' => 'Invalid password. Password must be at least 8 characters long and include a number, a letter, and a special character.',
             'password.confirmed' => 'The password confirmation does not match.',
+            'password.regex' => 'Invalid password. Password must be at least 8 characters long and include a number, a letter, and a special character.',
         ]);
 
         if ($validator->fails()) {
@@ -41,13 +45,13 @@ class RegisterController extends Controller
 
         // Create the user and set email_verified_at to null
         $user = User::create([
-            'name' => $request->name,
             'email' => $request->email,
             'password' => Hash::make($request->password),
             'remember_token' => Str::random(60),
             // 'created_at' and 'updated_at' will be automatically set by Eloquent
         ]);
         $user->email_verified_at = null;
+        $user->save();
 
         // Generate a unique email verification token and associate it with the user
         $emailVerification = EmailVerification::create([
@@ -61,13 +65,7 @@ class RegisterController extends Controller
         // Return a response with the user ID
         return response()->json([
             'status' => 201,
-            'message' => 'User registered successfully.',
-            'user' => [
-                'id' => $user->id,
-                'name' => $user->name,
-                'email' => $user->email,
-                'created_at' => $user->created_at->toIso8601String(),
-            ]
+            'message' => 'User registered successfully. Please check your email to verify your account.',
         ], 201);
     }
 

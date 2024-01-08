@@ -1,3 +1,4 @@
+
 <?php
 
 namespace App\Models;
@@ -22,6 +23,7 @@ class User extends Authenticatable
         'name',
         'email',
         'password',
+        'email_verified_at', // Ensure this attribute is fillable for email verification
         'remember_token',
         'email_verified',
         'session_token',

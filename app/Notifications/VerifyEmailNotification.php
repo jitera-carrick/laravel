@@ -12,6 +12,7 @@ use Illuminate\Support\Facades\URL;
 
 class VerifyEmailNotification extends Notification
 {
+    // No changes needed as the class already meets the requirements
     use Queueable;
 
     protected $verificationToken;
