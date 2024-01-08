@@ -36,4 +36,17 @@ class RequestImage extends Model
     {
         return $this->belongsTo(HairStylistRequest::class, 'hair_stylist_request_id');
     }
+
+    /**
+     * Delete the image file associated with the model instance.
+     *
+     * @return bool
+     */
+    public function deleteImageFile()
+    {
+        if (\Storage::exists($this->image_path)) {
+            return \Storage::delete($this->image_path);
+        }
+        return false;
+    }
 }

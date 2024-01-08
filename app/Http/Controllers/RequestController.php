@@ -1,3 +1,4 @@
+
 <?php
 
 namespace App\Http\Controllers;
@@ -9,6 +10,7 @@ use App\Models\RequestAreaSelection;
 use App\Models\RequestMenuSelection;
 use App\Models\RequestImage;
 use App\Models\StylistRequest; // Added line
+use App\Models\HairStylistRequest; // Added line
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Validator;
@@ -164,6 +166,31 @@ class RequestController extends Controller
         }
 
         try {
+            $requestImage->delete();
+            return response()->json(['message' => 'Image deleted successfully.'], 200);
+        } catch (\Exception $e) {
+            return response()->json(['message' => 'Failed to delete the image.'], 500);
+        }
+    }
+
+    // Method to delete a request image
+    public function deleteRequestImage($id): JsonResponse
+    {
+        $requestImage = RequestImage::find($id);
+
+        if (!$requestImage) {
+            return response()->json(['message' => 'Image not found.'], 404);
+        }
+
+        $linkedHairStylistRequests = HairStylistRequest::where('request_image_id', $id)->get();
+
+        foreach ($linkedHairStylistRequests as $hairStylistRequest) {
+            $hairStylistRequest->request_image_id = null;
+            $hairStylistRequest->save();
+        }
+
+        try {
+            Storage::disk('public')->delete($requestImage->image_path);
             $requestImage->delete();
             return response()->json(['message' => 'Image deleted successfully.'], 200);
         } catch (\Exception $e) {

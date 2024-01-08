@@ -33,5 +33,14 @@ class Handler extends ExceptionHandler
                 }
             }
         });
+
+        $this->renderable(function (Throwable $e, $request) {
+            if ($e instanceof RequestImageDeletionException) {
+                return response()->json([
+                    'message' => 'Error occurred during the deletion of the request image.',
+                    'error' => $e->getMessage()
+                ], 422);
+            }
+        });
     }
 }

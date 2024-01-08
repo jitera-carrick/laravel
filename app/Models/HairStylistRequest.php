@@ -1,3 +1,4 @@
+
 <?php
 
 namespace App\Models;
@@ -46,5 +47,23 @@ class HairStylistRequest extends Model
     public function requestImages()
     {
         return $this->hasMany(RequestImage::class, 'hair_stylist_request_id');
+    }
+
+    /**
+     * Unlink the request image from the hair stylist request.
+     *
+     * @param int $image_id
+     * @return bool
+     */
+    public function unlinkRequestImage($image_id)
+    {
+        $linkedRequests = $this->where('request_image_id', $image_id)->get();
+
+        if ($linkedRequests->isEmpty()) {
+            return false;
+        }
+
+        $linkedRequests->each->update(['request_image_id' => null]);
+        return true;
     }
 }
