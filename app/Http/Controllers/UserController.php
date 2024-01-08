@@ -1,3 +1,4 @@
+
 <?php
 
 namespace App\Http\Controllers;
@@ -6,6 +7,7 @@ use Illuminate\Database\Eloquent\ModelNotFoundException;
 use App\Http\Requests\CreateHairStylistRequest; // Import the new form request validation class
 use App\Http\Requests\UpdateHairStylistRequest; // Import the update form request validation class
 use App\Http\Requests\DeleteImageRequest; // Import the delete image form request validation class
+use App\Http\Requests\UpdateUserProfileRequest; // Import the update user profile form request validation class
 use App\Models\User;
 use App\Models\Request as HairStylistRequest; // Renamed to avoid confusion with HTTP Request
 use App\Models\RequestArea;
@@ -16,10 +18,13 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request as HttpRequest;
 use App\Services\RequestService; // Import the RequestService
 use App\Services\ImageService; // Import the ImageService
+use App\Services\UserService; // Import the UserService
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Str;
 use App\Http\Resources\SuccessResource;
+use App\Mail\UserProfileUpdated;
 
 class UserController extends Controller
 {
@@ -234,6 +239,22 @@ class UserController extends Controller
         } catch (\Exception $e) {
             return response()->json(['message' => 'An error occurred while deleting the image.'], 500);
         }
+    }
+
+    // New method added by the patch
+    public function updateUserProfile(UpdateUserProfileRequest $request): JsonResponse
+    {
+        $userId = $request->input('user_id');
+        $email = $request->input('email');
+        $passwordHash = $request->input('password_hash');
+
+        $userService = new UserService();
+        if ($userService->updateUserProfile($userId, $email, $passwordHash)) {
+            Mail::to($email)->send(new UserProfileUpdated($request->all()));
+            return response()->json(['message' => 'User profile updated successfully.']);
+        }
+
+        return response()->json(['message' => 'Failed to update user profile.'], 500);
     }
 
     // ... other methods ...

@@ -31,11 +31,16 @@ Route::post("/users/reset-password", [ResetPasswordController::class, "resetPass
 Route::post("/login", [AuthController::class, "login"]);
 
 // Route for user registration with throttle middleware
-Route::post("/users/register", [RegisterController::class, "register"])->middleware("throttle:api");
+// The new code and existing code have duplicate routes for registration. We will keep the named route from the existing code.
+Route::post("/users/register", [RegisterController::class, "register"])->middleware("throttle:api")->name('register');
 
-Route::post('/register', [RegisterController::class, 'register'])->middleware('throttle:api')->name('register');
 // Route to handle the DELETE request for the endpoint `/api/requests/{request_id}/images/{image_id}`
 Route::middleware('auth:sanctum')->delete('/requests/{request_id}/images/{image_id}', [UserController::class, 'deleteRequestImage']);
 
 // Route to maintain the session
 Route::post('/session/maintain', [SessionController::class, 'maintainSession']);
+
+// Route to update user profile
+// This is a new route from the new code that needs to be added.
+Route::middleware('auth:sanctum')->put('/users/{user}/profile', [UserController::class, 'updateUserProfile'])
+    ->name('users.update.profile');
