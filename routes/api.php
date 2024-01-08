@@ -1,4 +1,3 @@
-
 <?php
 
 use Illuminate\Http\Request;
@@ -10,6 +9,8 @@ use App\Http\Controllers\UserController; // Import the UserController
 use App\Http\Controllers\SessionController; // Import the SessionController
 use App\Http\Controllers\RequestImageController; // Import the RequestImageController
 use App\Http\Controllers\HairStylistRequestController; // Import the HairStylistRequestController
+use App\Http\Controllers\LogoutController; // Import the LogoutController
+use App\Http\Controllers\EmailVerificationController; // Import the EmailVerificationController
 
 /*
 |--------------------------------------------------------------------------
@@ -36,9 +37,6 @@ Route::post("/login", [AuthController::class, "login"]);
 // Route for user registration with throttle middleware
 Route::post("/users/register", [RegisterController::class, "register"])->middleware("throttle:api");
 
-// Route for verifying user's email
-Route::get('/email/verify/{token}', [RegisterController::class, 'verifyEmail']);
-
 // Route to maintain the session
 Route::post('/session/maintain', [SessionController::class, 'maintainSession']);
 
@@ -52,3 +50,11 @@ Route::middleware('auth:sanctum')->delete('/user/hair-stylist-request/image', [R
 // Existing route to handle the DELETE request for the endpoint `/api/requests/images/{request_image_id}`
 // This route is kept as it is more specific and likely to be the correct implementation for a different feature.
 Route::middleware('auth:sanctum')->delete('/requests/images/{request_image_id}', [RequestImageController::class, 'deleteRequestImage']);
+
+// New POST route for user logout
+Route::middleware('auth:sanctum')->post('/logout', [LogoutController::class, 'logout']);
+
+// New GET route for email verification
+// The new code has introduced a separate EmailVerificationController for handling email verification.
+// We will use this new controller instead of the RegisterController for the email verification route.
+Route::get('/email/verify/{token}', [EmailVerificationController::class, 'verifyEmail'])->name('email.verify');

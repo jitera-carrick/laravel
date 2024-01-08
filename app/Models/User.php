@@ -1,4 +1,3 @@
-
 <?php
 
 namespace App\Models;
@@ -8,6 +7,7 @@ use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Laravel\Sanctum\HasApiTokens;
 use Illuminate\Support\Facades\Hash;
+use Carbon\Carbon;
 
 class User extends Authenticatable
 {
@@ -100,7 +100,14 @@ class User extends Authenticatable
 
     // Other existing methods and relationships...
 
-    // New relationships can be added below as needed.
+    /**
+     * Mark the user's email as verified.
+     */
+    public function markEmailAsVerified()
+    {
+        $this->email_verified_at = Carbon::now();
+        $this->save();
+    }
 
     /**
      * Update the user's password.
@@ -113,4 +120,6 @@ class User extends Authenticatable
         $this->password = Hash::make($newPassword);
         return $this->save();
     }
+
+    // New relationships can be added below as needed.
 }

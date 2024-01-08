@@ -1,3 +1,4 @@
+
 <?php
 
 namespace App\Http\Controllers\Auth;
@@ -37,7 +38,6 @@ class EmailVerificationController extends Controller
         // Update the user's email verification status
         $user->email_verified_at = Carbon::now();
         $user->save(); // Persist the changes to the database
-        $user->save();
 
         // Return a success response
         return response()->json(['status' => 200, 'message' => 'Email verified successfully.'], 200);

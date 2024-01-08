@@ -1,11 +1,10 @@
-
 <?php
 
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Support\Str; // Added to use Str::random
+use Illuminate\Support\Str; // Use Str::random from existing code
 
 class EmailVerificationToken extends Model
 {
@@ -19,7 +18,8 @@ class EmailVerificationToken extends Model
     protected $fillable = [
         'token',
         'expires_at',
-        'verified', // Added from new code
+        'verified',
+        'used', // Added from new code
         'user_id',
     ];
 
@@ -30,7 +30,8 @@ class EmailVerificationToken extends Model
      */
     protected $casts = [
         'expires_at' => 'datetime',
-        'verified' => 'boolean', // Added from new code
+        'verified' => 'boolean',
+        'used' => 'boolean', // Added from new code
     ];
 
     /**
@@ -62,13 +63,16 @@ class EmailVerificationToken extends Model
     }
 
     /**
-     * Check if the token is valid and has not expired.
+     * Check if the token is valid, has not expired, and has not been used.
      *
      * @return bool
      */
     public function isValid()
     {
-        return $this->expires_at->isFuture();
+        return $this->expires_at->isFuture() &&
+               !$this->verified &&
+               !$this->used && // Added from new code
+               $this->created_at->diffInMinutes(now()) <= config('auth.verification.expiration', 60);
     }
 
     /**
@@ -77,5 +81,15 @@ class EmailVerificationToken extends Model
     public function user()
     {
         return $this->belongsTo(User::class, 'user_id');
+    }
+
+    /**
+     * Mark the token as used after successful verification.
+     *
+     * @return void
+     */
+    public function markAsUsed()
+    {
+        $this->update(['used' => true]);
     }
 }

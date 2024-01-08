@@ -15,7 +15,7 @@ return new class extends Migration
             // Add new columns to the email_verification_tokens table
             $table->string('token')->after('id');
             $table->timestamp('expires_at')->nullable()->after('token');
-            $table->unsignedBigInteger('user_id')->after('expires_at');
+            $table->unsignedBigInteger('user_id')->after('expires_at')->index();
             $table->boolean('used')->default(false)->after('user_id');
             
             // Assuming 'users' table has 'id' as the primary key
@@ -29,8 +29,9 @@ return new class extends Migration
     public function down(): void
     {
         Schema::table('email_verification_tokens', function (Blueprint $table) {
-            // Remove the foreign key constraint before dropping the column
+            // Remove the foreign key constraint and index before dropping the column
             $table->dropForeign(['user_id']);
+            $table->dropIndex(['user_id']);
             
             // Remove the new columns if the migration is rolled back
             $table->dropColumn(['token', 'expires_at', 'user_id', 'used']);
