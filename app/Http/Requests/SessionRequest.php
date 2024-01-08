@@ -1,4 +1,3 @@
-
 <?php
 
 namespace App\Http\Requests;
@@ -15,7 +14,6 @@ class SessionRequest extends FormRequest
      */
     public function authorize()
     {
-        // Optionally add authorization logic
         return Auth::check();
     }
 
@@ -27,7 +25,21 @@ class SessionRequest extends FormRequest
     public function rules()
     {
         return [
-            'session_token' => 'required|string',
+            'session_token' => 'required|string|exists:sessions,token',
+        ];
+    }
+
+    /**
+     * Get the error messages for the defined validation rules.
+     *
+     * @return array
+     */
+    public function messages()
+    {
+        return [
+            'session_token.required' => 'Invalid session token.',
+            'session_token.string' => 'Invalid session token.',
+            'session_token.exists' => 'Invalid session token.',
         ];
     }
 }

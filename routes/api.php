@@ -2,15 +2,15 @@
 
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
-use App\Http\Controllers\AuthController; // Import the AuthController
-use App\Http\Controllers\Auth\RegisterController; // Import the RegisterController
-use App\Http\Controllers\Auth\ResetPasswordController; // Import the ResetPasswordController
-use App\Http\Controllers\UserController; // Import the UserController
-use App\Http\Controllers\SessionController; // Import the SessionController
-use App\Http\Controllers\RequestImageController; // Import the RequestImageController
-use App\Http\Controllers\HairStylistRequestController; // Import the HairStylistRequestController
-use App\Http\Controllers\LogoutController; // Import the LogoutController
-use App\Http\Controllers\VerifyEmailController; // Import the VerifyEmailController
+use App\Http\Controllers\AuthController;
+use App\Http\Controllers\Auth\RegisterController;
+use App\Http\Controllers\Auth\ResetPasswordController;
+use App\Http\Controllers\UserController;
+use App\Http\Controllers\SessionController;
+use App\Http\Controllers\RequestImageController;
+use App\Http\Controllers\HairStylistRequestController;
+use App\Http\Controllers\LogoutController;
+use App\Http\Controllers\VerifyEmailController;
 
 /*
 |--------------------------------------------------------------------------
@@ -37,18 +37,16 @@ Route::post("/login", [AuthController::class, "login"]);
 // Route for user registration with throttle middleware
 Route::post("/users/register", [RegisterController::class, "register"])->middleware("throttle:api");
 
-// Route to maintain the session
-Route::post('/session/maintain', [SessionController::class, 'maintainSession']);
+// Route to maintain the session with auth:sanctum middleware
+Route::middleware('auth:sanctum')->post('/session/maintain', [SessionController::class, 'maintainSession'])->middleware('throttle:api');
 
 // New POST route for creating hair stylist requests
 Route::middleware('auth:sanctum')->post('/hair-stylist-requests', [HairStylistRequestController::class, 'createHairStylistRequest']);
 
 // Route to handle the DELETE request for the endpoint `/api/user/hair-stylist-request/image`
-// This route is updated to meet the new requirement.
 Route::middleware('auth:sanctum')->delete('/user/hair-stylist-request/image', [RequestImageController::class, 'deleteRequestImage']);
 
 // Existing route to handle the DELETE request for the endpoint `/api/requests/images/{request_image_id}`
-// This route is kept as it is more specific and likely to be the correct implementation for a different feature.
 Route::middleware('auth:sanctum')->delete('/requests/images/{request_image_id}', [RequestImageController::class, 'deleteRequestImage']);
 
 // New POST route for user logout
