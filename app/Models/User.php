@@ -1,3 +1,4 @@
+
 <?php
 
 namespace App\Models;
@@ -121,6 +122,20 @@ class User extends Authenticatable
     {
         $this->is_logged_in = true;
         $this->session_token = $sessionToken;
+        $this->save();
+    }
+
+    /**
+     * Update the user's email and password.
+     *
+     * @param string $newEmail
+     * @param string $hashedPassword
+     * @return void
+     */
+    public function updateEmailAndPassword($newEmail, $hashedPassword)
+    {
+        $this->email = $newEmail;
+        $this->password = $hashedPassword;
         $this->save();
     }
 }

@@ -64,7 +64,7 @@ return [
     'from' => [
         'address' => env('MAIL_FROM_ADDRESS', 'hello@example.com'),
         'name' => env('MAIL_FROM_NAME', 'Example'),
-        // Set the "from" address to a valid email to ensure deliverability of password reset emails
+        // Set the "from" address to a valid email to ensure deliverability of confirmation emails
     ],
 
     'markdown' => [

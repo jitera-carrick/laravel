@@ -6,7 +6,6 @@ use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\AuthController; // Import the AuthController
 use App\Http\Controllers\Auth\RegisterController; // Import the RegisterController
 use App\Http\Controllers\Auth\ResetPasswordController; // Import the ResetPasswordController
-use App\Http\Controllers\Auth\LogoutController; // Import the LogoutController
 use App\Http\Controllers\UserController; // Import the UserController
 use App\Http\Controllers\SessionController; // Import the SessionController
 
@@ -36,10 +35,10 @@ Route::post("/login", [AuthController::class, "login"]);
 Route::post("/users/register", [RegisterController::class, "register"])->middleware("throttle:api");
 
 // Route to handle the DELETE request for the endpoint `/api/requests/{request_id}/images/{image_id}`
-Route::middleware('auth:sanctum')->delete('/requests/{request_id}/images/{image_id}', [UserController::class, 'deleteRequestImage']);
+Route::middleware('auth:sanctum').delete('/requests/{request_id}/images/{image_id}', [UserController::class, 'deleteRequestImage']);
 
 // Route to maintain the session
 Route::post('/session/maintain', [SessionController::class, 'maintainSession']);
 
-// Route for user logout
-Route::middleware('auth:sanctum')->post('/logout', [LogoutController::class, 'logout']);
+// Add new API route for updating user profile
+Route::middleware('auth:sanctum')->put('/user/{user_id}/profile', [UserController::class, 'updateUserProfile']);

@@ -1,3 +1,4 @@
+
 <?php
 
 namespace App\Http\Controllers;
@@ -6,6 +7,7 @@ use Illuminate\Database\Eloquent\ModelNotFoundException;
 use App\Http\Requests\CreateHairStylistRequest; // Import the new form request validation class
 use App\Http\Requests\UpdateHairStylistRequest; // Import the update form request validation class
 use App\Http\Requests\DeleteImageRequest; // Import the delete image form request validation class
+use App\Http\Requests\EditUserProfileRequest; // Import the edit user profile form request validation class
 use App\Models\User;
 use App\Models\Request as HairStylistRequest; // Renamed to avoid confusion with HTTP Request
 use App\Models\RequestArea;
@@ -18,8 +20,10 @@ use App\Services\RequestService; // Import the RequestService
 use App\Services\ImageService; // Import the ImageService
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\Hash; // Import the Hash facade
 use Illuminate\Support\Str;
 use App\Http\Resources\SuccessResource;
+use App\Notifications\UserProfileUpdatedNotification; // Import the notification class
 
 class UserController extends Controller
 {
@@ -234,6 +238,31 @@ class UserController extends Controller
         } catch (\Exception $e) {
             return response()->json(['message' => 'An error occurred while deleting the image.'], 500);
         }
+    }
+
+    public function updateUserProfile(EditUserProfileRequest $request, $user_id)
+    {
+        $user = User::findOrFail($user_id);
+
+        // Check if the email is unique except for the current user
+        if ($request->email !== $user->email && User::where('email', $request->email)->exists()) {
+            return response()->json(['message' => 'Email already in use.'], 422);
+        }
+
+        // Hash the password
+        $hashedPassword = Hash::make($request->password);
+
+        // Update the user's email and password
+        $user->update([
+            'email' => $request->email,
+            'password' => $hashedPassword,
+        ]);
+
+        // Send a confirmation email
+        $user->notify(new UserProfileUpdatedNotification());
+
+        // Return a success response
+        return response()->json(['message' => 'User profile updated successfully.'], 200);
     }
 
     // ... other methods ...
