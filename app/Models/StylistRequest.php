@@ -18,7 +18,6 @@ class StylistRequest extends Model
         'user_id',
         'created_at',
         'updated_at',
-        // 'details' and 'status' are already included in the $fillable property
     ];
 
     protected $hidden = [
@@ -26,10 +25,10 @@ class StylistRequest extends Model
     ];
 
     protected $casts = [
-        // 'details' => 'array' cast is already present to handle JSON encoding/decoding
         'created_at' => 'datetime',
         'updated_at' => 'datetime',
-        'details' => 'array',
+        // Assuming 'details' is a JSON column, it should be cast to an array.
+        'details' => 'array', // Added cast for 'details' column
     ];
 
     public function user()
@@ -38,4 +37,18 @@ class StylistRequest extends Model
     }
 
     // Other relationships can be added here as needed.
+
+    /**
+     * Update the stylist request with new details and status.
+     *
+     * @param string|null $details
+     * @param string|null $status
+     * @return void
+     */
+    public function updateStylistRequest($details = null, $status = null)
+    {
+        if ($details) $this->details = $details;
+        if ($status) $this->status = $status;
+        $this->save();
+    }
 }

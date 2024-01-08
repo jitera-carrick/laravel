@@ -17,8 +17,8 @@ class UpdateHairStylistRequest extends FormRequest
     public function authorize()
     {
         // Check if the user is logged in and the request_id belongs to the user
-        $user = Auth::user(); // No change here, just context for the next change
-        if (!$user || !$this->requestBelongsToUser($user->id, $this->route('id'))) {
+        $user = Auth::user();
+        if (!$user || !$this->requestBelongsToUser($user->id, $this->request('request_id'))) {
             return false;
         }
         return true;
@@ -33,7 +33,9 @@ class UpdateHairStylistRequest extends FormRequest
      */
     protected function requestBelongsToUser($userId, $requestId)
     {
-        $request = \App\Models\StylistRequest::find($requestId); // Updated to use StylistRequest model
+        // Assuming RequestModel exists and has a relationship with User
+        // Replace RequestModel with the actual model name
+        $request = \App\Models\Request::find($requestId); // Updated to use the correct Request model
         return $request && $request->user_id === $userId;
     }
 
@@ -44,7 +46,9 @@ class UpdateHairStylistRequest extends FormRequest
      */
     public function rules()
     {
-        $rules = [
+        return [
+            'details' => 'nullable|string',
+            'status' => 'nullable|string',
             'request_id' => 'required|integer|exists:requests,id',
             'area' => 'required|string', // Updated to be required and a string
             'menu' => 'required|string', // Updated to be required and a string
@@ -52,15 +56,6 @@ class UpdateHairStylistRequest extends FormRequest
             'image_paths' => 'nullable|array', // Updated to be nullable
             'image_paths.*' => 'nullable|file|mimes:png,jpg,jpeg|max:5120', // Updated to validate each file in the array
         ];
-
-        if ($this->has('details')) {
-            $rules['details'] = 'nullable|string';
-        }
-        if ($this->has('status')) {
-            $rules['status'] = ['nullable', 'string', Rule::in(['pending', 'accepted', 'rejected'])];
-        }
-
-        return $rules;
     }
 
     /**
@@ -80,9 +75,6 @@ class UpdateHairStylistRequest extends FormRequest
             'image_paths.*.file' => 'Each image path must be a file.',
             'image_paths.*.mimes' => 'Each file must be of type: png, jpg, jpeg.',
             'image_paths.*.max' => 'Each file may not be greater than 5MB.',
-            'details.string' => 'The details must be a string.',
-            'status.string' => 'The status must be a string.',
-            'status.in' => 'The selected status is invalid.',
         ];
     }
 }
