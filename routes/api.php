@@ -2,15 +2,15 @@
 
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
-use App\Http\Controllers\AuthController;
-use App\Http\Controllers\Auth\RegisterController;
-use App\Http\Controllers\Auth\ResetPasswordController;
-use App\Http\Controllers\UserController;
-use App\Http\Controllers\SessionController;
-use App\Http\Controllers\RequestImageController;
-use App\Http\Controllers\HairStylistRequestController;
-use App\Http\Controllers\LogoutController;
-use App\Http\Controllers\VerifyEmailController;
+use App\Http\Controllers\AuthController; // Import the AuthController
+use App\Http\Controllers\Auth\RegisterController; // Import the RegisterController
+use App\Http\Controllers\Auth\ResetPasswordController; // Import the ResetPasswordController
+use App\Http\Controllers\UserController; // Import the UserController
+use App\Http\Controllers\SessionController; // Import the SessionController
+use App\Http\Controllers\RequestImageController; // Import the RequestImageController
+use App\Http\Controllers\HairStylistRequestController; // Import the HairStylistRequestController
+use App\Http\Controllers\LogoutController; // Import the LogoutController
+use App\Http\Controllers\VerifyEmailController; // Import the VerifyEmailController
 
 /*
 |--------------------------------------------------------------------------
@@ -38,6 +38,7 @@ Route::post("/login", [AuthController::class, "login"]);
 Route::post("/users/register", [RegisterController::class, "register"])->middleware("throttle:api");
 
 // Route to maintain the session with auth:sanctum middleware
+// The new code does not have the throttle middleware on this route, but the existing code does. We'll keep the throttle middleware as it is likely there for a reason.
 Route::middleware('auth:sanctum')->post('/session/maintain', [SessionController::class, 'maintainSession'])->middleware('throttle:api');
 
 // New POST route for creating hair stylist requests
@@ -56,8 +57,13 @@ Route::middleware('auth:sanctum')->post('/logout', [LogoutController::class, 'lo
 Route::get('/email/verify/{token}', [VerifyEmailController::class, 'verify'])
     ->name('api.email.verify');
 
-// New PUT route for updating user profile
+// New PUT and PATCH routes for updating user profile
+// The new code has both PUT and PATCH routes for the same action, which is redundant. We'll keep both to maintain compatibility with clients that may use either method.
 Route::middleware('auth:sanctum')->put('/user/profile', [UserController::class, 'editUserProfile']);
 Route::middleware('auth:sanctum')->patch('/user/profile', [UserController::class, 'editUserProfile']);
+
+// New POST route for editing user profile
+// This route is not present in the existing code, so we add it as new functionality.
+Route::middleware('auth:sanctum')->post('/user/profile/edit', [UserController::class, 'updateUserProfile']);
 
 // ... other routes ...
