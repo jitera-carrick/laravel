@@ -12,6 +12,8 @@ class SessionResource extends JsonResource
         return [
             'session_token' => $this->session_token,
             'expires_at' => $this->expires_at,
+            'id' => $this->id,
+            'user_id' => $this->user_id,
         ];
     }
 }

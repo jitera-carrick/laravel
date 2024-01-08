@@ -1,5 +1,7 @@
+
 <?php
 
+use Illuminate\Support\Facades\Config;
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -77,9 +79,9 @@ class Session extends Model
      */
     public function maintainSession($sessionToken)
     {
-        $session = self::where('session_token', $sessionToken)->first();
+        $session = $this->where('session_token', $sessionToken)->first();
         if ($session && $session->is_active && $session->expires_at > now()) {
-            $session->expires_at = now()->addMinutes(config('session.lifetime'));
+            $session->expires_at = now()->addMinutes(Config::get('session.lifetime'));
             return $session->save();
         }
         return false;
