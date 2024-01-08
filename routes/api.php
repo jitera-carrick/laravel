@@ -34,4 +34,9 @@ Route::post("/users/register", [RegisterController::class, "register"])->middlew
 Route::middleware('auth:sanctum')->delete('/requests/{request_id}/images/{image_id}', [UserController::class, 'deleteRequestImage']);
 
 // New route for user logout with sanctum middleware
+Route::middleware('auth:sanctum')->match(['put', 'patch'], '/shops/{id}', [UserController::class, 'updateShopInformation'])
+    ->name('shops.update')
+    ->middleware('auth:sanctum');
+
+// Existing routes...
 Route::middleware('auth:sanctum')->post('/logout', [SessionController::class, 'logout']);

@@ -1,3 +1,4 @@
+
 <?php
 
 namespace App\Http\Controllers;
@@ -6,11 +7,13 @@ use Illuminate\Database\Eloquent\ModelNotFoundException;
 use App\Http\Requests\CreateHairStylistRequest; // Import the new form request validation class
 use App\Http\Requests\UpdateHairStylistRequest; // Import the update form request validation class
 use App\Http\Requests\DeleteImageRequest; // Import the delete image form request validation class
+use App\Http\Requests\UpdateShopRequest; // Import the UpdateShopRequest form request validation class
 use App\Models\User;
 use App\Models\Request as HairStylistRequest; // Renamed to avoid confusion with HTTP Request
 use App\Models\RequestArea;
 use App\Models\RequestMenu;
 use App\Models\RequestImage;
+use App\Models\Shop; // Import the Shop model
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request as HttpRequest;
@@ -233,6 +236,35 @@ class UserController extends Controller
             return response()->json(['message' => 'Request or image not found.'], 404);
         } catch (\Exception $e) {
             return response()->json(['message' => 'An error occurred while deleting the image.'], 500);
+        }
+    }
+
+    /**
+     * Update shop information.
+     *
+     * @param UpdateShopRequest $request
+     * @return JsonResponse
+     */
+    public function updateShopInformation(UpdateShopRequest $request): JsonResponse
+    {
+        try {
+            $shop = Shop::findOrFail($request->id);
+
+            if (Auth::id() !== $shop->user_id) {
+                return response()->json(['message' => 'Unauthorized.'], 403);
+            }
+
+            $shop->fill($request->only(['name', 'address']));
+            $shop->save();
+
+            return response()->json([
+                'message' => 'Shop information updated successfully.',
+                'shop' => $shop
+            ]);
+        } catch (ModelNotFoundException $e) {
+            return response()->json(['message' => 'Shop not found.'], 404);
+        } catch (\Exception $e) {
+            return response()->json(['message' => 'An error occurred while updating the shop.'], 500);
         }
     }
 
