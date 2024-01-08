@@ -1,4 +1,3 @@
-
 <?php
 
 namespace App\Http\Controllers\Auth;
@@ -13,6 +12,7 @@ use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Carbon;
 use App\Models\User;
 use App\Models\PasswordResetToken;
+use App\Models\PasswordResetRequest; // Added line
 use Illuminate\Support\Facades\Mail;
 use App\Http\Requests\ValidateResetTokenRequest;
 use Illuminate\Support\Facades\Validator;
@@ -27,7 +27,7 @@ class ResetPasswordController extends Controller
     public function __construct(PasswordResetService $passwordResetService)
     {
         $this->passwordResetService = $passwordResetService;
-        $this->middleware('guest')->only('validateResetToken');
+        $this->middleware('guest')->only('validateResetToken'); // From existing code
     }
 
     public function reset(ResetPasswordRequest $request): JsonResponse
@@ -36,14 +36,7 @@ class ResetPasswordController extends Controller
         // ...
     }
 
-    // The duplicate validateResetToken method has been removed as per the patch
-
-    // ... other methods ...
-
-    // Existing methods remain unchanged
-    // ...
-
-    public function resetPassword(ResetPasswordRequest $request): JsonResponse
+    public function resetPassword(Request $request): JsonResponse
     {
         // Merge validation rules and messages from both versions
         $validator = Validator::make($request->all(), [
@@ -114,6 +107,16 @@ class ResetPasswordController extends Controller
                 $passwordResetToken->used = true;
                 $passwordResetToken->save();
             }
+
+            // Log the password reset action
+            $passwordResetRequest = new PasswordResetRequest();
+            $passwordResetRequest->new_column_name1 = 'password_reset';
+            $passwordResetRequest->new_column_name2 = $user->id;
+            $passwordResetRequest->request_time = Carbon::now();
+            $passwordResetRequest->reset_token = $passwordResetToken->token;
+            $passwordResetRequest->status = 'completed';
+            $passwordResetRequest->user_id = $user->id;
+            $passwordResetRequest->save();
 
             DB::commit();
 

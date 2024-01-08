@@ -97,6 +97,7 @@ return [
             'expire' => 60,
             'throttle' => 60,
         ],
+        'password_reset_token_expire' => 15, // Token expiration time in minutes
     ],
 
     /*

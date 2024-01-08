@@ -1,4 +1,3 @@
-
 <?php
 
 namespace App\Models;
@@ -37,6 +36,21 @@ class PasswordResetToken extends Model
     public function user()
     {
         return $this->belongsTo(User::class, 'user_id');
+    }
+
+    /**
+     * Find a valid password reset token.
+     *
+     * @param string $token
+     * @param string $email
+     * @return PasswordResetToken|null
+     */
+    public static function findValidToken($token, $email)
+    {
+        return self::where('token', $token)
+            ->where('email', $email)
+            ->where('used', false)
+            ->where('expires_at', '>', now())->first();
     }
 
     /**

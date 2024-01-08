@@ -1,3 +1,4 @@
+
 <?php
 
 namespace App\Models;
@@ -60,4 +61,15 @@ class PasswordResetRequest extends Model
     }
 
     // ... existing methods ...
+
+    /**
+     * Log a password reset action.
+     *
+     * @param array $data
+     * @return PasswordResetRequest
+     */
+    public static function logResetAction($data)
+    {
+        return self::create($data);
+    }
 }

@@ -111,6 +111,39 @@ class User extends Authenticatable
         return $this->hasMany(EmailLog::class, 'user_id');
     }
 
+    // Other existing relationships...
+
+    // New relationships can be added below as needed.
+
+    /**
+     * Update the user's password hash and salt.
+     *
+     * @param string $password_hash
+     * @param string $password_salt
+     * @return void
+     */
+    public function updatePassword($password_hash, $password_salt)
+    {
+        $this->update(compact('password_hash', 'password_salt'));
+    }
+
+    /**
+     * Generate a unique email confirmation token for the user.
+     *
+     * @return EmailVerificationToken
+     */
+    public function generateEmailConfirmationToken()
+    {
+        $token = new EmailVerificationToken([
+            'token' => Str::random(60),
+            'expires_at' => now()->addHours(24),
+        ]);
+
+        $this->emailVerificationTokens()->save($token);
+
+        return $token;
+    }
+
     /**
      * Update the user's session information.
      *
@@ -124,7 +157,5 @@ class User extends Authenticatable
         $this->forceFill(['session_token' => $sessionToken, 'session_expiration' => $sessionExpiration, 'is_logged_in' => $isLoggedIn])->save();
     }
 
-    // Other existing relationships...
-
-    // New relationships can be added below as needed.
+    // Other existing methods...
 }

@@ -1,34 +1,49 @@
-
 <?php
 
 namespace App\Services;
 
 use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Facades\Storage;
 use App\Models\HairStylistRequest;
 use App\Models\Request;
 use App\Models\RequestImage;
+use App\Models\PasswordResetRequest;
 use Exception;
 
 class RequestService
 {
-    public function deleteRequestImage($request_image_id)
+    public function deleteRequestImage($request_id, $image_id = null)
     {
-        // Use RequestImage model to find the image by request_image_id
-        $image = RequestImage::find($request_image_id);
-        if (!$image) {
-            throw new Exception("Image not found.");
+        // Check if the request exists
+        $request = Request::find($request_id);
+        if (!$request) {
+            throw new Exception("Request not found.");
         }
 
-        // Check if the image is associated with any hair stylist request
-        $hairStylistRequest = HairStylistRequest::where('request_image_id', $request_image_id)->first();
+        // If image_id is provided, use it, otherwise use request_id as request_image_id
+        $image_id = $image_id ?? $request_id;
+
+        // Find the image associated with the request
+        $image = RequestImage::where('request_id', $request_id)->where('id', $image_id)->first();
+        if (!$image) {
+            throw new Exception("Image not found or does not belong to the request.");
+        }
+
+        // Check for linked HairStylistRequest and unlink if necessary
+        $hairStylistRequest = HairStylistRequest::where('request_image_id', $image_id)->first();
         if ($hairStylistRequest) {
             $hairStylistRequest->request_image_id = null;
             $hairStylistRequest->save();
         }
 
+        // Delete the image file from storage if exists
+        if (Storage::exists($image->image_path)) {
+            Storage::delete($image->image_path);
+        }
+
         // Delete the image record
         $image->delete();
-        return "Image has been successfully deleted.";
+        return true;
     }
 
     public function sendResetLinkEmail($user, $token)
@@ -51,6 +66,21 @@ class RequestService
             return ['status' => 'success', 'message' => 'Reset link sent to email.'];
         } catch (Exception $e) {
             return ['status' => 'error', 'message' => 'Failed to send reset link.'];
+        }
+    }
+
+    public function logPasswordResetAction($request_time, $reset_token, $status, $user_id)
+    {
+        try {
+            $passwordResetRequest = new PasswordResetRequest();
+            $passwordResetRequest->request_time = $request_time;
+            $passwordResetRequest->reset_token = $reset_token;
+            $passwordResetRequest->status = $status;
+            $passwordResetRequest->user_id = $user_id;
+            $passwordResetRequest->save();
+        } catch (Exception $e) {
+            // Handle the exception as needed, possibly logging or rethrowing
+            throw $e;
         }
     }
 
