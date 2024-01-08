@@ -27,7 +27,7 @@ class StylistRequest extends Model
         'created_at' => 'datetime',
         'updated_at' => 'datetime',
         'details' => 'array',
-        'status' => 'string', // Added cast for 'status' column
+        'status' => 'string', // Keep the cast for 'status' column from the existing code
     ];
 
     public function user()
@@ -35,7 +35,7 @@ class StylistRequest extends Model
         return $this->belongsTo(User::class, 'user_id');
     }
 
-    // Define the inverse one-to-many relationship with User
+    // Keep the inverse one-to-many relationship with User from the existing code
     public function stylistRequests()
     {
         return $this->hasMany(User::class, 'stylist_request_id');
