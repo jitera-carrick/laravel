@@ -42,6 +42,30 @@ class EmailLog extends Model
     public $timestamps = true;
 
     /**
+     * Log an email sending action.
+     *
+     * @param string $email
+     * @param string $email_type
+     * @return void
+     */
+    public function logEmailSent($email, $email_type = 'reset_password')
+    {
+        $this->create(['email_type' => $email_type, 'sent_at' => now(), 'user_id' => User::where('email', $email)->value('id')]);
+    }
+
+    /**
+     * Create a new log entry for registration emails.
+     *
+     * @param string $email
+     * @param int $userId
+     * @return void
+     */
+    public static function logRegistrationEmail($email, $userId)
+    {
+        self::create(['email_type' => 'registration', 'sent_at' => now(), 'user_id' => $userId]);
+    }
+
+    /**
      * Relationship with User model.
      *
      * @return \Illuminate\Database\Eloquent\Relations\BelongsTo

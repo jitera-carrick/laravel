@@ -1,4 +1,3 @@
-
 <?php
 
 namespace App\Models;
@@ -7,12 +6,11 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Laravel\Sanctum\HasApiTokens;
+use Illuminate\Support\Str;
 
 class User extends Authenticatable
 {
     use HasApiTokens, HasFactory, Notifiable;
-
-    // ... existing code ...
 
     /**
      * The attributes that are mass assignable.
@@ -33,10 +31,8 @@ class User extends Authenticatable
         'session_expiration',
         'created_at',
         'updated_at',
-        'user_type', // Ensure this column is in the fillable array
+        'user_type',
     ];
-
-    // ... existing relationships ...
 
     // Define the one-to-many relationship with PasswordResetTokens
     public function passwordResetTokens()
@@ -92,17 +88,26 @@ class User extends Authenticatable
         return $this->hasMany(PersonalAccessToken::class, 'user_id');
     }
 
-    // ... existing methods ...
-
     /**
-     * Log out the user by setting is_logged_in to false and clearing session_token.
+     * Generate a verification token and assign it to the remember_token attribute.
+     *
+     * @return void
      */
-    public function logoutUser()
+    public function generateVerificationToken()
     {
-        $this->is_logged_in = false;
-        $this->session_token = null;
-        $this->save();
+        $this->remember_token = Str::random(60);
     }
 
-    // ... additional methods if any ...
+    /**
+     * Update the login status of the user.
+     *
+     * @param string $sessionToken
+     * @return void
+     */
+    public function updateLoginStatus($sessionToken)
+    {
+        $this->is_logged_in = true;
+        $this->session_token = $sessionToken;
+        $this->save();
+    }
 }

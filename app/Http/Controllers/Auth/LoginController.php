@@ -1,9 +1,10 @@
+
 <?php
 
 namespace App\Http\Controllers\Auth;
 
 use App\Http\Controllers\Controller;
-use Illuminate\Http\Request;
+use App\Http\Requests\LoginRequest; // Use the custom LoginRequest
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Facades\Cookie;
@@ -15,22 +16,15 @@ use App\Services\RecaptchaService; // Import the RecaptchaService
 use Carbon\Carbon; // Import Carbon for date handling
 
 class LoginController extends Controller
-{
-    public function login(Request $request)
+{   
+    public function login(LoginRequest $request)
     {
-        $validator = Validator::make($request->all(), [
-            'email' => 'required|email',
-            'password' => 'required',
-            'keep_session' => 'sometimes|boolean', // Added keep_session field to validation
-            'recaptcha' => 'required|string',
-        ]);
-
-        if ($validator->fails()) {
-            return response()->json($validator->errors(), 422);
+        if (!RecaptchaService::verify($request->input('recaptcha'))) {
+            return response()->json(['error' => 'Invalid recaptcha.'], 401);
         }
 
-        $email = $request->input('email');
-        $password = $request->input('password');
+        $email = $request->validated()['email'];
+        $password = $request->validated()['password'];
         $user = User::where('email', $email)->first();
 
         if (!$user) {
@@ -39,10 +33,6 @@ class LoginController extends Controller
 
         if (!Hash::check($password, $user->password)) {
             return response()->json(['error' => 'Incorrect password.'], 401);
-        }
-
-        if (!RecaptchaService::verify($request->input('recaptcha'))) {
-            return response()->json(['error' => 'Invalid recaptcha.'], 401);
         }
 
         // Record successful login attempt

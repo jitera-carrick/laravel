@@ -2,6 +2,7 @@
 
 namespace App\Http\Middleware;
 
+use App\Models\Session;
 use Illuminate\Auth\Middleware\Authenticate as Middleware;
 use Illuminate\Http\Request;
 
@@ -12,6 +13,23 @@ class Authenticate extends Middleware
      */
     protected function redirectTo(Request $request): ?string
     {
-        return $request->expectsJson() ? null : route('login');
+        if (!$request->expectsJson()) {
+            return route('login');
+        }
+
+        $sessionToken = $request->bearerToken() ?? $request->cookie('session_token');
+
+        if (!$sessionToken) {
+            return null;
+        }
+
+        $session = Session::where('session_token', $sessionToken)
+                          ->where('expires_at', '>', now())
+                          ->where('is_active', true)
+                          ->first();
+
+        if (!$session) {
+            return null;
+        }
     }
 }
