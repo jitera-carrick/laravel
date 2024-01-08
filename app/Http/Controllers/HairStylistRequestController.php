@@ -3,8 +3,8 @@
 namespace App\Http\Controllers;
 
 use App\Http\Requests\CreateHairStylistRequest;
-use App\Http\Requests\DeleteHairStylistRequestImageRequest;
 use App\Http\Requests\UpdateHairStylistRequest;
+use App\Http\Requests\DeleteHairStylistRequestImageRequest;
 use App\Services\HairStylistRequestService;
 use App\Http\Resources\HairStylistRequestResource;
 use Illuminate\Http\JsonResponse;
@@ -28,6 +28,21 @@ class HairStylistRequestController extends Controller
         return response()->json(new HairStylistRequestResource($hairStylistRequest), 201);
     }
 
+    public function updateHairStylistRequest(UpdateHairStylistRequest $request): JsonResponse
+    {
+        $validatedData = $request->validated();
+        $hairStylistRequest = $this->hairStylistRequestService->updateRequest(
+            $validatedData['id'],
+            $validatedData['user_id'],
+            $validatedData['status']
+        );
+
+        return response()->json([
+            'data' => new HairStylistRequestResource($hairStylistRequest),
+            'message' => 'Hair stylist request updated successfully.'
+        ]);
+    }
+
     public function createOrUpdateHairStylistRequest(HttpRequest $request): JsonResponse
     {
         if ($request->has('id')) {
@@ -38,8 +53,15 @@ class HairStylistRequestController extends Controller
                 $updateRequest->messages(),
                 $updateRequest->attributes()
             ));
+            if ($updateRequest->fails()) {
+                return response()->json(['message' => 'Validation failed.', 'errors' => $updateRequest->errors()], 422);
+            }
             $validatedData = $updateRequest->validated();
-            $hairStylistRequest = $this->hairStylistRequestService->updateHairStylistRequest($request->input('id'), $validatedData);
+            $hairStylistRequest = $this->hairStylistRequestService->updateRequest(
+                $validatedData['id'],
+                $validatedData['user_id'],
+                $validatedData['status']
+            );
         } else {
             $createRequest = new CreateHairStylistRequest();
             $createRequest->setValidator($this->getValidationFactory()->make(
@@ -48,6 +70,9 @@ class HairStylistRequestController extends Controller
                 $createRequest->messages(),
                 $createRequest->attributes()
             ));
+            if ($createRequest->fails()) {
+                return response()->json(['message' => 'Validation failed.', 'errors' => $createRequest->errors()], 422);
+            }
             $validatedData = $createRequest->validated();
             $hairStylistRequest = $this->hairStylistRequestService->createRequest($validatedData);
         }

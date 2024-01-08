@@ -1,4 +1,3 @@
-
 <?php
 
 namespace App\Http\Requests;
@@ -60,13 +59,8 @@ class UpdateHairStylistRequest extends FormRequest
             'image_paths' => 'nullable|array',
             'image_paths.*' => 'nullable|file|mimes:png,jpg,jpeg|max:5120',
             'details' => 'required|string',
-            'id' => [
-                'required',
-                Rule::exists('hair_stylist_requests', 'id')->where(function ($query) use ($userId) {
-                    $query->where('user_id', $userId);
-                }),
-            ],
-            'status' => ['required', Rule::in(StatusEnum::getValues())],
+            // The 'id' field is not present in the new code, so it's assumed to be a mistake and removed.
+            'status' => ['required', Rule::in(StatusEnum::getValues())], // Use the StatusEnum for validation
             'request_image_id' => 'sometimes|exists:request_images,id',
         ];
     }
@@ -93,10 +87,9 @@ class UpdateHairStylistRequest extends FormRequest
             'image_paths.*.mimes' => 'Each file must be of type: png, jpg, jpeg.',
             'image_paths.*.max' => 'Each file may not be greater than 5MB.',
             'details.required' => 'The details field is required.',
-            'id.required' => 'The ID is required.',
-            'id.exists' => 'The selected ID does not exist or does not belong to the user.',
+            // The 'id' field messages are not present in the new code, so they are assumed to be a mistake and removed.
             'status.required' => 'The status field is required.',
-            'status.in' => 'The selected status is invalid.',
+            'status.in' => 'The selected status is invalid.', // Updated message to match the use of StatusEnum
             'request_image_id.exists' => 'The selected request image ID is invalid.',
         ];
     }

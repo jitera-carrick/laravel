@@ -6,6 +6,7 @@ use App\Enums\StatusEnum;
 use App\Models\HairStylistRequest;
 use App\Models\User;
 use App\Models\RequestImage;
+use Illuminate\Support\Facades\DB;
 
 class HairStylistRequestService
 {
@@ -31,27 +32,20 @@ class HairStylistRequestService
         return $hairStylistRequest;
     }
 
-    public function createHairStylistRequest($data)
+    public function updateRequest(int $id, int $userId, string $status)
     {
-        if (!StatusEnum::isValid($data['status'])) {
+        $hairStylistRequest = HairStylistRequest::find($id);
+
+        if (!$hairStylistRequest || $hairStylistRequest->user_id !== $userId) {
+            throw new \Exception('Invalid request or user_id provided');
+        }
+
+        if (!StatusEnum::isValid($status)) {
             throw new \Exception('Invalid status provided');
         }
 
-        $hairStylistRequest = new HairStylistRequest($data);
-        $hairStylistRequest->save();
-
-        return $hairStylistRequest;
-    }
-
-    public function updateHairStylistRequest($id, $data)
-    {
-        $hairStylistRequest = HairStylistRequest::findOrFail($id);
-
-        if (!StatusEnum::isValid($data['status'])) {
-            throw new \Exception('Invalid status provided');
-        }
-
-        $hairStylistRequest->fill($data);
+        $hairStylistRequest->status = $status;
+        $hairStylistRequest->updated_at = now();
         $hairStylistRequest->save();
 
         return $hairStylistRequest;
