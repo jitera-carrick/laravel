@@ -44,10 +44,21 @@ class EmailLog extends Model
     /**
      * Log an email sending action.
      *
+     * @param string $email_type
+     * @param int $user_id
+     * @return void
+     */
+    public function logEmailAction($email_type, $user_id)
+    {
+        $this->create(['email_type' => $email_type, 'sent_at' => now(), 'user_id' => $user_id]);
+    }
+
+    /**
+     * Log an email sending action.
+     *
      * @param string $email
      * @param string $email_type
      * @return void
-     */
     public function logEmailSent($email, $email_type = 'reset_password')
     {
         $this->create(['email_type' => $email_type, 'sent_at' => now(), 'user_id' => User::where('email', $email)->value('id')]);

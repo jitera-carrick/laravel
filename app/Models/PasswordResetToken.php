@@ -1,8 +1,10 @@
+
 <?php
 
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Str;
 
 class PasswordResetToken extends Model
 {
@@ -54,5 +56,24 @@ class PasswordResetToken extends Model
             'expires_at' => $expiresAt,
             'used' => false,
         ]);
+    }
+
+    /**
+     * Generate a unique password reset token for a user.
+     *
+     * @param string $email
+     * @return PasswordResetToken
+     */
+    public static function generateUniqueResetToken($email)
+    {
+        $token = Str::random(60);
+        $expiresAt = now()->addHours(2); // Set expiration time to 2 hours from now
+
+        // Ensure token is unique
+        while (self::where('token', $token)->exists()) {
+            $token = Str::random(60);
+        }
+
+        return self::createToken($email, $token, $expiresAt);
     }
 }

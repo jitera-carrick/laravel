@@ -27,6 +27,7 @@ class ResetPasswordRequest extends FormRequest
     public function rules()
     {
         return [
+            'email' => 'required|email',
             'token' => 'required|string',
             'password' => ['required', 'confirmed', Password::defaults()],
             'password_confirmation' => 'required_with:password',
@@ -41,6 +42,8 @@ class ResetPasswordRequest extends FormRequest
     public function messages()
     {
         return [
+            'email.required' => 'The email field is required.',
+            'email.email' => 'The email must be a valid email address.',
             'token.required' => 'The reset token is required.',
             'token.exists' => 'The provided reset token is invalid or has expired.',
             'password.required' => 'The password field is required.',

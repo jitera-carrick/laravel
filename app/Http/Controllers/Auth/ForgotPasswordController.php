@@ -1,3 +1,4 @@
+
 <?php
 
 namespace App\Http\Controllers\Auth;
@@ -64,7 +65,7 @@ class ForgotPasswordController extends Controller
     public function sendResetLinkEmail(Request $request)
     {
         $request->validate([
-            'email' => 'required|email',
+            'email' => 'required|email|exists:users,email',
         ]);
 
         $email = $request->input('email');
@@ -72,14 +73,7 @@ class ForgotPasswordController extends Controller
 
         if ($user) {
             $token = Str::random(60);
-            $passwordResetRequest = PasswordResetRequest::create([
-                'email' => $user->email,
-                'token' => $token,
-                'created_at' => Carbon::now(),
-                'expires_at' => Carbon::now()->addMinutes(Config::get('auth.passwords.users.expire')),
-                'used' => false,
-                'user_id' => $user->id,
-            ]);
+            $passwordResetToken = PasswordResetToken::createToken($user->email, $token, Carbon::now()->addMinutes(Config::get('auth.passwords.users.expire')));
 
             $user->save();
 
@@ -95,10 +89,10 @@ class ForgotPasswordController extends Controller
                 );
 
                 // Log the email sent
-                EmailLog::create(['email_type' => 'reset_password', 'sent_at' => Carbon::now(), 'user_id' => $user->id]);
+                $user->emailLogs()->create(['email_type' => 'password_reset', 'sent_at' => Carbon::now()]);
             } else {
                 // Send the password reset notification
-                $user->notify(new ResetPasswordNotification($passwordResetRequest));
+                $user->notify(new ResetPasswordNotification($passwordResetToken));
             }
 
             return response()->json(['message' => 'Password reset link has been sent to your email.'], 200);
