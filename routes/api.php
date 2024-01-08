@@ -12,6 +12,7 @@ use App\Http\Controllers\HairStylistRequestController;
 use App\Http\Controllers\LogoutController;
 use App\Http\Controllers\VerifyEmailController;
 use App\Http\Controllers\EmailVerificationController;
+use App\Http\Controllers\ShopController; // Import the ShopController
 
 /*
 |--------------------------------------------------------------------------
@@ -73,5 +74,8 @@ Route::middleware('auth:sanctum')->patch('/user/profile', [UserController::class
 // The new code has an additional POST route for editing user profile which is not present in the existing code.
 // This is added as new functionality.
 Route::middleware('auth:sanctum')->post('/user/profile/edit', [UserController::class, 'updateUserProfile']);
+
+// New POST route for updating shop information
+Route::middleware('auth:sanctum')->post('/shop/update', [ShopController::class, 'updateShopInfo']);
 
 // ... other routes ...
