@@ -1,4 +1,3 @@
-
 <?php
 
 namespace App\Http\Requests;
@@ -27,7 +26,10 @@ class ResetPasswordRequest extends FormRequest
     public function rules()
     {
         return [
-            'email' => 'required|email',
+            'email' => 'required|email|exists:users,email',
+            'token' => 'required|string|exists:password_resets,token',
+            'password' => ['required', 'confirmed', Password::defaults()],
+            'password_confirmation' => 'required_with:password',
         ];
     }
 
@@ -39,8 +41,14 @@ class ResetPasswordRequest extends FormRequest
     public function messages()
     {
         return [
-            'token.required' => 'The reset token is required.',
-            'token.exists' => 'The provided reset token is invalid or has expired.',
             'email.required' => 'The email field is required.',
             'email.email' => 'The email must be a valid email address.',
+            'email.exists' => 'The email does not exist in our records.',
+            'token.required' => 'The reset token is required.',
+            'token.exists' => 'The provided reset token is invalid or has expired.',
+            'password.required' => 'The password field is required.',
+            'password.confirmed' => 'The password confirmation does not match.',
+            'password_confirmation.required_with' => 'The password confirmation is required when password is present.',
+        ];
+    }
 }

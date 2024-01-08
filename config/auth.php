@@ -1,4 +1,3 @@
-
 <?php
 
 return [
@@ -102,7 +101,7 @@ return [
     'passwords' => [
         'users' => [
             'provider' => 'users',
-            'table' => 'password_reset_tokens',
+            'table' => 'password_resets', // Updated table name from 'password_reset_tokens' to 'password_resets'
             'expire' => 60,
             'throttle' => 60,
         ],

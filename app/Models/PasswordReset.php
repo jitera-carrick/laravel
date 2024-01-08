@@ -21,6 +21,7 @@ class PasswordReset extends Model
     protected $fillable = [
         'email',
         'token',
+        'created_at', // Added from new code
         'user_id',
     ];
 
@@ -32,6 +33,34 @@ class PasswordReset extends Model
     public $timestamps = true;
 
     /**
+     * Find a token record in the database.
+     * Added from new code
+     */
+    public function scopeFindByToken($query, $token)
+    {
+        return $query->where('token', $token);
+    }
+
+    /**
+     * Check if the token is valid based on the expiration time.
+     * Added from new code
+     */
+    public function isValid()
+    {
+        $expirationTime = config('auth.passwords.users.expire') * 60;
+        return $this->created_at->addSeconds($expirationTime) > now();
+    }
+
+    /**
+     * Delete the token record after use.
+     * Added from new code
+     */
+    public function deleteToken()
+    {
+        $this->delete();
+    }
+
+    /**
      * Get the user that owns the password reset token.
      */
     public function user()
@@ -41,6 +70,7 @@ class PasswordReset extends Model
 
     /**
      * Create or update a password reset entry for the given email.
+     * Existing code
      *
      * @param string $email
      * @param string $token
@@ -50,7 +80,7 @@ class PasswordReset extends Model
     {
         $passwordReset = self::firstOrNew(['email' => $email]);
         $passwordReset->token = $token;
-        $passwordReset->created_at = now();
+        $passwordReset->created_at = now(); // Ensure 'created_at' is set for new code compatibility
         $passwordReset->save();
 
         return $passwordReset;

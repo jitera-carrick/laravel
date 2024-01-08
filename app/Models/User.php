@@ -1,3 +1,4 @@
+
 <?php
 
 namespace App\Models;
@@ -6,6 +7,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Laravel\Sanctum\HasApiTokens;
+use Illuminate\Support\Facades\Hash;
 
 class User extends Authenticatable
 {
@@ -99,4 +101,16 @@ class User extends Authenticatable
     // Other existing methods and relationships...
 
     // New relationships can be added below as needed.
+
+    /**
+     * Update the user's password.
+     *
+     * @param string $newPassword
+     * @return bool
+     */
+    public function updatePassword($newPassword)
+    {
+        $this->password = Hash::make($newPassword);
+        return $this->save();
+    }
 }

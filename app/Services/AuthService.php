@@ -1,9 +1,9 @@
-
 <?php
 
 namespace App\Services;
 
 use App\Models\User;
+use App\Models\PasswordReset;
 use Illuminate\Support\Facades\Hash;
 use Firebase\JWT\JWT;
 use Firebase\JWT\Key;
@@ -29,5 +29,25 @@ class AuthService
         $token = JWT::encode($payload, $jwtConfig['secret'], 'HS256');
 
         return $token;
+    }
+
+    public function encryptPassword($password)
+    {
+        return Hash::make($password);
+    }
+
+    public function validateResetToken($token)
+    {
+        $passwordReset = PasswordReset::where('token', $token)->first();
+        if (!$passwordReset) {
+            throw new Exception("Invalid token.");
+        }
+
+        $tokenLifeTime = config('auth.passwords.users.expire') * 60;
+        if (now()->subSeconds($tokenLifeTime)->isAfter($passwordReset->created_at)) {
+            throw new Exception("Token has expired.");
+        }
+
+        return true;
     }
 }
