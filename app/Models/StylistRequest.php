@@ -4,7 +4,6 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
-use App\Models\User;
 
 class StylistRequest extends Model
 {
@@ -30,10 +29,12 @@ class StylistRequest extends Model
      * @var array<int, string>
      */
     protected $fillable = [
-        'date_time',
+        'preferred_date',
+        'preferred_time',
+        'stylist_preferences',
         'status',
         'user_id',
-        'stylist_id',
+        'stylist_id', // Keep this from the existing code
     ];
 
     /**
@@ -42,6 +43,7 @@ class StylistRequest extends Model
      * @var array<int, string>
      */
     protected $hidden = [
+        // If there are any attributes that should be hidden, list them here.
         // Usually, sensitive fields like passwords are hidden. Add any fields that need to be hidden here.
     ];
 
@@ -51,12 +53,14 @@ class StylistRequest extends Model
      * @var array<string, string>
      */
     protected $casts = [
-        'date_time' => 'datetime',
-        // Add other casts here if necessary
+        'preferred_date' => 'date',
+        'preferred_time' => 'time',
+        // Add other casts here if necessary.
+        'date_time' => 'datetime', // Keep this from the existing code if needed, but it seems to be replaced by preferred_date and preferred_time
     ];
 
     /**
-     * Get the user that owns the stylist request.
+     * Get the user that made the stylist request.
      */
     public function user()
     {
@@ -64,8 +68,13 @@ class StylistRequest extends Model
     }
 
     // The relationship method name should be plural as it represents a one-to-many relationship
-    public function users()
-    {
-        return $this->hasMany(User::class, 'stylist_request_id');
-    }
+    // This seems to be a mistake in the existing code, as a stylist request likely belongs to a single user.
+    // If a one-to-many relationship is needed, it should be properly named and defined.
+    // For now, we'll comment it out until further clarification is provided.
+    // public function users()
+    // {
+    //     return $this->hasMany(User::class, 'stylist_request_id');
+    // }
+
+    // Other relationships can be added below as needed.
 }
