@@ -1,3 +1,4 @@
+
 <?php
 
 use Illuminate\Http\Request;
@@ -7,6 +8,7 @@ use App\Http\Controllers\Auth\RegisterController; // Import the RegisterControll
 use App\Http\Controllers\Auth\ResetPasswordController; // Import the ResetPasswordController
 use App\Http\Controllers\UserController; // Import the UserController
 use App\Http\Controllers\SessionController; // Import the SessionController
+use App\Http\Controllers\RequestImageController; // Import the RequestImageController
 
 /*
 |--------------------------------------------------------------------------
@@ -35,6 +37,9 @@ Route::post("/users/register", [RegisterController::class, "register"])->middlew
 
 // Route to handle the DELETE request for the endpoint `/api/requests/{request_id}/images/{image_id}`
 Route::middleware('auth:sanctum')->delete('/requests/{request_id}/images/{image_id}', [UserController::class, 'deleteRequestImage']);
+
+// New DELETE route for deleting a request image by its ID
+Route::middleware('auth:sanctum')->delete('/requests/images/{id}', [RequestImageController::class, 'deleteRequestImage']);
 
 // Route to maintain the session
 Route::post('/session/maintain', [SessionController::class, 'maintainSession']);
