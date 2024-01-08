@@ -1,4 +1,3 @@
-
 <?php
 
 namespace App\Http\Requests;
@@ -26,9 +25,9 @@ class UpdateShopRequest extends FormRequest
     public function rules()
     {
         return [
-            'id' => 'required|integer',
-            'name' => 'required|string',
+            'shop_name' => 'required|string', // Updated field name to match requirement
             'address' => 'required|string',
+            'contact_number' => 'required|regex:/^(\+\d{1,3}[- ]?)?\d{10}$/',
         ];
     }
 
@@ -40,12 +39,12 @@ class UpdateShopRequest extends FormRequest
     public function messages()
     {
         return [
-            'id.required' => 'The shop ID is required.',
-            'id.integer' => 'The shop ID must be an integer.',
-            'name.required' => 'The shop name is required.',
-            'name.string' => 'The shop name must be a string.',
-            'address.required' => 'The shop address is required.',
+            'shop_name.required' => 'Shop name is required.', // Updated error message to match requirement
+            'shop_name.string' => 'The shop name must be a string.',
+            'address.required' => 'Address is required.', // Updated error message to match requirement
             'address.string' => 'The shop address must be a string.',
+            'contact_number.required' => 'Contact number is required.',
+            'contact_number.regex' => 'Invalid contact number.', // Updated error message to match requirement
         ];
     }
 }

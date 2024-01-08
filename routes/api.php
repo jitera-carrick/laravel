@@ -33,7 +33,6 @@ Route::post("/users/reset-password", [ResetPasswordController::class, "resetPass
 Route::post("/login", [AuthController::class, "login"]);
 
 // Route for user registration with throttle middleware
-// The new code and existing code have duplicate routes for registration. We will keep the named route from the existing code.
 Route::post("/users/register", [RegisterController::class, "register"])->middleware("throttle:api")->name('register');
 
 // Route to handle the DELETE request for the endpoint `/api/requests/{request_id}/images/{image_id}`
@@ -43,13 +42,14 @@ Route::middleware('auth:sanctum')->delete('/requests/{request_id}/images/{image_
 Route::post('/session/maintain', [SessionController::class, 'maintainSession']);
 
 // Route to update user profile
-// This is a new route from the new code that needs to be added.
 Route::middleware('auth:sanctum')->put('/users/{user}/profile', [UserController::class, 'updateUserProfile'])
     ->name('users.update.profile');
 
 // Route to update shop information
-Route::middleware('auth:sanctum')->match(['put', 'patch'], '/shops/{id}', [ShopController::class, 'updateShop'])
-    ->name('shops.update');
+// The new code has a route for updating shop information, but it lacks validation and authorization checks.
+// We will add the necessary validation and authorization within the ShopController's updateShopInfo method.
+Route::middleware('auth:sanctum')->put('/shop/info', [ShopController::class, 'updateShopInfo'])
+    ->name('shops.update.info');
 
 // Route for user logout
 Route::middleware('auth:sanctum')->post('/logout', [LogoutController::class, 'logout']);
