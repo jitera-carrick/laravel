@@ -1,8 +1,9 @@
 
 <?php
 
-namespace App\Http\Controllers;
-
+use App\Http\Requests\DeleteImageRequest;
+use App\Services\ImageService;
+use App\Http\Resources\SuccessResource;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
 use App\Http\Requests\CreateHairStylistRequest; // Import the new form request validation class
 use App\Http\Requests\UpdateHairStylistRequest; // Import the update form request validation class
@@ -203,11 +204,12 @@ class UserController extends Controller
     /**
      * Delete a specific image from a hair stylist request.
      *
+     * @param DeleteImageRequest $request The validated request.
      * @param int $request_id The ID of the hair stylist request.
      * @param int $image_id The ID of the image to delete.
      * @return JsonResponse
      */
-    public function deleteRequestImage(int $request_id, int $image_id): JsonResponse
+    public function deleteRequestImage(DeleteImageRequest $request, $request_id, $image_id): JsonResponse
     {
         try {
             // Ensure the request exists
@@ -215,14 +217,17 @@ class UserController extends Controller
 
             // Find the image associated with the request and image ID
             $requestImage = RequestImage::where('request_id', $hairStylistRequest->id)
-                                        ->where('id', $image_id)
-                                        ->firstOrFail();
+                                        ->where('id', $image_id)->firstOrFail();
+
+            // Delete the image file from storage if necessary
+            $imageService = new ImageService();
+            $imageService->delete($requestImage->image_path);
 
             // Delete the image
             $requestImage->delete();
 
             // Return a success response
-            return response()->json(['message' => 'Image has been successfully deleted.']);
+            return new SuccessResource(['message' => 'Image has been successfully deleted.']);
         } catch (ModelNotFoundException $e) {
             // Return an error response if the request or image doesn't exist
             return response()->json(['message' => 'Request or image not found.'], 404);
