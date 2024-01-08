@@ -24,4 +24,22 @@ class RequestService
         $image->delete();
         return true;
     }
+
+    public function cancelStylistRequest($id, $user_id)
+    {
+        $request = Request::where('id', $id)->where('user_id', $user_id)->first();
+        if (!$request) {
+            throw new Exception("Request not found or does not belong to the user.");
+        }
+
+        if ($request->status !== 'pending') {
+            throw new Exception("Request is not in a cancellable state.");
+        }
+
+        $request->status = 'cancelled';
+        $request->updated_at = now();
+        $request->save();
+
+        return $request;
+    }
 }

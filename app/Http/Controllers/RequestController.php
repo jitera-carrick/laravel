@@ -1,19 +1,23 @@
+
 <?php
 
 namespace App\Http\Controllers;
 
 use Illuminate\Http\Request as HttpRequest;
 use App\Http\Requests\UpdateHairStylistRequest;
+use App\Http\Requests\CancelRequest; // Added line
 use App\Models\Request;
 use App\Models\RequestAreaSelection;
 use App\Models\RequestMenuSelection;
 use App\Models\RequestImage;
-use App\Models\StylistRequest; // Added line
+use App\Models\StylistRequest;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\DB;
+use App\Services\RequestService; // Added line
+use Exception; // Added line
 
 class RequestController extends Controller
 {
@@ -191,6 +195,28 @@ class RequestController extends Controller
             'message' => 'Hair stylist request cancelled successfully.',
             'request_id' => $stylistRequest->id,
         ]);
+    }
+
+    // Method to cancel a request
+    public function cancelRequest(CancelRequest $cancelRequest): JsonResponse
+    {
+        try {
+            $validatedData = $cancelRequest->validated();
+            $requestService = new RequestService(); // Assuming RequestService is injectable or can be instantiated
+            $cancelledRequest = $requestService->cancelStylistRequest($validatedData['id'], $validatedData['user_id']);
+
+            return response()->json([
+                'status' => 200,
+                'message' => 'Request cancelled successfully.',
+                'request_id' => $cancelledRequest->id,
+                'updated_status' => $cancelledRequest->status,
+            ]);
+        } catch (Exception $e) {
+            return response()->json([
+                'status' => $e->getCode(),
+                'message' => $e->getMessage(),
+            ], $e->getCode());
+        }
     }
 
     // ... other methods ...

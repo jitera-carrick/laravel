@@ -18,6 +18,7 @@ class Request extends Model
         'status',
         'user_id',
         // Assuming there are new columns to be added, they should be listed here.
+        'cancelled', // Add 'cancelled' status to the $fillable array
         // 'new_column_name', // Add new column names to the $fillable array
     ];
 
@@ -53,6 +54,11 @@ class Request extends Model
     {
         return $this->hasMany(RequestMenuSelection::class, 'request_id');
     }
+
+    // Add validation rule for 'status' field
+    public static $statusRules = [
+        'status' => 'in:pending,accepted,completed,cancelled'
+    ];
 
     // Assuming there are new relationships to be added, they should be defined here.
     // For example, if there's a new one-to-many relationship with a new table 'request_details':
