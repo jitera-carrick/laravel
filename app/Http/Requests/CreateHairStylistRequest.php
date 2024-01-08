@@ -1,4 +1,3 @@
-
 <?php
 
 namespace App\Http\Requests;
@@ -29,11 +28,11 @@ class CreateHairStylistRequest extends FormRequest
     public function rules()
     {
         return [
-            'user_id' => 'required|exists:users,id',
+            'user_id' => 'required|integer|exists:users,id',
             'requested_date' => 'required|date|after:now',
             'service_type' => ['required', new ValidServiceType()],
-            'status' => ['sometimes', new ValidStatus()],
-            'additional_notes' => 'sometimes|string',
+            'status' => ['required', new ValidStatus()],
+            'additional_notes' => 'sometimes|string|max:1000',
         ];
     }
 
@@ -45,14 +44,17 @@ class CreateHairStylistRequest extends FormRequest
     public function messages()
     {
         return [
-            'user_id.required' => 'The user_id field is required and must exist in the users table.',
-            'requested_date.required' => 'The requested date is required.',
-            'requested_date.date' => 'The requested date must be a valid date.',
+            'user_id.required' => 'User not found.',
+            'user_id.integer' => 'The user_id must be an integer.',
+            'user_id.exists' => 'User not found.',
+            'requested_date.required' => 'Invalid date format.',
+            'requested_date.date' => 'Invalid date format.',
             'requested_date.after' => 'The requested date must be a date after now.',
-            'service_type.required' => 'The service type is required.',
-            'status.sometimes' => 'The status field is optional.',
+            'service_type.required' => 'Invalid service type.',
+            'status.required' => 'Invalid status.',
             'additional_notes.sometimes' => 'The additional notes field is optional.',
             'additional_notes.string' => 'The additional notes must be a string.',
+            'additional_notes.max' => 'Additional notes too long.',
         ];
     }
 }

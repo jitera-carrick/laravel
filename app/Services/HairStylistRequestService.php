@@ -1,4 +1,3 @@
-
 <?php
 
 namespace App\Services;
@@ -6,6 +5,8 @@ namespace App\Services;
 use App\Models\HairStylistRequest;
 use App\Models\User;
 use App\Models\RequestImage;
+use Illuminate\Support\Facades\Validator;
+use Illuminate\Validation\Rule;
 
 class HairStylistRequestService
 {
@@ -13,7 +14,7 @@ class HairStylistRequestService
     public function createHairStylistRequest($validatedData)
     {
         // Create a new HairStylistRequest model instance with the provided data
-        $hairStylistRequest = new HairStylistRequest($validatedData);
+        $hairStylistRequest = HairStylistRequest::create($validatedData);
 
         // Save the new hair stylist request to the database
         $hairStylistRequest->save();
@@ -22,23 +23,23 @@ class HairStylistRequestService
         return $hairStylistRequest->id;
     }
 
-    public function createRequest($data)
+    public function create($data)
     {
-        $user = User::find($data['user_id']);
-        if (!$user) {
-            throw new \Exception('Invalid user_id provided');
+        // Validate the data
+        $validator = Validator::make($data, [
+            'user_id' => 'required|exists:users,id',
+            'requested_date' => 'required|date',
+            'service_type' => ['required', Rule::in(HairStylistRequest::SERVICE_TYPES)],
+            'status' => ['required', Rule::in(HairStylistRequest::STATUSES)],
+            'additional_notes' => 'sometimes|max:1000',
+        ]);
+
+        if ($validator->fails()) {
+            throw new \Exception($validator->errors()->first());
         }
 
-        // If a request_image_id is provided, verify it
-        if (isset($data['request_image_id'])) {
-            $requestImage = RequestImage::find($data['request_image_id']);
-            if (!$requestImage) {
-                throw new \Exception('Invalid request_image_id provided');
-            }
-        }
-
-        // Create a new HairStylistRequest record with the provided data
-        $hairStylistRequest = HairStylistRequest::create($data);
+        // Create a new HairStylistRequest record with the validated data
+        $hairStylistRequest = HairStylistRequest::create($validator->validated());
 
         return $hairStylistRequest;
     }
