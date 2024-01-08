@@ -10,6 +10,8 @@ use App\Http\Resources\HairStylistRequestResource;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request as HttpRequest;
 use App\Exceptions\CustomException;
+use App\Models\HairStylistRequest;
+use Illuminate\Support\Facades\Auth;
 
 class HairStylistRequestController extends Controller
 {
@@ -77,6 +79,27 @@ class HairStylistRequestController extends Controller
             $hairStylistRequest = $this->hairStylistRequestService->createRequest($validatedData);
         }
         return response()->json(['message' => 'Hair stylist request processed successfully.', 'data' => new HairStylistRequestResource($hairStylistRequest)], 200);
+    }
+
+    public function update(UpdateHairStylistRequest $request, $id): JsonResponse
+    {
+        $hairStylistRequest = HairStylistRequest::find($id);
+
+        if (!$hairStylistRequest) {
+            return response()->json(['message' => 'The request does not exist.'], 404);
+        }
+
+        if ($hairStylistRequest->user_id !== Auth::id()) {
+            return response()->json(['message' => 'Unauthorized.'], 403);
+        }
+
+        $validatedData = $request->validated();
+        $hairStylistRequest->update($validatedData);
+
+        return response()->json([
+            'status' => 200,
+            'hair_stylist_request' => new HairStylistRequestResource($hairStylistRequest)
+        ], 200);
     }
 
     public function deleteHairStylistRequestImages(DeleteHairStylistRequestImageRequest $request): JsonResponse

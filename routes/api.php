@@ -9,6 +9,8 @@ use App\Http\Controllers\UserController; // Import the UserController
 use App\Http\Controllers\SessionController; // Import the SessionController
 use App\Http\Controllers\RequestImageController; // Import the RequestImageController
 use App\Http\Controllers\HairStylistRequestController; // Import the HairStylistRequestController
+use App\Http\Controllers\LogoutController; // Import the LogoutController
+use App\Http\Controllers\VerifyEmailController; // Import the VerifyEmailController
 
 /*
 |--------------------------------------------------------------------------
@@ -42,9 +44,25 @@ Route::post('/session/maintain', [SessionController::class, 'maintainSession']);
 Route::middleware('auth:sanctum')->post('/hair-stylist-requests', [HairStylistRequestController::class, 'createHairStylistRequest']);
 
 // Route to handle the DELETE request for the endpoint `/api/user/hair-stylist-request/image`
-// This route is updated to meet the new requirement.
 Route::middleware('auth:sanctum')->delete('/user/hair-stylist-request/image', [RequestImageController::class, 'deleteRequestImage']);
 
 // Existing route to handle the DELETE request for the endpoint `/api/requests/images/{request_image_id}`
-// This route is kept as it is more specific and likely to be the correct implementation for a different feature.
 Route::middleware('auth:sanctum')->delete('/requests/images/{request_image_id}', [RequestImageController::class, 'deleteRequestImage']);
+
+// New POST route for user logout
+Route::middleware('auth:sanctum')->post('/logout', [LogoutController::class, 'logout']);
+
+// Add a new GET route for email verification
+Route::get('/email/verify/{token}', [VerifyEmailController::class, 'verify'])
+    ->name('api.email.verify');
+
+// New PUT route for updating user profile
+Route::middleware('auth:sanctum')->put('/user/profile', [UserController::class, 'editUserProfile']);
+Route::middleware('auth:sanctum')->patch('/user/profile', [UserController::class, 'editUserProfile']);
+
+// PATCH route for updating hair stylist requests
+Route::middleware('auth:sanctum')->patch('/api/request/{id}/update', [HairStylistRequestController::class, 'update'])
+    ->where('id', '[0-9]+')
+    ->middleware('can:update,hair_stylist_request');
+
+// ... other routes ...
