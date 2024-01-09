@@ -1,4 +1,3 @@
-
 <?php
 
 namespace App\Services;
@@ -6,6 +5,9 @@ namespace App\Services;
 use App\Models\HairStylistRequest;
 use App\Models\User;
 use App\Models\RequestImage;
+use Illuminate\Support\Facades\Validator;
+use Illuminate\Pagination\Paginator;
+use Illuminate\Validation\ValidationException;
 
 class HairStylistRequestService
 {
@@ -51,5 +53,47 @@ class HairStylistRequestService
         $hairStylistRequest->updated_at = now();
 
         return $hairStylistRequest;
+    }
+
+    public function filterRequests($service_details, $preferred_date, $status, $page, $limit)
+    {
+        // Validate the input parameters
+        $validator = Validator::make([
+            'service_details' => $service_details,
+            'preferred_date' => $preferred_date,
+            'status' => $status,
+            'page' => $page,
+            'limit' => $limit
+        ], [
+            'service_details' => 'nullable|string|max:500',
+            'preferred_date' => 'nullable|date',
+            'status' => 'nullable|in:pending,approved,rejected,cancelled',
+            'page' => 'nullable|integer|min:1',
+            'limit' => 'nullable|integer'
+        ]);
+
+        if ($validator->fails()) {
+            throw new ValidationException($validator);
+        }
+
+        $query = HairStylistRequest::query();
+
+        if ($service_details) {
+            $query->where('service_details', 'like', '%' . $service_details . '%');
+        }
+        if ($preferred_date) {
+            $query->where('preferred_date', $preferred_date);
+        }
+        if ($status) {
+            $query->where('status', $status);
+        }
+
+        Paginator::currentPageResolver(function () use ($page) {
+            return $page;
+        });
+
+        $paginatedResults = $query->paginate($limit);
+
+        return $paginatedResults;
     }
 }
