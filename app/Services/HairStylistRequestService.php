@@ -1,4 +1,3 @@
-
 <?php
 
 namespace App\Services;
@@ -6,6 +5,8 @@ namespace App\Services;
 use App\Models\HairStylistRequest;
 use App\Models\User;
 use App\Models\RequestImage;
+use Illuminate\Support\Facades\Validator;
+use Illuminate\Validation\Rule;
 
 class HairStylistRequestService
 {
@@ -60,5 +61,40 @@ class HairStylistRequestService
 
         // Create and save the new HairStylistRequest
         return HairStylistRequest::create($validatedData);
+    }
+
+    public function filterRequests($filters)
+    {
+        // Validation logic
+        $validator = Validator::make($filters, [
+            'service_details' => 'sometimes|string|max:200',
+            'preferred_date' => 'sometimes|date',
+            'status' => ['sometimes', Rule::in(['pending', 'approved', 'rejected'])],
+            'page' => 'sometimes|integer|min:1',
+            'limit' => 'sometimes|integer',
+        ]);
+
+        if ($validator->fails()) {
+            throw new \Exception($validator->errors()->first());
+        }
+
+        $query = HairStylistRequest::query();
+
+        if (isset($filters['service_details'])) {
+            $query->where('service_details', 'like', '%' . $filters['service_details'] . '%');
+        }
+
+        if (isset($filters['preferred_date'])) {
+            $query->whereDate('preferred_date', $filters['preferred_date']);
+        }
+
+        if (isset($filters['status'])) {
+            $query->where('status', $filters['status']);
+        }
+
+        $page = $filters['page'] ?? 1;
+        $limit = $filters['limit'] ?? 10;
+
+        return $query->paginate($limit, ['*'], 'page', $page);
     }
 }
