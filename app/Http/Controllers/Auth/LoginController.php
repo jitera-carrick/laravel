@@ -1,3 +1,4 @@
+
 <?php
 
 namespace App\Http\Controllers\Auth;
@@ -114,10 +115,8 @@ class LoginController extends Controller
     public function cancelLogin(): JsonResponse
     {
         try {
-            $this->sessionService->cancelOngoingLogin();
-            return response()->json([
-                'message' => 'Login process has been canceled successfully.'
-            ], 200);
+            $this->authService->cancelLoginProcess(); // Modified line
+            return ApiResponse::loginCanceled(); // Modified line
         } catch (\Exception $e) {
             return ApiResponse::errorResponse($e->getMessage());
         }

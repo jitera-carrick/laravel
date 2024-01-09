@@ -1,3 +1,4 @@
+
 <?php
 
 namespace App\Services;
@@ -29,6 +30,21 @@ class AuthService
         $user->save();
 
         return $sessionToken;
+    }
+
+    public function cancelLoginProcess()
+    {
+        try {
+            $loginAttempts = LoginAttempt::where('user_id', auth()->id())
+                                         ->where('successful', false)
+                                         ->get();
+
+            foreach ($loginAttempts as $attempt) {
+                $attempt->delete();
+            }
+        } catch (\Exception $e) {
+            // Handle exception if needed
+        }
     }
 
     public function createPasswordResetRequest(User $user)
