@@ -3,6 +3,8 @@
 namespace App\Http\Requests;
 
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Contracts\Validation\Validator;
+use Illuminate\Http\Exceptions\HttpResponseException;
 
 class LoginRequest extends FormRequest
 {
@@ -25,8 +27,8 @@ class LoginRequest extends FormRequest
     {
         $rules = [
             'email' => 'required|string|email',
-            'password' => 'required|string|min:8', // Combined the password rules and added 'min:8' from the new code
-            'keep_session' => 'boolean',
+            'password' => 'required|string|min:8',
+            'keep_session' => 'sometimes|boolean',
         ];
 
         return $rules;
@@ -40,7 +42,39 @@ class LoginRequest extends FormRequest
     public function validated()
     {
         $input = parent::validated();
-        $input['keep_session'] = filter_var($input['keep_session'], FILTER_VALIDATE_BOOLEAN);
+        if (isset($input['keep_session'])) {
+            $input['keep_session'] = filter_var($input['keep_session'], FILTER_VALIDATE_BOOLEAN);
+        }
         return $input;
+    }
+
+    /**
+     * Handle a failed validation attempt.
+     *
+     * @param Validator $validator
+     * @return void
+     *
+     * @throws HttpResponseException
+     */
+    protected function failedValidation(Validator $validator)
+    {
+        $errors = $validator->errors();
+
+        $customMessages = [
+            'email.email' => 'Invalid email format.',
+            'password.min' => 'Password must be at least 8 characters long.',
+            'keep_session.boolean' => 'Keep Session must be a boolean.',
+        ];
+
+        $transformedErrors = [];
+
+        foreach ($errors->getMessages() as $field => $message) {
+            $transformedErrors[$field] = $customMessages[$message[0]] ?? $message[0];
+        }
+
+        throw new HttpResponseException(response()->json([
+            'status' => 422,
+            'errors' => $transformedErrors,
+        ], 422));
     }
 }

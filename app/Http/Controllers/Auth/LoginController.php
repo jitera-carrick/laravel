@@ -14,14 +14,17 @@ use App\Http\Resources\SessionResource;
 use App\Http\Responses\ApiResponse;
 use App\Services\AuthService;
 use App\Models\LoginAttempt;
+use App\Models\User; // Added line
 
 class LoginController extends Controller
 {
     protected $sessionService;
+    protected $authService; // Added line
 
-    public function __construct(SessionService $sessionService)
+    public function __construct(SessionService $sessionService, AuthService $authService = null) // Modified line
     {
         $this->sessionService = $sessionService;
+        $this->authService = $authService ?: new AuthService(); // Modified line
     }
     
     public function login(Request $request): JsonResponse
@@ -32,13 +35,13 @@ class LoginController extends Controller
         } else {
             $validator = Validator::make($request->all(), [
                 'email' => 'required|email',
-                'password' => 'required|min:8', // Updated minimum length requirement
+                'password' => 'required|min:8',
                 'keep_session' => 'sometimes|boolean',
             ], [
                 'email.required' => 'Email is required.',
                 'email.email' => 'Invalid email format.',
                 'password.required' => 'Password is required.',
-                'password.min' => 'Password must be at least 8 characters long.', // Updated error message
+                'password.min' => 'Password must be at least 8 characters long.',
                 'keep_session.boolean' => 'Keep session must be a boolean.',
             ]);
 
@@ -54,9 +57,10 @@ class LoginController extends Controller
         $keepSession = $request->input('keep_session', false);
 
         try {
-            $sessionData = $this->sessionService->login($credentials['email'], $credentials['password'], $keepSession);
+            $sessionData = $this->authService->attemptLogin($credentials['email'], $credentials['password'], $keepSession); // Modified line
 
             if ($sessionData) {
+                $user = User::where('email', $credentials['email'])->first(); // Added line
                 // Use SessionResource if available, otherwise fallback to manual response
                 if (isset($sessionData['token'])) {
                     return response()->json([
@@ -64,6 +68,17 @@ class LoginController extends Controller
                         'message' => 'Login successful.',
                         'session_token' => $sessionData['token'],
                         'session_expiration' => $sessionData['expiration'],
+                    ], 200);
+                } elseif (isset($sessionData->session_token)) { // Added block
+                    return response()->json([
+                        'status' => 200,
+                        'session_token' => $sessionData->session_token,
+                        'session_expiration' => $sessionData->session_expiration,
+                        'user' => [
+                            'id' => $user->id,
+                            'name' => $user->name,
+                            'email' => $user->email,
+                        ]
                     ], 200);
                 } else {
                     return new SessionResource($sessionData);
@@ -81,17 +96,12 @@ class LoginController extends Controller
     {
         $email = $request->input('email', null);
         if ($email) {
-            // Trigger the FailedLogin event
             event(new FailedLogin($email, now()));
-            
-            // Log the failed login attempt
             LoginAttempt::create([
                 'email' => $email,
                 'attempted_at' => now(),
                 'successful' => false,
             ]);
-
-            // Return an error response
             return ApiResponse::loginFailure();
         } else {
             return response()->json([
@@ -121,3 +131,6 @@ Route::match(['get', 'post'], '/api/login/failure', [LoginController::class, 'ha
 
 // Register the route for canceling the login process
 Route::post('/api/login/cancel', [LoginController::class, 'cancelLogin']);
+
+// Register the route for login
+Route::post('/api/login', [LoginController::class, 'login']); // Modified line
