@@ -114,8 +114,8 @@ class LoginController extends Controller
     public function cancelLogin(): JsonResponse
     {
         try {
-            $this->sessionService->cancelOngoingLogin(); // Use the method from the new code
-            return ApiResponse::loginCanceled(); // Use the response from the existing code
+            $this->sessionService->cancelOngoingLogin();
+            return ApiResponse::loginCanceled();
         } catch (\Exception $e) {
             return ApiResponse::errorResponse($e->getMessage());
         }

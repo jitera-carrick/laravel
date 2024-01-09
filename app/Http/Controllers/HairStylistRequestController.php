@@ -1,4 +1,3 @@
-
 <?php
 
 namespace App\Http\Controllers;
@@ -13,7 +12,7 @@ use Illuminate\Validation\ValidationException;
 use App\Models\HairStylistRequest;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
-use App\Models\User; // Added to use the User model
+use App\Models\User;
 
 class HairStylistRequestController extends Controller
 {
@@ -28,62 +27,20 @@ class HairStylistRequestController extends Controller
     public function createHairStylistRequest(CreateHairStylistRequest $request): JsonResponse
     {
         $validatedData = $request->validated();
-        $validatedData['user_id'] = Auth::id(); // Ensure the user_id is the authenticated user's ID
+        $validatedData['user_id'] = Auth::id();
 
         try {
-            // Validate the request against the requirements
-            $validator = Validator::make($validatedData, [
-                'service_details' => 'required|string',
-                'preferred_date' => 'required|date',
-                'preferred_time' => 'required|string',
-                'user_id' => 'required|exists:users,id',
-            ]);
-
-            if ($validator->fails()) {
-                throw new ValidationException($validator);
-            }
-
-            $hairStylistRequest = $this->hairStylistRequestService->sendStylistRequest($validatedData['user_id']);
-            return response()->json(new HairStylistRequestResource($hairStylistRequest), 200);
-        } catch (ValidationException $e) {
-            return response()->json(['message' => $e->errors()], 422);
+            $hairStylistRequest = $this->hairStylistRequestService->createStylistRequest($validatedData);
+            return response()->json([
+                'status' => 201,
+                'hair_stylist_request' => new HairStylistRequestResource($hairStylistRequest)
+            ], 201);
         } catch (\Exception $e) {
-            return response()->json(['message' => $e->getMessage()], 500);
+            return response()->json(['message' => 'An error occurred while creating the hair stylist request.'], 500);
         }
     }
 
-    // ... other methods ...
+    // Removed the createStylistRequest method as it is redundant and does not meet the requirement.
 
-    /**
-     * Create a new hair stylist request.
-     *
-     * @param  \Illuminate\Http\Request  $request
-     * @return \Illuminate\Http\JsonResponse
-     */
-    public function createStylistRequest(Request $request): JsonResponse
-    {
-        $user = User::find($request->user_id);
-        if (!$user) {
-            return response()->json(['message' => 'User not found.'], 404);
-        }
-
-        $hairStylistRequest = $this->hairStylistRequestService->createStylistRequest($request->user_id);
-        return response()->json(['message' => 'Hair stylist request created successfully.', 'request_id' => $hairStylistRequest->id], 201);
-    }
-
-    /**
-     * Handle the incoming request to create a hair stylist request.
-     *
-     * @param  \App\Http\Requests\CreateHairStylistRequest  $request
-     * @return \Illuminate\Http\Response
-     */
-    public function __invoke(CreateHairStylistRequest $request)
-    {
-        try {
-            $hairStylistRequest = app(HairStylistRequestService::class)->sendStylistRequest($request->validated()['user_id']);
-            return new ApiResponse(new HairStylistRequestResource($hairStylistRequest), true, 'Hair stylist request created successfully.');
-        } catch (\Exception $e) {
-            return new ApiResponse(null, false, $e->getMessage());
-        }
-    }
+    // Removed the __invoke method as it is redundant and does not meet the requirement.
 }
