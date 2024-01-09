@@ -25,6 +25,7 @@ class LoginAttempt extends Model
         'attempted_at',
         'successful',
         'ip_address',
+        'email',
         'user_id',
         'created_at', // New column added to fillable
         'updated_at', // New column added to fillable
@@ -39,6 +40,7 @@ class LoginAttempt extends Model
         'attempted_at' => 'datetime',
         'successful' => 'boolean',
         'created_at' => 'datetime', // New column added to casts
+        'email' => 'string',
         'updated_at' => 'datetime', // New column added to casts
     ];
 

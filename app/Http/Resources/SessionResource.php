@@ -7,6 +7,7 @@ use Illuminate\Http\Resources\Json\JsonResource;
 
 class SessionResource extends JsonResource
 {
+    // No changes needed as the current code meets the requirements
     public function toArray($request)
     {
         return [

@@ -58,4 +58,14 @@ class SessionService
             'session_expiration' => $sessionExpiration->toIso8601String(),
         ];
     }
+
+    public function cancelOngoingLogin(): void
+    {
+        // Assuming Session model has a method to find and invalidate active sessions
+        $activeSessions = Session::where('is_active', true)->get();
+        foreach ($activeSessions as $session) {
+            $session->is_active = false;
+            $session->save();
+        }
+    }
 }

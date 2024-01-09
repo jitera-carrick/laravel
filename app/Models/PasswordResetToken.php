@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Models;
+namespace App\Models; // No change in namespace
 
 use Illuminate\Database\Eloquent\Model;
 
@@ -12,7 +12,7 @@ class PasswordResetToken extends Model
      * @var array<int, string>
      */
     protected $fillable = [
-        'email',
+        'email', // No change in fillable attributes
         'token',
         'created_at',
         'expires_at',
@@ -21,7 +21,7 @@ class PasswordResetToken extends Model
     ];
 
     /**
-     * Indicates if the model should be timestamped.
+     * Indicates if the model should be timestamped. // No change in timestamps behavior
      *
      * @var bool
      */
@@ -30,7 +30,7 @@ class PasswordResetToken extends Model
     /**
      * The user that the password reset token belongs to.
      *
-     * @return \Illuminate\Database\Eloquent\Relations\BelongsTo
+     * @return \Illuminate\Database\Eloquent\Relations\BelongsTo // No change in user relationship
      */
     public function user()
     {
@@ -38,7 +38,7 @@ class PasswordResetToken extends Model
     }
 
     /**
-     * Create a new password reset token entry.
+     * Create a new password reset token entry. // No change in method description
      *
      * @param string $email
      * @param string $token
@@ -47,7 +47,7 @@ class PasswordResetToken extends Model
      */
     public static function createToken($email, $token, $expiresAt)
     {
-        return self::create([
+        return self::create([ // No change in createToken method logic
             'email' => $email,
             'token' => $token,
             'created_at' => now(),

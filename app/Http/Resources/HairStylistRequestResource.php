@@ -16,6 +16,8 @@ class HairStylistRequestResource extends JsonResource
             'service_details' => $this->service_details,
             'preferred_date' => $this->preferred_date,
             'preferred_time' => $this->preferred_time,
+            'created_at' => $this->created_at,
+            'updated_at' => $this->updated_at,
             // Use the default status if the status is not set
             // This is particularly useful for new requests
             'status' => $status,

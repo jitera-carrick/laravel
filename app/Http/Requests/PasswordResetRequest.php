@@ -1,7 +1,10 @@
-
 <?php
 
+namespace App\Http\Requests;
+
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Validation\Rule;
+use App\Models\User;
 
 class PasswordResetRequest extends FormRequest
 {
@@ -12,7 +15,7 @@ class PasswordResetRequest extends FormRequest
      */
     public function authorize()
     {
-        return true; // Assuming all users are allowed to request a password reset
+        return true;
     }
 
     /**
@@ -23,7 +26,27 @@ class PasswordResetRequest extends FormRequest
     public function rules()
     {
         return [
-            'email' => 'required|email',
+            // Ensure the email field is not empty and is in the correct format
+            'email' => [
+                'required',
+                'string',
+                'email',
+                Rule::exists(User::class, 'email')->where(function ($query) {
+                    $query->whereNotNull('email');
+                }),
+            ],
+        ];
+    }
+
+    /**
+     * Get the error messages for the defined validation rules.
+     *
+     * @return array
+     */
+    public function messages()
+    {
+        return [
+            'email.exists' => 'Email not found or invalid.',
         ];
     }
 }

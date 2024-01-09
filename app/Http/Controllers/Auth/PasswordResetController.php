@@ -4,10 +4,11 @@
 namespace App\Http\Controllers\Auth;
 
 use App\Http\Controllers\Controller;
-use App\Http\Requests\PasswordResetRequest;
+use App\Http\Requests\PasswordResetRequest as PasswordResetRequestValidation;
 use App\Services\AuthService;
+use App\Http\Responses\ApiResponse;
 use App\Models\User;
-use Illuminate\Http\JsonResponse;
+use App\Notifications\PasswordResetNotification;
 
 class PasswordResetController extends Controller
 {
@@ -18,14 +19,18 @@ class PasswordResetController extends Controller
         $this->authService = $authService;
     }
 
-    public function resetPassword(PasswordResetRequest $request): JsonResponse
+    public function requestPasswordReset(PasswordResetRequestValidation $request)
     {
-        $user = User::where('email', $request->validated()['email'])->first();
+        $validatedData = $request->validated();
+        $user = User::where('email', $validatedData['email'])->first();
 
-        if ($user) {
-            $this->authService->createPasswordResetRequest($user);
+        if (!$user) {
+            return ApiResponse::loginFailure();
         }
 
-        return response()->json(['message' => 'If your email address is registered in our system, you will receive a password reset email shortly.']);
+        $passwordResetRequest = $this->authService->createPasswordResetRequest($user);
+        $user->notify(new PasswordResetNotification($passwordResetRequest));
+
+        return ApiResponse::loginSuccess(['reset_token' => $passwordResetRequest->reset_token]);
     }
 }

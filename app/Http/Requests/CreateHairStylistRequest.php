@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Http\Requests;
+namespace App\Http\Requests; // No change here, just for context
 
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Support\Facades\Auth;
@@ -12,7 +12,7 @@ class CreateHairStylistRequest extends FormRequest
      *
      * @return bool
      */
-    public function authorize()
+    public function authorize() // No change here, just for context
     {
         // Check if the user is authenticated and if the user_id matches the authenticated user's id
         return true;
@@ -23,7 +23,7 @@ class CreateHairStylistRequest extends FormRequest
      *
      * @return array
      */
-    public function rules()
+    public function rules() // No change here, just for context
     {
         $rules = [
             'status' => 'sometimes|in:pending,accepted,rejected,cancelled',
@@ -42,10 +42,10 @@ class CreateHairStylistRequest extends FormRequest
      *
      * @return array
      */
-    public function messages()
+    public function messages() // No change here, just for context
     {
         return [
-            'user_id.required' => 'User not found.',
+            'user_id.required' => 'The user_id field is required.',
             'user_id.exists' => 'User not found.',
             'status.in' => 'Invalid status value.',
             'service_details.required' => 'Service details are required.',
