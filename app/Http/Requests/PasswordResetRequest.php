@@ -5,6 +5,8 @@ namespace App\Http\Requests;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 use App\Models\User;
+use Illuminate\Contracts\Validation\Validator;
+use Illuminate\Http\Exceptions\HttpResponseException;
 
 class PasswordResetRequest extends FormRequest
 {
@@ -26,7 +28,6 @@ class PasswordResetRequest extends FormRequest
     public function rules()
     {
         return [
-            // Ensure the email field is not empty and is in the correct format
             'email' => [
                 'required',
                 'string',
@@ -46,7 +47,32 @@ class PasswordResetRequest extends FormRequest
     public function messages()
     {
         return [
-            'email.exists' => 'Email not found or invalid.',
+            'email.required' => 'Email is required.',
+            'email.exists' => 'Email not found.',
         ];
+    }
+
+    /**
+     * Customize the failed validation response.
+     *
+     * @param \Illuminate\Contracts\Validation\Validator $validator
+     * @return void
+     *
+     * @throws \Illuminate\Http\Exceptions\HttpResponseException
+     */
+    protected function failedValidation(Validator $validator)
+    {
+        $errors = $validator->errors();
+        $status = 400; // Bad Request
+
+        // Check if the error is due to unauthorized access
+        if ($errors->first() === 'Unauthorized') {
+            $status = 401; // Unauthorized
+        }
+
+        throw new HttpResponseException(response()->json([
+            'status' => $status,
+            'errors' => $errors,
+        ], $status));
     }
 }
