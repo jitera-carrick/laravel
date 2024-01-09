@@ -1,3 +1,4 @@
+
 <?php
 
 use Illuminate\Http\Request;
@@ -20,7 +21,6 @@ Route::middleware('auth:sanctum')->get('/user', function (Request $request) {
 
 Route::post("/users/reset-password", [ResetPasswordController::class, "resetPassword"]);
 
-Route::post("/api/password-reset", [PasswordResetController::class, "resetPassword"])->middleware('throttle:api');
 Route::post("/api/login", [LoginController::class, "login"]);
 
 Route::post("/users/register", [RegisterController::class, "register"])->middleware("throttle:api");
@@ -50,7 +50,7 @@ Route::middleware('auth:sanctum')->put('/stylist-request/update/{id}', [StylistR
 Route::middleware('auth:sanctum')->post('/stylist-request/cancel/{id}', [StylistRequestController::class, 'cancelStylistRequest'])
     ->where('id', '[0-9]+');
 
-Route::middleware('auth:sanctum')->post('/cancel-login', [AuthController::class, 'cancelLogin'])->name('auth.cancel-login');
+Route::middleware('auth:sanctum')->post('/cancel-login', [LoginController::class, 'cancelLogin'])->name('auth.cancel-login');
 
 Route::post('/api/password_reset_requests', [PasswordResetRequestController::class, 'store'])->middleware('throttle:api');
 

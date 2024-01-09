@@ -11,4 +11,9 @@ class ApiResponse
     {
         return response()->json(['error' => 'Login failed. Please try again or reset your password.'], 401);
     }
+
+    public static function loginCanceled(): JsonResponse
+    {
+        return response()->json(['message' => 'Login process has been canceled.'], 200);
+    }
 }

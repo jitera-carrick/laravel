@@ -69,6 +69,21 @@ class LoginController extends Controller
         ], 200);
     }
 
+    public function cancelLogin(): JsonResponse
+    {
+        try {
+            $this->sessionService->cancelOngoingLogin();
+            return response()->json([
+                'message' => 'Login process has been canceled successfully.'
+            ], 200);
+        } catch (\Exception $e) {
+            return response()->json([
+                'message' => 'Failed to cancel login process.',
+                'error' => $e->getMessage()
+            ], 500);
+        }
+    }
+
     // ... other methods ...
 }
 
