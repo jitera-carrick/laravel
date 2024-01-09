@@ -13,7 +13,7 @@ class LogFailedLogin
 {
     public function handle(FailedLogin $event)
     {
-        $loginAttempt = LoginAttempt::create([
+        $loginAttempt = $event->loginAttempt ?? LoginAttempt::create([
             'email' => $event->email,
             'attempted_at' => Carbon::now(),
             'successful' => false
