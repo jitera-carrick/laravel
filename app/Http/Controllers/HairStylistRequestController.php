@@ -15,13 +15,12 @@ class HairStylistRequestController extends Controller
     public function __construct(HairStylistRequestService $hairStylistRequestService)
     {
         $this->hairStylistRequestService = $hairStylistRequestService;
-        // Other constructor code...
     }
-
+    
     public function createHairStylistRequest(CreateHairStylistRequest $request): JsonResponse
     {
         $validatedData = $request->validated();
-        $hairStylistRequest = $this->hairStylistRequestService->createRequest($validatedData);
+        $hairStylistRequest = $this->hairStylistRequestService->createHairStylistRequest($validatedData);
 
         return response()->json(new HairStylistRequestResource($hairStylistRequest), 201);
     }
