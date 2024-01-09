@@ -94,28 +94,17 @@ class LoginController extends Controller
 
     public function handleLoginFailure(Request $request): JsonResponse
     {
-        $email = $request->input('email', null);
-        if ($email) {
-            event(new FailedLogin($email));
-            LoginAttempt::create([
-                'email' => $email,
-                'attempted_at' => now(),
-                'successful' => false,
-            ]);
-            return ApiResponse::loginFailure();
-        } else {
-            return response()->json([
-                'status' => 401,
-                'error' => 'Login failed. Please check your email and password.'
-            ], 401);
-        }
+        return response()->json([
+            'status' => 200,
+            'message' => 'Login failed. Please check your email and password and try again.'
+        ], 200);
     }
 
     public function cancelLogin(): JsonResponse
     {
         try {
-            $this->sessionService->cancelOngoingLogin(); // Use the method from the new code
-            return ApiResponse::loginCanceled(); // Use the response from the existing code
+            $this->sessionService->cancelOngoingLogin();
+            return ApiResponse::loginCanceled();
         } catch (\Exception $e) {
             return ApiResponse::errorResponse($e->getMessage());
         }
@@ -125,7 +114,7 @@ class LoginController extends Controller
 }
 
 // Register the route for handling login failure
-Route::match(['get', 'post'], '/api/login/failure', [LoginController::class, 'handleLoginFailure']);
+Route::get('/api/login/failure', [LoginController::class, 'handleLoginFailure']);
 
 // Register the route for canceling the login process
 Route::post('/api/login/cancel', [LoginController::class, 'cancelLogin']);
