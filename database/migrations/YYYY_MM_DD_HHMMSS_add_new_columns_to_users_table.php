@@ -12,18 +12,13 @@ return new class extends Migration
     public function up(): void
     {
         Schema::table('users', function (Blueprint $table) {
-            // Add new columns for stylist_request_id and hair_stylist_request_id
-            $table->unsignedBigInteger('stylist_request_id')->nullable()->after('session_last_active');
-            $table->unsignedBigInteger('hair_stylist_request_id')->nullable()->after('stylist_request_id');
+            // Add new columns for email_verified_at and remember_token
+            $table->timestamp('email_verified_at')->nullable()->after('email');
+            $table->string('remember_token', 100)->nullable()->after('password');
 
-            // Add foreign key constraints
-            $table->foreign('stylist_request_id')->references('id')->on('stylist_requests');
-            $table->foreign('hair_stylist_request_id')->references('id')->on('hair_stylist_requests');
-
-            // Add new columns for user_type, last_login_at, is_active
-            $table->string('user_type')->after('remember_token');
-            $table->timestamp('last_login_at')->nullable()->after('user_type');
-            $table->boolean('is_active')->default(true)->after('last_login_at');
+            // Add foreign key constraint for password_resets.user_id
+            // Assuming that the password_resets table has a 'user_id' column
+            $table->foreign('id')->references('user_id')->on('password_resets');
         });
     }
 
@@ -33,15 +28,11 @@ return new class extends Migration
     public function down(): void
     {
         Schema::table('users', function (Blueprint $table) {
-            // Remove the foreign key constraints before dropping the columns
-            $table->dropForeign(['stylist_request_id']);
-            $table->dropForeign(['hair_stylist_request_id']);
+            // Remove the foreign key constraint before dropping the columns
+            $table->dropForeign(['id']);
 
             // Remove the columns if the migration is rolled back
-            $table->dropColumn(['stylist_request_id', 'hair_stylist_request_id']);
-
-            // Remove the columns if the migration is rolled back
-            $table->dropColumn(['user_type', 'last_login_at', 'is_active']);
+            $table->dropColumn(['email_verified_at', 'remember_token']);
         });
     }
 };
