@@ -22,11 +22,12 @@ class PasswordResetRequest extends Model
      * @var array<int, string>
      */
     protected $fillable = [
+        'token',
+        'expires_at',
         'status',
         'user_id',
-        'request_time', // Added from new code
-        'reset_token', // Retained from existing code
-        'expiration', // Retained from existing code
+        'reset_token',
+        'token_expiration',
     ];
 
     /**
@@ -35,7 +36,7 @@ class PasswordResetRequest extends Model
      * @var array<int, string>
      */
     protected $hidden = [
-        'reset_token', // Retained from existing code as it's sensitive data
+        'reset_token',
     ];
 
     /**
@@ -46,9 +47,9 @@ class PasswordResetRequest extends Model
     protected $casts = [
         'created_at' => 'datetime',
         'updated_at' => 'datetime',
-        'request_time' => 'datetime', // Added from new code, assuming request_time is a datetime column
-        'expiration' => 'datetime', // Retained from existing code
-        'status' => 'string', // Retained from existing code, assuming status is a string type
+        'expires_at' => 'datetime',
+        'token_expiration' => 'datetime',
+        'status' => 'string',
     ];
 
     /**
