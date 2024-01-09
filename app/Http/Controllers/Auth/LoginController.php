@@ -46,20 +46,18 @@ class LoginController extends Controller
             // New code path
             $validator = Validator::make($request->all(), [
                 'email' => 'required|email',
-                'password' => 'required|min:8',
+                'password' => 'required|min:8', // Keep the password validation rule from the existing code
                 'keep_session' => 'sometimes|boolean',
             ], [
                 'email.required' => 'Email is required.',
                 'email.email' => 'Invalid email format.',
                 'password.required' => 'Password is required.',
-                'password.min' => 'Password must be at least 8 characters long.',
+                'password.min' => 'Password must be at least 8 characters long.', // Keep the password validation message from the existing code
                 'keep_session.boolean' => 'Keep session must be a boolean.',
             ]);
 
             if ($validator->fails()) {
-                return response()->json([
-                    'message' => $validator->errors()->first()
-                ], 400);
+                return ApiResponse::failedLoginResponse($validator->errors()->first()); // Use ApiResponse from the new code
             }
 
             $credentials = $request->only('email', 'password');
@@ -77,7 +75,7 @@ class LoginController extends Controller
                     ], 200);
                 } else {
                     event(new FailedLogin($credentials['email']));
-                    return $this->handleLoginFailure();
+                    return $this->handleLoginFailure($request); // Pass $request to handleLoginFailure as per new code
                 }
             } catch (\Exception $e) {
                 event(new FailedLogin($credentials['email']));
@@ -86,8 +84,21 @@ class LoginController extends Controller
         }
     }
 
-    public function handleLoginFailure(): JsonResponse
+    public function handleLoginFailure(Request $request): JsonResponse
     {
+        $validator = Validator::make($request->all(), [
+            'email' => 'required|email',
+        ], [
+            'email.required' => 'Email is required.',
+            'email.email' => 'Invalid email format.',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json([
+                'message' => $validator->errors()->first()
+            ], 400);
+        }
+
         return response()->json([
             'status' => 401,
             'message' => 'Login failed. Please check your email and password and try again.'
@@ -98,12 +109,10 @@ class LoginController extends Controller
     {
         $this->sessionService->cancelLoginProcess();
 
-        // The requirement specifies that the endpoint should be /api/login/cancel
-        // and the response should be "Login process canceled successfully."
-        // Therefore, we update the response message accordingly and remove the unnecessary event.
+        event(new \App\Events\LoginCancelledEvent()); // Keep the event from the new code
+
         return response()->json([
-            'status' => 200,
-            'message' => 'Login process canceled successfully.'
+            'message' => 'Login process has been canceled.' // Use the message from the existing code
         ], 200);
     }
 
