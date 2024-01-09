@@ -1,4 +1,3 @@
-
 <?php
 
 namespace App\Http\Controllers\Auth;
@@ -8,6 +7,7 @@ use App\Http\Requests\PasswordResetRequest as PasswordResetRequestValidation;
 use App\Models\User;
 use App\Services\PasswordResetService;
 use Illuminate\Http\JsonResponse;
+use App\Notifications\PasswordResetNotification;
 
 class PasswordResetRequestController extends Controller
 {
@@ -21,7 +21,22 @@ class PasswordResetRequestController extends Controller
     public function store(PasswordResetRequestValidation $request): JsonResponse
     {
         $validatedData = $request->validated();
+
+        if (empty($validatedData['email'])) {
+            return response()->json([
+                'status' => 400,
+                'message' => 'Email is required.'
+            ], 400);
+        }
+
         $user = User::where('email', $validatedData['email'])->first();
+        
+        if (!$user) {
+            return response()->json([
+                'status' => 400,
+                'message' => 'Email not found.'
+            ], 400);
+        }
 
         $passwordResetRequest = $this->passwordResetService->createResetToken($user->email);
 
@@ -32,13 +47,14 @@ class PasswordResetRequestController extends Controller
             'token_expiration' => $passwordResetRequest->expires_at,
         ]);
         $newPasswordResetRequest->save();
-
-        // TODO: Send password reset email to the user
-
+        
+        // Send password reset email to the user
+        $user->notify(new PasswordResetNotification($newPasswordResetRequest));
+        
         return response()->json([
-            'status' => 200,
-            'message' => 'Password reset request created successfully.',
+            'status' => 201,
+            'message' => 'Password reset request sent successfully. Please check your email for further instructions.',
             'password_reset_request' => $newPasswordResetRequest
-        ], 200);
+        ], 201);
     }
 }
