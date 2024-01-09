@@ -13,10 +13,22 @@ class HairStylistRequestService
 {
     public function createRequest($data)
     {
+        // Validate the request data
+        $validator = Validator::make($data, [
+            'service_details' => 'required',
+            'preferred_date' => 'required|date',
+            'preferred_time' => 'required',
+            'user_id' => 'required|exists:users,id',
+        ]);
+
+        if ($validator->fails()) {
+            throw new ValidationException($validator);
+        }
+
         // Check if the user_id corresponds to a valid user
         $user = User::find($data['user_id']);
         if (!$user) {
-            throw new \Exception('Invalid user_id provided');
+            throw new \Exception('User not found.');
         }
 
         // If a request_image_id is provided, verify it
@@ -28,9 +40,16 @@ class HairStylistRequestService
         }
 
         // Create a new HairStylistRequest record
-        $hairStylistRequest = HairStylistRequest::create($data);
+        $hairStylistRequest = new HairStylistRequest([
+            'service_details' => $data['service_details'],
+            'preferred_date' => $data['preferred_date'],
+            'preferred_time' => $data['preferred_time'],
+            'user_id' => $data['user_id'],
+            // Set the status to 'pending'
+            'status' => 'pending',
+        ]);
 
-        $hairStylistRequest->status = 'pending';
+        // Set created_at and updated_at to now
         $hairStylistRequest->created_at = now();
         $hairStylistRequest->updated_at = now();
         $hairStylistRequest->save();
