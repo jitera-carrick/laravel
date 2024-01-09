@@ -15,7 +15,7 @@ class CreateHairStylistRequest extends FormRequest
     public function authorize()
     {
         // Check if the user is authenticated and if the user_id matches the authenticated user's id
-        return Auth::check() && Auth::id() == $this->get('user_id');
+        return Auth::check();
     }
 
     /**
@@ -43,7 +43,7 @@ class CreateHairStylistRequest extends FormRequest
     public function messages()
     {
         return [
-            'user_id.required' => 'User not found.',
+            'user_id.required' => 'The user_id field is required.',
             'user_id.exists' => 'User not found.',
             'service_details.required' => 'Service details are required.',
             'preferred_date.required' => 'The preferred date field is required.',

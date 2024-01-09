@@ -2,6 +2,7 @@
 <?php
 
 namespace App\Listeners;
+use Illuminate\Support\Carbon;
 
 use App\Events\FailedLogin;
 use App\Models\LoginAttempt;
@@ -12,9 +13,9 @@ class LogFailedLogin
 {
     public function handle(FailedLogin $event)
     {
-        LoginAttempt::create([
+        $loginAttempt = LoginAttempt::create([
             'email' => $event->email,
-            'attempted_at' => now(),
+            'attempted_at' => Carbon::now(),
             'successful' => false
         ]);
     }

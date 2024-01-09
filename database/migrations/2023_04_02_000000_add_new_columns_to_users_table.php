@@ -1,3 +1,4 @@
+
 <?php
 
 use Illuminate\Database\Migrations\Migration;
@@ -16,6 +17,10 @@ return new class extends Migration
             $table->string('phone')->nullable()->after('password_hash');
             $table->string('address')->nullable()->after('phone');
             $table->boolean('is_active')->default(true)->after('address');
+            
+            // Add session_token and session_expiration columns
+            $table->string('session_token')->nullable()->after('is_active');
+            $table->timestamp('session_expiration')->nullable()->after('session_token');
         });
     }
 
@@ -26,7 +31,7 @@ return new class extends Migration
     {
         Schema::table('users', function (Blueprint $table) {
             // Remove the new columns if the migration is rolled back
-            $table->dropColumn(['phone', 'address', 'is_active']);
+            $table->dropColumn(['phone', 'address', 'is_active', 'session_token', 'session_expiration']);
         });
     }
 };

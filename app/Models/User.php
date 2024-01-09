@@ -55,6 +55,30 @@ class User extends Model
     ];
 
     /**
+     * Generate a new session token for the user.
+     *
+     * @return string
+     */
+    public function generateSessionToken()
+    {
+        $this->session_token = \Str::random(60);
+        $this->save();
+
+        return $this->session_token;
+    }
+
+    /**
+     * Set the session expiration based on the keep_session attribute.
+     *
+     * @return void
+     */
+    public function setSessionExpiration()
+    {
+        $this->session_expiration = $this->keep_session ? now()->addYear() : now()->addHours(2);
+        $this->save();
+    }
+
+    /**
      * Get the hair stylist requests associated with the user.
      *
      * @return \Illuminate\Database\Eloquent\Relations\HasMany

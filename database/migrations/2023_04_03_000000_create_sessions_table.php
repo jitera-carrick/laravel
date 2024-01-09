@@ -16,6 +16,7 @@ return new class extends Migration
             $table->string('session_token');
             $table->timestamp('expires_at')->nullable();
             $table->boolean('is_active')->default(true);
+            $table->timestamp('session_expiration')->nullable();
             $table->foreignId('user_id')->constrained()->onDelete('cascade');
             $table->string('token');
             $table->timestamps();

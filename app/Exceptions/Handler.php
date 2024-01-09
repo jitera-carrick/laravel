@@ -1,10 +1,11 @@
-
 <?php
 
 namespace App\Exceptions;
 
 use Illuminate\Foundation\Exceptions\Handler as ExceptionHandler;
 use Throwable;
+use Illuminate\Auth\AuthenticationException;
+use App\Http\Responses\ApiResponse;
 
 class Handler extends ExceptionHandler
 {
@@ -33,5 +34,32 @@ class Handler extends ExceptionHandler
                 }
             }
         });
+
+        $this->renderable(function (AuthenticationException $e, $request) {
+            if ($request->expectsJson()) {
+                $message = $e->getMessage();
+                if ($e->getCode() === 401) {
+                    return ApiResponse::loginFailure($message);
+                }
+                return ApiResponse::unauthenticated($message);
+            }
+        });
+    }
+
+    /**
+     * Convert an authentication exception into an unauthenticated response.
+     *
+     * @param  \Illuminate\Http\Request  $request
+     * @param  \Illuminate\Auth\AuthenticationException  $exception
+     * @return \Illuminate\Http\Response
+     */
+    protected function unauthenticated($request, AuthenticationException $exception)
+    {
+        if ($request->expectsJson()) {
+            $message = $exception->getMessage();
+            return ApiResponse::loginFailure($message);
+        }
+
+        return redirect()->guest(route('login'));
     }
 }
