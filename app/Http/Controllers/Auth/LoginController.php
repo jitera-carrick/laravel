@@ -115,7 +115,16 @@ class LoginController extends Controller
     {
         try {
             $this->sessionService->cancelOngoingLogin();
-            return ApiResponse::loginCanceled();
+            // Merged the response from the new code and existing code
+            $response = [
+                'status' => 200,
+                'message' => 'Login process canceled successfully.'
+            ];
+            // Check if ApiResponse::loginCanceled() exists and use it if available
+            if (method_exists(ApiResponse::class, 'loginCanceled')) {
+                $response = ApiResponse::loginCanceled();
+            }
+            return response()->json($response, 200);
         } catch (\Exception $e) {
             return ApiResponse::errorResponse($e->getMessage());
         }

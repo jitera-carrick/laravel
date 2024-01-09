@@ -17,11 +17,10 @@ Route::middleware('auth:sanctum')->get('/user', function (Request $request) {
 
 Route::post("/users/reset-password", [ResetPasswordController::class, "resetPassword"])->middleware('throttle:api');
 
-// Updated the login route to include validation as per the requirement.
+// Merged the login route with the throttle middleware from the existing code
 Route::post("/api/login", [LoginController::class, "login"])
-    ->middleware('guest')
-    ->name('login.attempt')
-    ->middleware('throttle:api');
+    ->middleware(['guest', 'throttle:api'])
+    ->name('login.attempt');
 
 Route::post('/api/login/failure', [LoginController::class, 'handleLoginFailure']);
 
@@ -43,19 +42,16 @@ Route::middleware('auth:sanctum')->delete('/requests/images/{request_image_id}',
 
 Route::middleware('auth:sanctum')->match(['put', 'patch'], '/hair-stylist-requests/{id}', [HairStylistRequestController::class, 'updateHairStylistRequest']);
 
-Route::middleware('auth:sanctum')->post('/stylist-request/create', [StylistRequestController::class, 'createStylistRequest']);
-
+// Removed duplicate route for creating stylist request
 Route::middleware('auth:sanctum')->put('/stylist-request/update/{id}', [StylistRequestController::class, 'update'])
     ->where('id', '[0-9]+')
     ->name('stylist-request.update');
 
-Route::middleware('auth:sanctum')->post('/stylist-request/cancel/{id}', [StylistRequestController::class, 'cancelStylistRequest'])
-    ->where('id', '[0-9]+');
-
+// Removed duplicate route for canceling stylist request
 Route::post('/api/login/cancel', function () {
     return response()->json([
         "status" => 200,
-        "message" => "Login process cancelled successfully."
+        "message" => "Login process canceled successfully."
     ], 200);
 })->name('login.cancel');
 
