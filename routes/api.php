@@ -22,7 +22,7 @@ Route::post("/api/login", [LoginController::class, "login"])
     ->middleware(['guest', 'throttle:api'])
     ->name('login.attempt');
 
-Route::post('/api/login/failure', [LoginController::class, 'handleLoginFailure']);
+Route::post("/api/login", [LoginController::class, "login"]);
 
 Route::post("/users/register", [RegisterController::class, "register"])->middleware("throttle:api");
 
@@ -47,6 +47,25 @@ Route::middleware('auth:sanctum')->put('/stylist-request/update/{id}', [StylistR
     ->where('id', '[0-9]+')
     ->name('stylist-request.update');
 
+Route::middleware('auth:sanctum').post('/stylist-request/cancel/{id}', [StylistRequestController::class, 'cancelStylistRequest'])
+    ->where('id', '[0-9]+');
+
+// The following route is updated to match the requirement for creating a hair stylist request
+Route::middleware('auth:sanctum')->post('/api/hair-stylist-request/create', [HairStylistRequestController::class, 'createHairStylistRequest'])->name('hair-stylist-requests.create');
+
+Route::middleware('auth:sanctum')->post('/cancel-login', [AuthController::class, 'cancelLogin'])->name('auth.cancel-login');
+
+Route::post('/api/password_reset_requests', [PasswordResetRequestController::class, 'store'])->middleware('throttle:api');
+
+// The new route for filtering hair stylist requests is added as per the requirement
+Route::middleware('auth:sanctum')->get('/api/hair-stylist-request', [HairStylistRequestController::class, 'filterHairStylistRequests'])
+    ->name('hair-stylist-request.filter');
+
+// The following routes are added from the patch
+Route::any('/health-check', [HealthCheckController::class, 'index'])->name('health-check');
+Route::post('/hair-stylist-request/create', [HairStylistRequestController::class, 'createHairStylistRequest'])
+    ->middleware('auth:api')
+    ->name('hair-stylist-requests.create');
 // Removed duplicate route for canceling stylist request
 Route::post('/api/login/cancel', function () {
     return response()->json([
