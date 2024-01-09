@@ -1,4 +1,3 @@
-
 <?php
 
 namespace App\Http\Requests;
@@ -15,7 +14,6 @@ class SessionRequest extends FormRequest
      */
     public function authorize()
     {
-        // Optionally add authorization logic
         return Auth::check();
     }
 
@@ -27,7 +25,24 @@ class SessionRequest extends FormRequest
     public function rules()
     {
         return [
-            'session_token' => 'required|string',
+            'email' => 'required|email',
+            'password' => 'required|string',
+            'keep_session' => 'sometimes|boolean',
+        ];
+    }
+
+    /**
+     * Get custom messages for validator errors.
+     *
+     * @return array
+     */
+    public function messages()
+    {
+        return [
+            'email.required' => 'Email is required.',
+            'email.email' => 'Invalid email format.',
+            'password.required' => 'Password is required.',
+            'keep_session.boolean' => 'Keep session must be a boolean.',
         ];
     }
 }
