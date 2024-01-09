@@ -12,7 +12,7 @@ return new class extends Migration
     public function up(): void
     {
         Schema::table('login_attempts', function (Blueprint $table) {
-            // Add a new column 'successful' to indicate if the login attempt was successful
+            // Add a new boolean column 'successful' to indicate if the login attempt was successful
             $table->boolean('successful')->after('ip_address')->default(false);
         });
     }

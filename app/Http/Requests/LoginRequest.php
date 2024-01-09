@@ -1,4 +1,3 @@
-
 <?php
 
 namespace App\Http\Requests;
@@ -24,11 +23,13 @@ class LoginRequest extends FormRequest
      */
     public function rules()
     {
-        return [
-            'email' => 'required|email',
-            'password' => 'required|string',
+        $rules = [
+            'email' => 'required|string|email',
+            'password' => 'required|string|min:8', // Combined the password rules and added 'min:8' from the new code
             'keep_session' => 'boolean',
         ];
+
+        return $rules;
     }
 
     /**

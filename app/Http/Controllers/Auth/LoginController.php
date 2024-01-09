@@ -3,14 +3,16 @@
 namespace App\Http\Controllers\Auth;
 
 use App\Http\Controllers\Controller;
-use App\Http\Requests\SessionRequest;
+use App\Http\Requests\LoginRequest;
 use App\Services\SessionService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
 use App\Events\FailedLogin;
 use Illuminate\Support\Facades\Route;
-use App\Http\Responses\ApiResponse; // Added line
+use App\Http\Resources\SessionResource;
+use App\Http\Responses\ApiResponse;
+use App\Services\AuthService;
 use App\Models\LoginAttempt; // Added line
 
 class LoginController extends Controller
@@ -21,45 +23,56 @@ class LoginController extends Controller
     {
         $this->sessionService = $sessionService;
     }
-
+    
     public function login(Request $request): JsonResponse
     {
-        $validator = Validator::make($request->all(), [
-            'email' => 'required|email',
-            'password' => 'required',
-            'keep_session' => 'sometimes|boolean',
-        ], [
-            'email.required' => 'Email is required.',
-            'email.email' => 'Invalid email format.',
-            'password.required' => 'Password is required.',
-            'keep_session.boolean' => 'Keep session must be a boolean.',
-        ]);
+        // Use LoginRequest if available, otherwise fallback to manual validation
+        if ($request instanceof LoginRequest) {
+            $credentials = $request->validated();
+        } else {
+            $validator = Validator::make($request->all(), [
+                'email' => 'required|email',
+                'password' => 'required',
+                'keep_session' => 'sometimes|boolean',
+            ], [
+                'email.required' => 'Email is required.',
+                'email.email' => 'Invalid email format.',
+                'password.required' => 'Password is required.',
+                'keep_session.boolean' => 'Keep session must be a boolean.',
+            ]);
 
-        if ($validator->fails()) {
-            return response()->json([
-                'message' => $validator->errors()->first()
-            ], 400);
+            if ($validator->fails()) {
+                return response()->json([
+                    'message' => $validator->errors()->first()
+                ], 400);
+            }
+
+            $credentials = $request->only('email', 'password');
         }
 
-        $credentials = $request->only('email', 'password');
         $keepSession = $request->input('keep_session', false);
 
         try {
             $sessionData = $this->sessionService->login($credentials['email'], $credentials['password'], $keepSession);
 
             if ($sessionData) {
-                return response()->json([
-                    'status' => 200,
-                    'message' => 'Login successful.',
-                    'session_token' => $sessionData['token'],
-                    'session_expiration' => $sessionData['expiration'],
-                ], 200);
+                // Use SessionResource if available, otherwise fallback to manual response
+                if (isset($sessionData['token'])) {
+                    return response()->json([
+                        'status' => 200,
+                        'message' => 'Login successful.',
+                        'session_token' => $sessionData['token'],
+                        'session_expiration' => $sessionData['expiration'],
+                    ], 200);
+                } else {
+                    return new SessionResource($sessionData);
+                }
             } else {
-                event(new FailedLogin($request->input('email'), now())); // Modified line
-                return $this->handleLoginFailure($request->input('email')); // Modified line
-            } 
+                event(new FailedLogin($credentials['email']));
+                return $this->handleLoginFailure($credentials['email']); // Modified line
+            }
         } catch (\Exception $e) {
-            return response()->json(['message' => 'Internal Server Error'], 500);
+            return ApiResponse::errorResponse($e->getMessage());
         }
     }
 
@@ -94,10 +107,7 @@ class LoginController extends Controller
                 'message' => 'Login process has been canceled successfully.'
             ], 200);
         } catch (\Exception $e) {
-            return response()->json([
-                'message' => 'Failed to cancel login process.',
-                'error' => $e->getMessage()
-            ], 500);
+            return ApiResponse::errorResponse($e->getMessage());
         }
     }
 
