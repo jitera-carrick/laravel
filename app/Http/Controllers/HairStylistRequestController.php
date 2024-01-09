@@ -7,6 +7,7 @@ use App\Services\HairStylistRequestService;
 use App\Http\Resources\HairStylistRequestResource;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Http\JsonResponse;
+use App\Http\Responses\ApiResponse;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Validation\ValidationException;
 
@@ -24,7 +25,7 @@ class HairStylistRequestController extends Controller
     public function createHairStylistRequest(CreateHairStylistRequest $request): JsonResponse
     {
         $validatedData = $request->validated();
-        $validatedData['user_id'] = Auth::id(); // Ensure the user_id is the authenticated user's ID
+        // $validatedData['user_id'] = Auth::id(); // Ensure the user_id is the authenticated user's ID
 
         // Custom validation for user_id existence
         $validator = Validator::make($validatedData, [
@@ -38,13 +39,13 @@ class HairStylistRequestController extends Controller
             throw new ValidationException($validator);
         }
 
-        try {
+        // try {
             $hairStylistRequest = $this->hairStylistRequestService->createRequest($validatedData);
-        } catch (\Exception $e) {
-            return response()->json(['message' => $e->getMessage()], 400);
-        }
+        // } catch (\Exception $e) {
+        //     return response()->json(['message' => $e->getMessage()], 400);
+        // }
 
-        return response()->json(new HairStylistRequestResource($hairStylistRequest), 201);
+        return ApiResponse::stylistRequestCreated($hairStylistRequest);
     }
 
     // ... other methods ...

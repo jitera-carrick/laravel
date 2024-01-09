@@ -20,4 +20,9 @@ class ApiResponse
     {
         return response()->json(['message' => 'Login process has been canceled.'], 200);
     }
+
+    public static function stylistRequestCreated($hairStylistRequest): JsonResponse
+    {
+        return response()->json(['message' => 'Stylist request successfully sent.', 'request_id' => $hairStylistRequest->id], 200);
+    }
 }

@@ -26,7 +26,7 @@ class CreateHairStylistRequest extends FormRequest
     public function rules()
     {
         return [
-            'user_id' => 'required|integer|exists:users,id',
+            'user_id' => 'required|unsignedBigInteger|exists:users,id',
             'service_details' => 'required|string',
             'preferred_date' => 'required|date|after_or_equal:today',
             'preferred_time' => 'required|string',

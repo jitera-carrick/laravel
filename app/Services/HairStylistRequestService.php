@@ -32,6 +32,7 @@ class HairStylistRequestService
         // Set the initial status of the request
         $data['status'] = 'pending';
 
+        $data['created_at'] = $data['updated_at'] = now();
         // If a request_image_id is provided, verify it
         if (!empty($data['request_image_id'])) {
             $requestImage = RequestImage::find($data['request_image_id']);
