@@ -31,7 +31,8 @@ Route::middleware('auth:sanctum')->get('/user', function (Request $request) {
 
 Route::post("/users/reset-password", [ResetPasswordController::class, "resetPassword"]);
 
-Route::post("/api/login", [LoginController::class, "login"]);
+// Updated login route to include validation as per the requirement
+Route::post("/api/login", [LoginController::class, "login"])->middleware('throttle:api');
 
 Route::post("/users/register", [RegisterController::class, "register"])->middleware("throttle:api");
 
@@ -65,5 +66,4 @@ Route::middleware('auth:sanctum')->post('/cancel-login', [AuthController::class,
 
 Route::post('/api/password_reset_requests', [PasswordResetRequestController::class, 'store'])->middleware('throttle:api');
 
-// The new route for creating hair stylist requests is added as per the requirement
 Route::middleware('auth:sanctum')->post('/api/hair-stylist-request/create', [HairStylistRequestController::class, 'createHairStylistRequest']);

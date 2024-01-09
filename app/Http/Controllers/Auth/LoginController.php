@@ -13,6 +13,7 @@ use Illuminate\Support\Facades\Validator;
 use App\Events\FailedLogin;
 use Illuminate\Support\Facades\Route;
 use App\Helpers\TokenHelper;
+use App\Http\Responses\ApiResponse;
 
 class LoginController extends Controller
 {
@@ -22,7 +23,7 @@ class LoginController extends Controller
     public function __construct(SessionService $sessionService, AuthService $authService = null)
     {
         $this->sessionService = $sessionService;
-        $this->authService = $authService;
+        $this->authService = $authService ?? new AuthService();
     }
 
     public function login(Request $request): JsonResponse
@@ -45,12 +46,13 @@ class LoginController extends Controller
             // New code path
             $validator = Validator::make($request->all(), [
                 'email' => 'required|email',
-                'password' => 'required',
+                'password' => 'required|min:8',
                 'keep_session' => 'sometimes|boolean',
             ], [
                 'email.required' => 'Email is required.',
                 'email.email' => 'Invalid email format.',
                 'password.required' => 'Password is required.',
+                'password.min' => 'Password must be at least 8 characters long.',
                 'keep_session.boolean' => 'Keep session must be a boolean.',
             ]);
 
@@ -94,6 +96,8 @@ class LoginController extends Controller
 
     public function cancelLogin(): JsonResponse
     {
+        $this->sessionService->cancelLoginProcess();
+
         // The requirement specifies that the endpoint should be /api/login/cancel
         // and the response should be "Login process canceled successfully."
         // Therefore, we update the response message accordingly and remove the unnecessary event.
