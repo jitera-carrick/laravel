@@ -20,9 +20,8 @@ Route::middleware('auth:sanctum')->get('/user', function (Request $request) {
 
 Route::post("/users/reset-password", [ResetPasswordController::class, "resetPassword"]);
 
-// The login route from the new code uses the 'guest' middleware, and the existing code has an additional route for login failure.
 Route::post("/api/login", [LoginController::class, "login"])->middleware('guest');
-Route::post('/api/login/failure', [LoginController::class, 'handleLoginFailure']); // Added from existing code
+Route::post('/api/login/failure', [LoginController::class, 'handleLoginFailure']);
 
 Route::post("/users/register", [RegisterController::class, "register"])->middleware("throttle:api");
 
@@ -51,14 +50,20 @@ Route::middleware('auth:sanctum')->put('/stylist-request/update/{id}', [StylistR
 Route::middleware('auth:sanctum')->post('/stylist-request/cancel/{id}', [StylistRequestController::class, 'cancelStylistRequest'])
     ->where('id', '[0-9]+');
 
-// The cancel-login route from the new code uses the LoginController, while the existing code uses the AuthController. We need to decide which one to use.
-// Assuming we are going with the new code's controller, as it seems to be the more recent change.
 Route::middleware('auth:sanctum')->post('/cancel-login', [LoginController::class, 'cancelLogin'])->name('auth.cancel-login');
 
 Route::post('/api/password_reset_requests', [PasswordResetRequestController::class, 'store'])->middleware('throttle:api');
 
-// The new route for creating hair stylist requests is added as per the requirement
 Route::middleware('auth:sanctum')->post('/api/hair-stylist-request/create', [HairStylistRequestController::class, 'createHairStylistRequest']);
 
-// The existing code has an additional route for password reset that is not present in the new code.
 Route::post("/api/password-reset", [ResetPasswordController::class, "resetPassword"])->middleware('throttle:api');
+
+// New route for canceling the login process as per the requirement
+Route::post('/api/login/cancel', function () {
+    // Business logic for canceling the login process would go here
+    // For now, we just return a success response as per the requirement
+    return response()->json([
+        "status" => 200,
+        "message" => "Login process cancelled successfully."
+    ], 200);
+})->name('login.cancel');

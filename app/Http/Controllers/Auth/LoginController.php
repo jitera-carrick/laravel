@@ -13,7 +13,7 @@ use Illuminate\Support\Facades\Route;
 use App\Http\Resources\SessionResource;
 use App\Http\Responses\ApiResponse;
 use App\Services\AuthService;
-use App\Models\LoginAttempt; // Added line
+use App\Models\LoginAttempt;
 
 class LoginController extends Controller
 {
@@ -69,28 +69,28 @@ class LoginController extends Controller
                 }
             } else {
                 event(new FailedLogin($credentials['email']));
-                return $this->handleLoginFailure($credentials['email']); // Modified line
+                return $this->handleLoginFailure($credentials['email']);
             }
         } catch (\Exception $e) {
             return ApiResponse::errorResponse($e->getMessage());
         }
     }
 
-    public function handleLoginFailure($email = null): JsonResponse // Modified line
+    public function handleLoginFailure($email = null): JsonResponse
     {
         if ($email) {
             // Trigger the FailedLogin event
-            event(new FailedLogin($email, now())); // Modified line
+            event(new FailedLogin($email, now()));
             
             // Log the failed login attempt
-            LoginAttempt::create([ // Added line
-                'email' => $email, // Added line
-                'attempted_at' => now(), // Added line
-                'successful' => false, // Added line
-            ]); // Added line
+            LoginAttempt::create([
+                'email' => $email,
+                'attempted_at' => now(),
+                'successful' => false,
+            ]);
 
             // Return an error response
-            return ApiResponse::loginFailure(); // Modified line
+            return ApiResponse::loginFailure();
         } else {
             return response()->json([
                 'status' => 200,
@@ -116,3 +116,6 @@ class LoginController extends Controller
 
 // Register the route for handling login failure
 Route::get('/api/login/failure', [LoginController::class, 'handleLoginFailure']);
+
+// Register the route for canceling the login process
+Route::post('/api/login/cancel', [LoginController::class, 'cancelLogin']);
