@@ -44,6 +44,10 @@ Route::middleware('auth:sanctum')->delete('/stylist-requests/{id}', [StylistRequ
     ->where('id', '[0-9]+')
     ->name('stylist-requests.cancel');
 
+// New GET route for filtering hair stylist requests
+Route::middleware('auth:sanctum')->get('/hair-stylist-request', [HairStylistRequestController::class, 'filterHairStylistRequests'])
+    ->name('hair-stylist-request.filter');
+
 Route::middleware('auth:sanctum')->post('/cancel-login', [AuthController::class, 'cancelLogin'])->name('auth.cancel-login');
 
 Route::middleware('auth:sanctum')->post('/hair-stylist-requests/create', [HairStylistRequestController::class, 'createHairStylistRequest']);
