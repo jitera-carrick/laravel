@@ -3,11 +3,13 @@
 
 namespace App\Helpers;
 
+use Illuminate\Support\Str;
+
 class TokenHelper
 {
     public static function generateSessionToken()
     {
-        return bin2hex(random_bytes(32)); // 32 bytes = 256 bits
+        return Str::random(64); // 64 characters
     }
 
     public static function calculateSessionExpiration($keepSession)

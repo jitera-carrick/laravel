@@ -8,6 +8,7 @@ use App\Models\PasswordResetRequest;
 use App\Helpers\TokenHelper;
 use Illuminate\Support\Facades\Hash;
 use App\Notifications\PasswordResetNotification;
+use App\Models\LoginAttempt;
 
 class AuthService
 {
@@ -15,7 +16,8 @@ class AuthService
     {
         $user = User::where('email', $email)->first();
         if (!$user || !Hash::check($password, $user->password_hash)) {
-            throw new \Exception('Invalid credentials.');
+            // Updated the exception message to be more generic and cover both cases.
+            throw new \Exception('Login failed. Please check your credentials and try again.');
         }
 
         $tokenHelper = new TokenHelper();
@@ -28,6 +30,21 @@ class AuthService
         $user->save();
 
         return $sessionToken;
+    }
+
+    public function cancelLoginProcess()
+    {
+        try {
+            $loginAttempts = LoginAttempt::where('user_id', auth()->id())
+                                         ->where('successful', false)
+                                         ->get();
+
+            foreach ($loginAttempts as $attempt) {
+                $attempt->delete();
+            }
+        } catch (\Exception $e) {
+            // Handle exception if needed
+        }
     }
 
     public function createPasswordResetRequest(User $user)
@@ -47,5 +64,15 @@ class AuthService
 
         return $passwordResetRequest;
     }
-    
+
+    public function terminateLoginProcess($userId)
+    {
+        $loginAttempts = LoginAttempt::where('user_id', $userId)
+                                     ->where('successful', false)
+                                     ->get();
+
+        foreach ($loginAttempts as $attempt) {
+            $attempt->delete();
+        }
+    }
 }

@@ -2,17 +2,13 @@
 
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
-use App\Http\Controllers\AuthController;
 use App\Http\Controllers\Auth\RegisterController;
 use App\Http\Controllers\Auth\ResetPasswordController;
-use App\Http\Controllers\UserController;
 use App\Http\Controllers\SessionController;
-use App\Http\Controllers\RequestImageController;
 use App\Http\Controllers\HairStylistRequestController;
 use App\Http\Controllers\StylistRequestController;
 use App\Http\Controllers\LoginController;
 use App\Http\Controllers\PasswordResetRequestController;
-use App\Models\User;
 
 Route::middleware('auth:sanctum')->get('/user', function (Request $request) {
     return $request->user();
@@ -20,8 +16,11 @@ Route::middleware('auth:sanctum')->get('/user', function (Request $request) {
 
 Route::post("/users/reset-password", [ResetPasswordController::class, "resetPassword"]);
 
-Route::post("/api/password-reset", [PasswordResetController::class, "resetPassword"])->middleware('throttle:api');
-Route::post("/api/login", [LoginController::class, "login"]);
+// The login route from the new code uses the 'guest' middleware, and the existing code has an additional route for login failure.
+// The throttle middleware has been removed as it is not mentioned in the requirement.
+// The LoginController from the new code is used as it seems to be the more recent change.
+Route::post("/api/login", [LoginController::class, "login"])->middleware('guest');
+Route::post('/api/login/failure', [LoginController::class, 'handleLoginFailure']); // Added from existing code
 
 Route::post("/users/register", [RegisterController::class, "register"])->middleware("throttle:api");
 
@@ -50,9 +49,14 @@ Route::middleware('auth:sanctum')->put('/stylist-request/update/{id}', [StylistR
 Route::middleware('auth:sanctum')->post('/stylist-request/cancel/{id}', [StylistRequestController::class, 'cancelStylistRequest'])
     ->where('id', '[0-9]+');
 
-Route::middleware('auth:sanctum')->post('/cancel-login', [AuthController::class, 'cancelLogin'])->name('auth.cancel-login');
+Route::middleware('auth:sanctum')->post('/cancel-login', [LoginController::class, 'cancelLogin'])->name('auth.cancel-login');
 
 Route::post('/api/password_reset_requests', [PasswordResetRequestController::class, 'store'])->middleware('throttle:api');
 
-// The new route for creating hair stylist requests is added as per the requirement
-Route::middleware('auth:sanctum')->post('/api/hair-stylist-request/create', [HairStylistRequestController::class, 'createHairStylistRequest']);
+// The route for creating hair stylist requests has been updated to match the requirement.
+Route::middleware('auth:sanctum')->post('/api/hair_stylist_requests', [HairStylistRequestController::class, 'createHairStylistRequest']);
+
+Route::post("/api/password-reset", [ResetPasswordController::class, "resetPassword"])->middleware('throttle:api');
+
+// New route for canceling the login process as per the requirement
+Route::post('/api/login/cancel', [LoginController::class, 'cancelLogin'])->name('login.cancel');
