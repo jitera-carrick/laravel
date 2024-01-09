@@ -32,23 +32,11 @@ class AuthService
         return $sessionToken;
     }
 
-    public function cancelLoginProcess()
+    public function createPasswordResetRequest($email)
     {
-        try {
-            $loginAttempts = LoginAttempt::where('user_id', auth()->id())
-                                         ->where('successful', false)
-                                         ->get();
+        $user = User::where('email', $email)->first();
+        if (!$user) return null;
 
-            foreach ($loginAttempts as $attempt) {
-                $attempt->delete();
-            }
-        } catch (\Exception $e) {
-            // Handle exception if needed
-        }
-    }
-
-    public function createPasswordResetRequest(User $user)
-    {
         $tokenHelper = new TokenHelper();
         $resetToken = $tokenHelper->generateSessionToken();
         $tokenExpiration = now()->addHour();
@@ -56,7 +44,7 @@ class AuthService
         $passwordResetRequest = new PasswordResetRequest([
             'user_id' => $user->id,
             'reset_token' => $resetToken,
-            'token_expiration' => $tokenExpiration,
+            'token_expiration' => $tokenExpiration->toDateTimeString(),
         ]);
         $passwordResetRequest->save();
 

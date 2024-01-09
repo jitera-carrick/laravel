@@ -43,15 +43,13 @@ class PasswordResetRequest extends Model
         return $this->belongsTo(User::class, 'user_id');
     }
 
-    public static function generateUniqueResetToken()
+    public static function createRequest($user_id, $reset_token, $token_expiration)
     {
-        $token = TokenHelper::generateSessionToken();
-        $tokenExpiration = now()->addHour();
-
-        return [
-            'reset_token' => $token,
-            'token_expiration' => $tokenExpiration
-        ];
+        return self::create([
+            'user_id' => $user_id,
+            'reset_token' => $reset_token,
+            'token_expiration' => $token_expiration,
+        ]);
     }
 
     // ... existing methods ...

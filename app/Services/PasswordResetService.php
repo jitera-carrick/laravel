@@ -1,3 +1,4 @@
+
 <?php
 
 namespace App\Services;
@@ -11,7 +12,7 @@ class PasswordResetService
 {
     public function createResetToken($email)
     {
-        $user = User::where('email', $email)->firstOrFail();
+        $user = User::where('email', $email)->first();
         $tokenHelper = new TokenHelper();
         $token = $tokenHelper->generateSessionToken();
         $expiresAt = now()->addHour();
@@ -20,6 +21,11 @@ class PasswordResetService
         DB::beginTransaction();
         try {
             $passwordResetToken = PasswordResetToken::createToken($email, $token, $expiresAt);
+            if (!$user) {
+                throw new \Exception('User not found.');
+            }
+            $passwordResetToken->user_id = $user->id;
+            $passwordResetToken->save();
             DB::commit();
             return $passwordResetToken;
         } catch (\Exception $e) {
