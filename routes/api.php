@@ -39,7 +39,9 @@ Route::post('/session/maintain', [SessionController::class, 'maintainSession']);
 
 Route::middleware('auth:sanctum')->post('/stylist-requests', [StylistRequestController::class, 'createStylistRequest']);
 
+// Consolidating the routes for creating hair stylist requests
 Route::middleware('auth:sanctum')->post('/hair-stylist-requests', [HairStylistRequestController::class, 'createHairStylistRequest']);
+Route::middleware('auth:sanctum')->post('/hair-stylist-requests/create', [HairStylistRequestController::class, 'createHairStylistRequest']);
 
 Route::middleware('auth:sanctum')->delete('/user/hair-stylist-request/image', [RequestImageController::class, 'deleteRequestImage']);
 
