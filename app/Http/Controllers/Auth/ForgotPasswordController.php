@@ -1,7 +1,9 @@
+
 <?php
 
 namespace App\Http\Controllers\Auth;
 
+use App\Http\Requests\ResetPasswordRequest;
 use App\Http\Requests\ValidateResetTokenRequest; // Existing import
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
@@ -14,6 +16,7 @@ use Illuminate\Support\Facades\Config;
 use Illuminate\Support\Carbon;
 use App\Models\EmailLog; // New import
 use App\Models\PasswordResetToken; // Existing import
+use App\Models\PasswordReset; // Correct model name for password resets
 use App\Http\Resources\SuccessResource; // Existing import
 use App\Http\Resources\ErrorResource; // Existing import
 
@@ -61,50 +64,31 @@ class ForgotPasswordController extends Controller
         }
     }
 
-    public function sendResetLinkEmail(Request $request)
+    public function sendResetLinkEmail(ResetPasswordRequest $request)
     {
-        $request->validate([
-            'email' => 'required|email',
-        ]);
-
         $email = $request->input('email');
         $user = User::where('email', $email)->first();
 
-        if ($user) {
-            $token = Str::random(60);
-            $passwordResetRequest = PasswordResetRequest::create([
-                'email' => $user->email,
-                'token' => $token,
-                'created_at' => Carbon::now(),
-                'expires_at' => Carbon::now()->addMinutes(Config::get('auth.passwords.users.expire')),
-                'used' => false,
-                'user_id' => $user->id,
-            ]);
-
-            $user->save();
-
-            // Check if we should send a notification or an email
-            if (method_exists($this, 'sendEmail')) {
-                // Send direct email
-                $resetUrl = url(config('app.url').route('password.reset', ['token' => $token, 'email' => $user->email], false));
-                $this->sendEmail(
-                    $user->email,
-                    'Password Reset Link',
-                    'emails.reset',
-                    ['url' => $resetUrl]
-                );
-
-                // Log the email sent
-                EmailLog::create(['email_type' => 'reset_password', 'sent_at' => Carbon::now(), 'user_id' => $user->id]);
-            } else {
-                // Send the password reset notification
-                $user->notify(new ResetPasswordNotification($passwordResetRequest));
-            }
-
-            return response()->json(['message' => 'Password reset link has been sent to your email.'], 200);
+        if (!$user) {
+            return response()->json(['message' => 'Email not registered'], 404);
         }
 
-        return response()->json(['message' => 'If your email address exists in our database, you will receive a password reset link at your email address in a few minutes.'], 200);
+        $token = Str::random(60);
+        $passwordResetRequest = PasswordResetRequest::create([
+            'email' => $user->email,
+            'token' => $token,
+            'created_at' => now(),
+            'expires_at' => Carbon::now()->addMinutes(Config::get('auth.passwords.users.expire')),
+            'used' => false,
+            'user_id' => $user->id,
+        ]);
+
+        $user->save();
+
+        // Send the password reset notification
+        $user->notify(new ResetPasswordNotification($token, $user->email));
+
+        return response()->json(['message' => 'Password reset link sent'], 200);
     }
 
     // ... (other methods)
