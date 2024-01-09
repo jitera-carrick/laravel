@@ -26,6 +26,7 @@ class CreateHairStylistRequest extends FormRequest
     public function rules()
     {
         return [
+            'status' => 'sometimes|in:pending,accepted,rejected,cancelled',
             'user_id' => 'required|integer|exists:users,id',
             'service_details' => 'required|string',
             'preferred_date' => 'required|date|after_or_equal:today',
@@ -45,6 +46,7 @@ class CreateHairStylistRequest extends FormRequest
         return [
             'user_id.required' => 'User not found.',
             'user_id.exists' => 'User not found.',
+            'status.in' => 'Invalid status value.',
             'service_details.required' => 'Service details are required.',
             'preferred_date.required' => 'The preferred date field is required.',
             'preferred_date.date' => 'Invalid date format.',

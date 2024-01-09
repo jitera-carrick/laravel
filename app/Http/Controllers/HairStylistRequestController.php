@@ -1,3 +1,4 @@
+
 <?php
 
 namespace App\Http\Controllers;
@@ -23,7 +24,7 @@ class HairStylistRequestController extends Controller
     public function createHairStylistRequest(CreateHairStylistRequest $request): JsonResponse
     {
         $validatedData = $request->validated();
-        $validatedData['user_id'] = Auth::id(); // Ensure the user_id is the authenticated user's ID
+        // The user_id is now being validated by the CreateHairStylistRequest, so no need to set it here
 
         // Custom validation for user_id existence is not needed as it's handled by CreateHairStylistRequest
         try {
@@ -32,17 +33,10 @@ class HairStylistRequestController extends Controller
                 'service_details' => 'required|string',
                 'preferred_date' => 'required|date',
                 'preferred_time' => 'required|string',
-                'user_id' => 'required|exists:users,id',
             ]);
 
-            if ($validator->fails()) {
-                throw new ValidationException($validator);
-            }
-
-            $hairStylistRequest = $this->hairStylistRequestService->create($validatedData);
-            return response()->json(new HairStylistRequestResource($hairStylistRequest), 201);
-        } catch (ValidationException $e) {
-            return response()->json(['message' => $e->errors()], 422);
+            $hairStylistRequest = $this->hairStylistRequestService->createHairStylistRequest($validatedData);
+            return new HairStylistRequestResource($hairStylistRequest);
         } catch (\Exception $e) {
             return response()->json(['message' => $e->getMessage()], 500);
         }

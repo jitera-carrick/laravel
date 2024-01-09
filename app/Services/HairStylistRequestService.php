@@ -47,4 +47,18 @@ class HairStylistRequestService
 
         return $hairStylistRequest;
     } // End of createRequest method
+
+    public function createHairStylistRequest($validatedData)
+    {
+        // Check if the user_id exists in the users table
+        if (!User::find($validatedData['user_id'])) {
+            throw new \Exception('Invalid user_id provided');
+        }
+
+        // Set the status to "pending" if not provided
+        $validatedData['status'] = $validatedData['status'] ?? 'pending';
+
+        // Create and save the new HairStylistRequest
+        return HairStylistRequest::create($validatedData);
+    }
 }
