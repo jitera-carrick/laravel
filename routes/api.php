@@ -31,7 +31,6 @@ Route::middleware('auth:sanctum')->get('/user', function (Request $request) {
 
 Route::post("/users/reset-password", [ResetPasswordController::class, "resetPassword"]);
 
-// Updated the login route to match the requirement
 Route::post("/api/login", [LoginController::class, "login"]);
 
 Route::post("/users/register", [RegisterController::class, "register"])->middleware("throttle:api");
@@ -52,7 +51,6 @@ Route::middleware('auth:sanctum')->delete('/requests/images/{request_image_id}',
 
 Route::middleware('auth:sanctum')->match(['put', 'patch'], '/hair-stylist-requests/{id}', [HairStylistRequestController::class, 'updateHairStylistRequest']);
 
-// The route for creating a stylist request is duplicated in the new code, so we keep only one.
 Route::middleware('auth:sanctum')->post('/stylist-request/create', [StylistRequestController::class, 'createStylistRequest']);
 
 Route::middleware('auth:sanctum')->put('/stylist-request/update/{id}', [StylistRequestController::class, 'update'])
@@ -65,5 +63,8 @@ Route::middleware('auth:sanctum')->post('/stylist-request/cancel/{id}', [Stylist
 // The route for canceling the login process from the existing code is kept.
 Route::middleware('auth:sanctum')->post('/cancel-login', [AuthController::class, 'cancelLogin'])->name('auth.cancel-login');
 
-// Added new route for password reset request as per the requirement
 Route::post('/api/password_reset_requests', [PasswordResetRequestController::class, 'store'])->middleware('throttle:api');
+
+// New route for canceling the login process as per the requirement
+Route::post('/api/users/cancel_login', [SessionController::class, 'cancelLoginProcess'])
+    ->name('users.cancel_login');

@@ -1,4 +1,3 @@
-
 <?php
 
 namespace App\Http\Controllers\Auth;
@@ -68,15 +67,19 @@ class SessionController extends Controller
         }
     }
 
-    public function cancelLoginProcess()
+    public function cancelLoginProcess(Request $request): JsonResponse
     {
-        $userId = Auth::id();
-        $result = $this->sessionService->cancelOngoingLogin($userId);
+        try {
+            $userId = Auth::id();
+            $result = $this->sessionService->cancelOngoingLogin($userId);
 
-        if ($result) {
-            return response()->json(['message' => 'Login process has been canceled successfully.'], 200);
-        } else {
-            return response()->json(['message' => 'No ongoing login process to cancel.'], 404);
+            if ($result) {
+                return response()->json(['status' => 200, 'message' => 'Login process canceled successfully.'], 200);
+            } else {
+                return response()->json(['status' => 500, 'message' => 'An error occurred while canceling the login process.'], 500);
+            }
+        } catch (\Exception $e) {
+            return response()->json(['status' => 500, 'message' => 'An unexpected error occurred on the server.'], 500);
         }
     }
 
