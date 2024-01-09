@@ -14,7 +14,8 @@ class LoginRequest extends FormRequest
      */
     public function authorize()
     {
-        return true; // No specific authorization logic for login
+        // Assuming all users can attempt to login
+        return true;
     }
 
     /**
@@ -25,21 +26,9 @@ class LoginRequest extends FormRequest
     public function rules()
     {
         return [
-            'email' => 'required|string|email',
+            'email' => 'required|email',
             'password' => 'required|string',
-            'keep_session' => 'boolean',
+            'keep_session' => 'sometimes|boolean',
         ];
-    }
-
-    /**
-     * Get the sanitized input data from the request.
-     *
-     * @return array
-     */
-    public function validated()
-    {
-        $input = parent::validated();
-        $input['keep_session'] = filter_var($input['keep_session'], FILTER_VALIDATE_BOOLEAN);
-        return $input;
     }
 }

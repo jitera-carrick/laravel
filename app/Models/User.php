@@ -1,3 +1,4 @@
+
 <?php
 
 namespace App\Models;
@@ -25,11 +26,11 @@ class User extends Model
         'name',
         'email',
         'password_hash',
-        'session_token', // Added from new code
-        'session_expiration', // Added from new code
-        'keep_session', // Added from new code
-        'created_at', // Added from new code
-        'updated_at', // Added from new code
+        'session_token',
+        'session_expiration',
+        'keep_session',
+        'created_at',
+        'updated_at',
     ];
 
     /**
@@ -39,7 +40,7 @@ class User extends Model
      */
     protected $hidden = [
         'password_hash',
-        'session_token', // Added from new code
+        'session_token',
     ];
 
     /**
@@ -50,8 +51,8 @@ class User extends Model
     protected $casts = [
         'created_at' => 'datetime',
         'updated_at' => 'datetime',
-        'session_expiration' => 'datetime', // Added from new code
-        'keep_session' => 'boolean', // Added from new code
+        'session_expiration' => 'datetime',
+        'keep_session' => 'boolean',
     ];
 
     /**
@@ -69,8 +70,23 @@ class User extends Model
      *
      * @return \Illuminate\Database\Eloquent\Relations\HasMany
      */
-    public function passwordResetRequests() // Added from new code
+    public function passwordResetRequests()
     {
         return $this->hasMany(PasswordResetRequest::class, 'user_id');
+    }
+
+    /**
+     * Update the user's session information.
+     *
+     * @param string $sessionToken
+     * @param \DateTime $sessionExpiration
+     * @return bool
+     */
+    public function updateSessionInfo($sessionToken, $sessionExpiration)
+    {
+        $this->session_token = $sessionToken;
+        $this->session_expiration = $sessionExpiration;
+
+        return $this->save();
     }
 }
