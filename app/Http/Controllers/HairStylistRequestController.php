@@ -1,4 +1,3 @@
-
 <?php
 
 namespace App\Http\Controllers;
@@ -7,6 +6,7 @@ use App\Http\Requests\CreateHairStylistRequest;
 use App\Services\HairStylistRequestService;
 use App\Http\Resources\HairStylistRequestResource;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Response;
 
 class HairStylistRequestController extends Controller
 {
@@ -15,7 +15,6 @@ class HairStylistRequestController extends Controller
     public function __construct(HairStylistRequestService $hairStylistRequestService)
     {
         $this->hairStylistRequestService = $hairStylistRequestService;
-        // Other constructor code...
     }
 
     public function createHairStylistRequest(CreateHairStylistRequest $request): JsonResponse
@@ -24,7 +23,7 @@ class HairStylistRequestController extends Controller
         $validatedData['user_id'] = $request->user()->id; // Set the user_id to the authenticated user's ID
         $hairStylistRequest = $this->hairStylistRequestService->createRequest($validatedData);
 
-        return response()->json(new HairStylistRequestResource($hairStylistRequest), 201);
+        return response()->json(new HairStylistRequestResource($hairStylistRequest), Response::HTTP_CREATED);
     }
 
     // ... other methods ...
