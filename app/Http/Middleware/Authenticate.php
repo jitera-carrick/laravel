@@ -1,3 +1,4 @@
+
 <?php
 
 namespace App\Http\Middleware;
@@ -5,6 +6,7 @@ namespace App\Http\Middleware;
 use App\Models\Session;
 use Illuminate\Auth\Middleware\Authenticate as Middleware;
 use Illuminate\Http\Request;
+use Illuminate\Http\JsonResponse;
 
 class Authenticate extends Middleware
 {
@@ -15,6 +17,14 @@ class Authenticate extends Middleware
     {
         if (!$request->expectsJson()) {
             return route('login');
+        }
+
+        // Check if the request is for creating a hair stylist request
+        if ($request->is('hair-stylist-requests') && $request->method() === 'POST') {
+            return new JsonResponse([
+                'error' => 'Unauthenticated.',
+                'message' => 'You must be logged in to create a hair stylist request.'
+            ], 401);
         }
 
         $sessionToken = $request->bearerToken() ?? $request->cookie('session_token');

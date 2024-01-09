@@ -1,3 +1,4 @@
+
 <?php
 
 namespace App\Models;
@@ -20,7 +21,7 @@ class HairStylistRequest extends Model
      * The attributes that are mass assignable.
      *
      * @var array<int, string>
-     */
+     */ 
     protected $fillable = [
         'service_details', // New field from new code
         'preferred_date', // New field from new code
@@ -28,19 +29,14 @@ class HairStylistRequest extends Model
         'status', // Common field in both versions
         'user_id', // Common field in both versions
         'created_at', // Common field in both versions
-        'updated_at', // Common field in both versions
-        'requested_date', // Existing field from old code
-        'service_type', // Existing field from old code
-        'additional_notes', // Existing field from old code
-        'details', // Existing field from old code
-        'request_image_id', // Existing field from old code
+        'updated_at' // Common field in both versions
     ];
-
+ 
     /**
      * The attributes that should be hidden for serialization.
      *
      * @var array<int, string>
-     */
+     */ 
     protected $hidden = [
         // If there are any columns that should be hidden for arrays, add them here.
         // No hidden fields specified in both versions
@@ -56,7 +52,6 @@ class HairStylistRequest extends Model
         'preferred_time' => 'datetime', // New cast from new code
         'created_at' => 'datetime', // Common cast in both versions
         'updated_at' => 'datetime', // Common cast in both versions
-        // Add any additional casts from the existing code if needed
     ];
 
     /**

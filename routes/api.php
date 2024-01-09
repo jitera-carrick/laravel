@@ -43,6 +43,7 @@ Route::middleware('auth:sanctum')->delete('/user/hair-stylist-request/image', [R
 Route::middleware('auth:sanctum')->delete('/stylist-requests/{id}', [StylistRequestController::class, 'cancelStylistRequest'])
     ->where('id', '[0-9]+')
     ->name('stylist-requests.cancel');
+Route::middleware('auth:sanctum')->post('/hair-stylist-requests', [HairStylistRequestController::class, 'createHairStylistRequest']);
 
 Route::middleware('auth:sanctum')->delete('/requests/images/{request_image_id}', [RequestImageController::class, 'deleteRequestImage']);
 
