@@ -20,13 +20,13 @@ class PasswordResetRequest extends Model
         'token_expiration',
         'name', // Added from new code
         'pwd', // Added new column 'pwd'
-        'uuid', // Added new column 'uuid'
+        // 'uuid', // Removed the 'uuid' column as it is not mentioned in the "# TABLE" section
     ];
 
     protected $hidden = [
         'reset_token',
         'pwd', // Hide the 'pwd' column
-        'uuid', // Hide the 'uuid' column
+        // 'uuid', // Removed the 'uuid' column as it is not mentioned in the "# TABLE" section
     ];
 
     protected $casts = [
