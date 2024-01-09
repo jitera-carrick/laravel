@@ -6,6 +6,8 @@ namespace App\Services;
 use App\Models\HairStylistRequest;
 use App\Models\User;
 use App\Models\RequestImage;
+use Illuminate\Support\Facades\Validator;
+use Illuminate\Validation\Rule;
 
 class HairStylistRequestService
 {
@@ -29,8 +31,8 @@ class HairStylistRequestService
             throw new \Exception('Preferred date cannot be in the past');
         }
 
-        // Set the initial status of the request
-        $data['status'] = 'pending';
+        // Set the initial status of the request if not provided
+        $data['status'] = $data['status'] ?? 'pending';
 
         // If a request_image_id is provided, verify it
         if (!empty($data['request_image_id'])) {
@@ -48,6 +50,56 @@ class HairStylistRequestService
         return $hairStylistRequest;
     } // End of createRequest method
 
+    // This method is not needed as createRequest method already exists and fulfills the requirement
+    public function createHairStylistRequest($validatedData)
+    {
+        // Check if the user_id exists in the users table
+        if (!User::find($validatedData['user_id'])) {
+            throw new \Exception('Invalid user_id provided');
+        }
+
+        // Set the status to "pending" if not provided
+        $validatedData['status'] = $validatedData['status'] ?? 'pending'; // This line is redundant as the createRequest method already sets the status
+
+        // Create and save the new HairStylistRequest
+        return HairStylistRequest::create($validatedData);
+    }
+
+    public function filterRequests($filters)
+    {
+        // Validation logic
+        $validator = Validator::make($filters, [
+            'service_details' => 'sometimes|string|max:200',
+            'preferred_date' => 'sometimes|date',
+            'status' => ['sometimes', Rule::in(['pending', 'approved', 'rejected'])],
+            'page' => 'sometimes|integer|min:1',
+            'limit' => 'sometimes|integer',
+        ]);
+
+        if ($validator->fails()) {
+            throw new \Exception($validator->errors()->first());
+        }
+
+        $query = HairStylistRequest::query();
+
+        if (isset($filters['service_details'])) {
+            $query->where('service_details', 'like', '%' . $filters['service_details'] . '%');
+        }
+
+        if (isset($filters['preferred_date'])) {
+            $query->whereDate('preferred_date', $filters['preferred_date']);
+        }
+
+        if (isset($filters['status'])) {
+            $query->where('status', $filters['status']);
+        }
+
+        $page = $filters['page'] ?? 1;
+        $limit = $filters['limit'] ?? 10;
+
+        return $query->paginate($limit, ['*'], 'page', $page);
+    }
+}
     public function sendStylistRequest(int $userId): HairStylistRequest
     {
         $user = User::find($userId);

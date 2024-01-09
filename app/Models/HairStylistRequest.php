@@ -47,7 +47,7 @@ class HairStylistRequest extends Model
      *
      * @var array<string, string>
      */
-    protected $casts = [
+    protected $casts = [ // Corrected cast types
         'preferred_date' => 'date', // Corrected cast from new code
         'preferred_time' => 'datetime', // New cast from new code
         'status' => 'enum:pending,confirmed,canceled', // Add cast for status as enum
@@ -100,6 +100,21 @@ class HairStylistRequest extends Model
             return $request->save();
         }
         return false;
+    }
+
+    /**
+     * Create a new hair stylist request with the provided data.
+     *
+     * @param array $data
+     * @return \App\Models\HairStylistRequest
+     */
+    public static function createRequest(array $data)
+    {
+        // Ensure 'status' is set to 'pending' if not provided
+        $data['status'] = $data['status'] ?? 'pending';
+
+        // Create and return the new hair stylist request
+        return self::create($data);
     }
 
     // Other existing relationships and methods from the old code should be included here.
