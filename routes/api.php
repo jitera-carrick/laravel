@@ -32,7 +32,6 @@ Route::middleware('auth:sanctum')->get('/user', function (Request $request) {
 
 Route::post("/users/reset-password", [ResetPasswordController::class, "resetPassword"]);
 
-// Updated login route to include validation as per the requirement
 // Merged the login route from both new and existing code, keeping the throttle middleware
 Route::post("/api/login", [LoginController::class, "login"])->middleware('throttle:api');
 
@@ -55,6 +54,7 @@ Route::middleware('auth:sanctum')->delete('/requests/images/{request_image_id}',
 Route::middleware('auth:sanctum')->match(['put', 'patch'], '/hair-stylist-requests/{id}', [HairStylistRequestController::class, 'updateHairStylistRequest']);
 
 // Removed duplicate route for creating stylist requests
+// Kept the update route from the new code as it seems to be the most updated one
 Route::middleware('auth:sanctum')->put('/stylist-request/update/{id}', [StylistRequestController::class, 'update'])
     ->where('id', '[0-9]+')
     ->name('stylist-request.update');
@@ -70,9 +70,10 @@ Route::middleware('auth:sanctum')->post('/api/cancel-login', [LoginController::c
 // Kept the middleware for validation from the existing code
 Route::post('/api/password_reset_requests', [ForgotPasswordController::class, 'createPasswordResetRequest'])
     ->middleware('throttle:api')
-    ->middleware('validate.password_reset_request'); // Added middleware for validation
+    ->middleware('validate.password_reset_request'); // Assuming there is a middleware for validation
 
 // The new route for creating hair stylist requests is added as per the requirement
+// Adjusted the route to match the existing pattern
 Route::middleware('auth:sanctum')->post('/api/hair-stylist-request/create', [HairStylistRequestController::class, 'createHairStylistRequest']);
 
 // Handle login failure

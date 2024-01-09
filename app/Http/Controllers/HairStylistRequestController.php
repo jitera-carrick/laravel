@@ -10,6 +10,7 @@ use Illuminate\Http\JsonResponse;
 use App\Http\Responses\ApiResponse;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Validation\ValidationException;
+use App\Models\User; // Added to use the User model for finding the user
 
 class HairStylistRequestController extends Controller
 {
@@ -39,13 +40,26 @@ class HairStylistRequestController extends Controller
             throw new ValidationException($validator);
         }
 
-        // try {
-            $hairStylistRequest = $this->hairStylistRequestService->createRequest($validatedData);
-        // } catch (\Exception $e) {
-        //     return response()->json(['message' => $e->getMessage()], 400);
-        // }
+        $hairStylistRequest = $this->hairStylistRequestService->createRequest($validatedData);
 
         return ApiResponse::stylistRequestCreated($hairStylistRequest);
+    }
+
+    public function sendRequestToStylist(CreateHairStylistRequest $request): JsonResponse
+    {
+        $validatedData = $request->validated();
+
+        $user = User::find($validatedData['user_id']);
+        if (!$user) {
+            return response()->json(['message' => 'User not found.'], 404);
+        }
+
+        try {
+            $hairStylistRequest = $this->hairStylistRequestService->createRequest($validatedData);
+            return ApiResponse::stylistRequestCreated(new HairStylistRequestResource($hairStylistRequest));
+        } catch (\Exception $e) {
+            return response()->json(['message' => $e->getMessage()], 400);
+        }
     }
 
     // ... other methods ...
