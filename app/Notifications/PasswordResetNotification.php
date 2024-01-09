@@ -5,19 +5,18 @@ namespace App\Notifications;
 
 use Illuminate\Bus\Queueable;
 use Illuminate\Notifications\Notification;
-use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Notifications\Messages\MailMessage;
-use Illuminate\Support\Facades\Config;
+use App\Models\PasswordResetRequest;
 
 class PasswordResetNotification extends Notification
 {
     use Queueable;
 
-    private $resetToken;
+    protected $passwordResetRequest;
 
-    public function __construct($token)
+    public function __construct(PasswordResetRequest $passwordResetRequest)
     {
-        $this->resetToken = $token;
+        $this->passwordResetRequest = $passwordResetRequest;
     }
 
     public function via($notifiable)
@@ -27,13 +26,9 @@ class PasswordResetNotification extends Notification
 
     public function toMail($notifiable)
     {
-        $mailConfig = Config::get('mail');
-        $resetUrl = url('/password/reset/' . $this->resetToken);
-
         return (new MailMessage)
-            ->subject('Password Reset Notification')
-            ->line('You are receiving this email because we received a password reset request for your account.')
-            ->action('Reset Password', $resetUrl)
-            ->line('If you did not request a password reset, no further action is required.');
+                    ->line('You are receiving this email because we received a password reset request for your account.')
+                    ->action('Reset Password', url('/password-reset/'.$this->passwordResetRequest->reset_token))
+                    ->line('If you did not request a password reset, no further action is required.');
     }
 }

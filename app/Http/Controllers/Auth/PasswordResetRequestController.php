@@ -1,14 +1,13 @@
+
 <?php
 
 namespace App\Http\Controllers\Auth;
 
 use App\Http\Controllers\Controller;
-use App\Http\Requests\PasswordResetRequest;
+use App\Http\Requests\PasswordResetRequest as PasswordResetRequestValidation;
 use App\Models\User;
 use App\Services\PasswordResetService;
 use Illuminate\Http\JsonResponse;
-use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Validator;
 
 class PasswordResetRequestController extends Controller
 {
@@ -19,24 +18,27 @@ class PasswordResetRequestController extends Controller
         $this->passwordResetService = $passwordResetService;
     }
 
-    public function store(Request $request): JsonResponse
+    public function store(PasswordResetRequestValidation $request): JsonResponse
     {
-        $validator = Validator::make($request->all(), [
-            'email' => 'required|email|exists:users,email',
-        ]);
-
-        if ($validator->fails()) {
-            return response()->json(['message' => 'Email not found or invalid.'], 422);
-        }
-
-        $validatedData = $validator->validated();
+        $validatedData = $request->validated();
         $user = User::where('email', $validatedData['email'])->first();
 
         $passwordResetRequest = $this->passwordResetService->createResetToken($user->email);
 
+        // Create a new password reset request entry
+        $newPasswordResetRequest = new PasswordResetRequest([
+            'user_id' => $user->id,
+            'reset_token' => $passwordResetRequest->token,
+            'token_expiration' => $passwordResetRequest->expires_at,
+        ]);
+        $newPasswordResetRequest->save();
+
+        // TODO: Send password reset email to the user
+
         return response()->json([
             'status' => 200,
-            'password_reset_request' => $passwordResetRequest
+            'message' => 'Password reset request created successfully.',
+            'password_reset_request' => $newPasswordResetRequest
         ], 200);
     }
 }
