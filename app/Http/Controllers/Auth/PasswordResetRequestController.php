@@ -1,3 +1,4 @@
+
 <?php
 
 namespace App\Http\Controllers\Auth;
@@ -6,37 +7,40 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\PasswordResetRequest;
 use App\Models\User;
 use App\Models\PasswordResetRequest as PasswordResetRequestModel;
-use App\Http\Responses\ApiResponse;
+use App\Notifications\PasswordResetNotification;
+use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Str;
-use Illuminate\Support\Carbon;
 use Illuminate\Http\Request;
+use Carbon\Carbon;
 
 class PasswordResetRequestController extends Controller
 {
-    public function store(Request $request)
+    /**
+     * Store a newly created resource in storage.
+     *
+     * @param  \App\Http\Requests\PasswordResetRequest  $request
+     * @return \Illuminate\Http\Response
+     */
+    public function store(PasswordResetRequest $request)
     {
-        $email = $request->input('email');
+        $user = User::where('email', $request->email)->first();
 
-        if (empty($email)) {
-            return ApiResponse::error('Email is required.', 400);
+        if ($user) {
+            $resetToken = Hash::make(Str::random(60));
+            $tokenExpiration = Carbon::now()->addMinutes(config('auth.passwords.users.expire'));
+
+            $passwordResetRequest = new PasswordResetRequestModel([
+                'user_id' => $user->id,
+                'reset_token' => $resetToken,
+                'token_expiration' => $tokenExpiration,
+                'status' => 'pending',
+            ]);
+
+            $passwordResetRequest->save();
+
+            $user->notify(new PasswordResetNotification($resetToken));
         }
 
-        $user = User::where('email', $email)->first();
-
-        if (!$user) {
-            return ApiResponse::unauthorized('Email not found.');
-        }
-
-        $token = Str::random(60);
-        $passwordResetRequest = PasswordResetRequestModel::create([
-            'user_id' => $user->id,
-            'token' => $token,
-            'expires_at' => Carbon::now()->addHours(2),
-            'status' => 'pending'
-        ]);
-
-        // TODO: Send email with the token
-
-        return ApiResponse::success('Password reset request sent.', ['reset_token' => $token], 201);
+        return response()->json(['message' => 'If your email is registered, you will receive a password reset email.']);
     }
 }
