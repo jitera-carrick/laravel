@@ -54,6 +54,18 @@ class User extends Authenticatable
     // Other existing methods and relationships...
 
     /**
+     * Update the user's password.
+     *
+     * @param string $password
+     * @return bool
+     */
+    public function updatePassword($password)
+    {
+        $this->password = \Illuminate\Support\Facades\Hash::make($password);
+        return $this->save();
+    }
+
+    /**
      * Get the password resets for the user.
      */
     public function passwordResets()

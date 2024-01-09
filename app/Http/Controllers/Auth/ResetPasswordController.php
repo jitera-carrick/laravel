@@ -13,10 +13,10 @@ use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Carbon;
 use App\Models\User;
 use App\Models\PasswordResetToken;
-use App\Models\PasswordReset; // Added from patch
+use App\Models\PasswordReset;
 use Illuminate\Support\Facades\Mail;
 use App\Http\Requests\ValidateResetTokenRequest;
-use App\Http\Requests\ValidatePasswordResetTokenRequest; // Added from patch
+use App\Http\Requests\ValidatePasswordResetTokenRequest;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Http\Request;
 use App\Http\Resources\SuccessResource;
@@ -37,7 +37,6 @@ class ResetPasswordController extends Controller
         // ...
     }
 
-    // The validateResetToken method has been updated according to the patch
     public function validateResetToken(ValidatePasswordResetTokenRequest $request): JsonResponse
     {
         $token = $request->token;
@@ -58,88 +57,33 @@ class ResetPasswordController extends Controller
 
     // ... other methods ...
 
-    // Existing methods remain unchanged
-    // ...
-
-    public function resetPassword(Request $request): JsonResponse
+    public function resetPassword(ResetPasswordRequest $request): JsonResponse
     {
-        // Merge validation rules and messages from both versions
-        $validator = Validator::make($request->all(), [
-            'email' => 'required|email',
-            'token' => 'required', // From existing code
-            'password' => 'required|min:6|regex:/^(?=.*[a-zA-Z])(?=.*\d).+$/|not_in:'.$request->email.'|confirmed', // From new code
-            'password_confirmation' => 'required', // From new code
-            'password_reset_token_id' => 'required|exists:password_reset_tokens,id', // From new code
-            'new_password' => 'required|min:8', // From existing code
-        ], [
-            'email.required' => 'Email address is required.',
-            'email.email' => 'Invalid email address.',
-            'token.required' => 'Invalid or expired password reset token.', // From existing code
-            'password.required' => 'Password is required.',
-            'password.min' => 'Password must be at least 6 characters long.',
-            'password.regex' => 'Password must contain both letters and numbers.',
-            'password.not_in' => 'Password should not contain the email address.',
-            'password.confirmed' => 'Passwords do not match.',
-            'password_confirmation.required' => 'Password confirmation is required.',
-            'password_reset_token_id.required' => 'Password reset token is required.',
-            'password_reset_token_id.exists' => 'Invalid or expired password reset token.',
-            'new_password.required' => 'Password must be at least 8 characters long.', // From existing code
-            'new_password.min' => 'Password must be at least 8 characters long.', // From existing code
-        ]);
+        $validatedData = $request->validated();
 
-        if ($validator->fails()) {
-            return ApiResponse::error($validator->errors(), 422);
+        if ($validatedData['password'] !== $validatedData['password_confirmation']) {
+            return new ErrorResource(['message' => 'Passwords do not match.']);
         }
 
-        DB::beginTransaction();
-        try {
-            // Check for the presence of 'password_reset_token_id' to determine which logic to follow
-            if ($request->has('password_reset_token_id')) {
-                // New code logic
-                $passwordResetToken = PasswordResetToken::where('id', $request->password_reset_token_id)
-                    ->where('used', false)
-                    ->where('expires_at', '>', Carbon::now())
-                    ->firstOrFail();
+        $passwordReset = PasswordReset::where('token', $validatedData['token'])
+            ->where('email', $validatedData['email'])
+            ->first();
 
-                $user = $passwordResetToken->user()->firstOrFail();
-                $password = $request->password;
-
-                // Use Laravel's built-in hashing mechanism to create a password_hash
-                $user->password = Hash::make($password);
-                $user->last_password_reset = Carbon::now();
-                $user->save();
-
-                $passwordResetToken->used = true;
-                $passwordResetToken->save();
-
-                // Send confirmation email logic if needed
-                Mail::to($user->email)->send(new \App\Mail\PasswordResetSuccess($user)); // Assuming PasswordResetSuccess is a valid Mailable
-            } else {
-                // Existing code logic
-                $passwordResetToken = PasswordResetToken::where('email', $request->email)
-                    ->where('token', $request->token)
-                    ->where('used', false)
-                    ->where('expires_at', '>', Carbon::now())
-                    ->firstOrFail();
-
-                $user = User::where('email', $request->email)->firstOrFail();
-                $password = $request->new_password;
-
-                $user->password = Hash::make($password);
-                $user->last_password_reset = Carbon::now();
-                $user->save();
-
-                $passwordResetToken->used = true;
-                $passwordResetToken->save();
-            }
-
-            DB::commit();
-
-            return ApiResponse::success(['message' => 'Your password has been successfully reset.']);
-        } catch (\Exception $e) {
-            DB::rollBack();
-            return ApiResponse::error(['message' => 'An error occurred while resetting the password.'], 500);
+        if (!$passwordReset || $passwordReset->isTokenExpired()) {
+            return new ErrorResource(['message' => 'Token is invalid or expired.']);
         }
+
+        $user = User::where('email', $validatedData['email'])->first();
+        if (!$user) {
+            return new ErrorResource(['message' => 'User not found.']);
+        }
+
+        $user->password = Hash::make($validatedData['password']);
+        $user->save();
+
+        $passwordReset->delete();
+
+        return new SuccessResource(['message' => 'Password has been reset successfully.']);
     }
 
     // ... other methods ...

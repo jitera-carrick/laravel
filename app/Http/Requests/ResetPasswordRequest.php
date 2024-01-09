@@ -4,48 +4,34 @@
 namespace App\Http\Requests;
 
 use Illuminate\Foundation\Http\FormRequest;
-use Illuminate\Validation\Rules\Password;
 
 class ResetPasswordRequest extends FormRequest
 {
-    /**
-     * Determine if the user is authorized to make this request.
-     *
-     * @return bool
-     */
     public function authorize()
     {
-        // Assuming any authenticated user can reset their password
-        return !is_null($this->user());
+        return true;
     }
 
-    /**
-     * Get the validation rules that apply to the request.
-     *
-     * @return array
-     */
     public function rules()
     {
         return [
-            'token' => 'required|string',
-            'password' => ['required', 'confirmed', Password::defaults()],
-            'password_confirmation' => 'required_with:password',
+            'email' => 'required|email',
+            'token' => 'required',
+            'password' => 'required|confirmed|min:8',
+            'password_confirmation' => 'required',
         ];
     }
 
-    /**
-     * Get the custom messages for validation errors.
-     *
-     * @return array
-     */
     public function messages()
     {
         return [
-            'token.required' => 'The reset token is required.',
-            'token.exists' => 'The provided reset token is invalid or has expired.',
-            'password.required' => 'The password field is required.',
-            'password.confirmed' => 'The password confirmation does not match.',
-            'password_confirmation.required_with' => 'The password confirmation is required when password is present.',
+            'email.required' => 'An email address is required.',
+            'email.email' => 'You must provide a valid email address.',
+            'token.required' => 'A token is required.',
+            'password.required' => 'A password is required.',
+            'password.confirmed' => 'Passwords do not match.',
+            'password.min' => 'Password must be at least 8 characters.',
+            'password_confirmation.required' => 'Password confirmation is required.',
         ];
     }
 }

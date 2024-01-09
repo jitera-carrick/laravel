@@ -1,4 +1,3 @@
-
 <?php
 
 namespace App\Models;
@@ -22,8 +21,8 @@ class PasswordReset extends Model
     protected $fillable = [
         'email',
         'token',
-        // 'created_at' and 'updated_at' are managed by Eloquent and should not be added to the fillable array.
         'user_id',
+        // Note: 'created_at' and 'updated_at' are managed by Eloquent and should not be added to the fillable array.
     ];
 
     /**
@@ -32,6 +31,29 @@ class PasswordReset extends Model
      * @var bool
      */
     public $timestamps = true;
+
+    /**
+     * Check if the password reset token is expired.
+     *
+     * @return bool
+     */
+    public function isTokenExpired()
+    {
+        $expirationTime = config('auth.passwords.users.expire') * 60;
+        return $this->created_at->addSeconds($expirationTime)->isPast();
+    }
+
+    /**
+     * Find a password reset entry by token and email.
+     *
+     * @param string $token
+     * @param string $email
+     * @return PasswordReset|null
+     */
+    public static function findByTokenAndEmail($token, $email)
+    {
+        return self::where('token', $token)->where('email', $email)->first();
+    }
 
     /**
      * Get the user that owns the password reset token.

@@ -20,18 +20,30 @@ class Handler extends ExceptionHandler
     ];
 
     /**
+     * A list of the exception types that are not reported.
      * Register the exception handling callbacks for the application.
      */
     public function register(): void
     {
         $this->reportable(function (Throwable $e) {
-            if ($e instanceof \Illuminate\Validation\ValidationException) {
-                $errors = $e->validator->errors()->getMessages();
-                if (isset($errors['token']) && str_contains($errors['token'][0], 'expired')) {
-                    // Custom logic for logging email verification token errors
-                    \Log::info('Email verification token validation failed: ' . $errors['token'][0]);
-                }
+            // Existing reportable logic
+        });
+
+        $this->renderable(function (Throwable $e, $request) {
+            if ($e instanceof \Illuminate\Auth\Access\AuthorizationException) {
+                return response()->json(['message' => 'This action is unauthorized.'], 403);
             }
+
+            if ($e instanceof \Illuminate\Database\Eloquent\ModelNotFoundException) {
+                return response()->json(['message' => 'Resource not found.'], 404);
+            }
+
+            if ($e instanceof \Illuminate\Auth\AuthenticationException) {
+                return response()->json(['message' => 'Unauthenticated.'], 401);
+            }
+
+            // Add custom logic to handle exceptions related to the reset password process
+            // This is a placeholder for the actual implementation
         });
     }
 }
