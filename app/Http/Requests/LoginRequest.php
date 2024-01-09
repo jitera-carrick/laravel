@@ -1,3 +1,4 @@
+
 <?php
 
 namespace App\Http\Requests;
@@ -26,12 +27,22 @@ class LoginRequest extends FormRequest
     public function rules()
     {
         $rules = [
-            'email' => 'required|string|email',
+            'email' => 'required|string|email|max:255',
             'password' => 'required|string|min:8',
             'keep_session' => 'sometimes|boolean',
         ];
 
         return $rules;
+    }
+
+    /**
+     * Get the custom messages for validation errors.
+     *
+     * @return array
+     */
+    public function messages()
+    {
+        return ['keep_session.boolean' => 'The keep session field must be true or false.'];
     }
 
     /**
@@ -49,7 +60,7 @@ class LoginRequest extends FormRequest
     }
 
     /**
-     * Handle a failed validation attempt.
+     * Customize the failed validation response.
      *
      * @param Validator $validator
      * @return void
@@ -58,23 +69,9 @@ class LoginRequest extends FormRequest
      */
     protected function failedValidation(Validator $validator)
     {
-        $errors = $validator->errors();
-
-        $customMessages = [
-            'email.email' => 'Invalid email format.',
-            'password.min' => 'Password must be at least 8 characters long.',
-            'keep_session.boolean' => 'Keep Session must be a boolean.',
-        ];
-
-        $transformedErrors = [];
-
-        foreach ($errors->getMessages() as $field => $message) {
-            $transformedErrors[$field] = $customMessages[$message[0]] ?? $message[0];
-        }
-
         throw new HttpResponseException(response()->json([
             'status' => 422,
-            'errors' => $transformedErrors,
+            'errors' => $validator->errors(),
         ], 422));
     }
 }

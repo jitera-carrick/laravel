@@ -1,4 +1,3 @@
-
 <?php
 
 namespace App\Http\Controllers\Auth;
@@ -15,17 +14,17 @@ use App\Http\Resources\SessionResource;
 use App\Http\Responses\ApiResponse;
 use App\Services\AuthService;
 use App\Models\LoginAttempt;
-use App\Models\User; // Added line
+use App\Models\User;
 
 class LoginController extends Controller
 {
     protected $sessionService;
-    protected $authService; // Added line
+    protected $authService;
 
-    public function __construct(SessionService $sessionService, AuthService $authService = null) // Modified line
+    public function __construct(SessionService $sessionService, AuthService $authService = null)
     {
         $this->sessionService = $sessionService;
-        $this->authService = $authService ?: new AuthService(); // Modified line
+        $this->authService = $authService ?: new AuthService();
     }
     
     public function login(Request $request): JsonResponse
@@ -58,10 +57,10 @@ class LoginController extends Controller
         $keepSession = $request->input('keep_session', false);
 
         try {
-            $sessionData = $this->authService->attemptLogin($credentials['email'], $credentials['password'], $keepSession); // Modified line
+            $sessionData = $this->authService->attemptLogin($credentials['email'], $credentials['password'], $keepSession);
 
             if ($sessionData) {
-                $user = User::where('email', $credentials['email'])->first(); // Added line
+                $user = User::where('email', $credentials['email'])->first();
                 // Use SessionResource if available, otherwise fallback to manual response
                 if (isset($sessionData['token'])) {
                     return response()->json([
@@ -70,7 +69,7 @@ class LoginController extends Controller
                         'session_token' => $sessionData['token'],
                         'session_expiration' => $sessionData['expiration'],
                     ], 200);
-                } elseif (isset($sessionData->session_token)) { // Added block
+                } elseif (isset($sessionData->session_token)) {
                     return response()->json([
                         'status' => 200,
                         'session_token' => $sessionData->session_token,
@@ -86,7 +85,7 @@ class LoginController extends Controller
                 }
             } else {
                 event(new FailedLogin($credentials['email']));
-                return $this->handleLoginFailure($request); // Updated to pass the request object
+                return $this->handleLoginFailure($request);
             }
         } catch (\Exception $e) {
             return ApiResponse::errorResponse($e->getMessage());
@@ -97,7 +96,7 @@ class LoginController extends Controller
     {
         $email = $request->input('email', null);
         if ($email) {
-            event(new FailedLogin($email, now()));
+            event(new FailedLogin($email));
             LoginAttempt::create([
                 'email' => $email,
                 'attempted_at' => now(),
@@ -115,8 +114,17 @@ class LoginController extends Controller
     public function cancelLogin(): JsonResponse
     {
         try {
-            $this->authService->cancelLoginProcess(); // Modified line
-            return ApiResponse::loginCanceled(); // Modified line
+            $this->sessionService->cancelOngoingLogin();
+            // Merged the response from the new code and existing code
+            $response = [
+                'status' => 200,
+                'message' => 'Login process canceled successfully.'
+            ];
+            // Check if ApiResponse::loginCanceled() exists and use it if available
+            if (method_exists(ApiResponse::class, 'loginCanceled')) {
+                $response = ApiResponse::loginCanceled();
+            }
+            return response()->json($response, 200);
         } catch (\Exception $e) {
             return ApiResponse::errorResponse($e->getMessage());
         }
@@ -132,4 +140,4 @@ Route::match(['get', 'post'], '/api/login/failure', [LoginController::class, 'ha
 Route::post('/api/login/cancel', [LoginController::class, 'cancelLogin']);
 
 // Register the route for login
-Route::post('/api/login', [LoginController::class, 'login']); // Modified line
+Route::post('/api/login', [LoginController::class, 'login']);

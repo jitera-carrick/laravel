@@ -25,6 +25,7 @@ class HairStylistRequest extends Model
     protected $fillable = [
         'service_details', // New field from new code
         'preferred_date', // New field from new code
+        'status' => 'pending', // Set default status to 'pending'
         'preferred_time', // New field from new code
         'status', // Common field in both versions
         'user_id', // Common field in both versions
@@ -46,9 +47,10 @@ class HairStylistRequest extends Model
      *
      * @var array<string, string>
      */
-    protected $casts = [
+    protected $casts = [ // Corrected cast types
         'preferred_date' => 'date', // Corrected cast from new code
         'preferred_time' => 'datetime', // New cast from new code
+        'status' => 'enum:pending,confirmed,canceled', // Add cast for status as enum
         'created_at' => 'datetime', // Common cast in both versions
         'updated_at' => 'datetime', // Common cast in both versions
     ];
@@ -72,6 +74,19 @@ class HairStylistRequest extends Model
     }
 
     /**
+     * Create a new stylist request.
+     *
+     * @param int $userId
+     * @return self
+     */
+    public static function createStylistRequest($userId)
+    {
+        $request = new self(['user_id' => $userId, 'status' => 'pending']);
+        $request->save();
+        return $request;
+    }
+
+    /**
      * Update the status of the hair stylist request to "canceled".
      *
      * @param int $requestId
@@ -85,6 +100,21 @@ class HairStylistRequest extends Model
             return $request->save();
         }
         return false;
+    }
+
+    /**
+     * Create a new hair stylist request with the provided data.
+     *
+     * @param array $data
+     * @return \App\Models\HairStylistRequest
+     */
+    public static function createRequest(array $data)
+    {
+        // Ensure 'status' is set to 'pending' if not provided
+        $data['status'] = $data['status'] ?? 'pending';
+
+        // Create and return the new hair stylist request
+        return self::create($data);
     }
 
     // Other existing relationships and methods from the old code should be included here.

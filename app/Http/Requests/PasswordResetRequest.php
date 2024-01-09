@@ -26,6 +26,7 @@ class PasswordResetRequest extends FormRequest
     public function rules()
     {
         return [
+            // Ensure the email field is not empty and is in the correct format
             'email' => [
                 'required',
                 'string',
