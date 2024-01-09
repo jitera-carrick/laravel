@@ -1,4 +1,3 @@
-
 <?php
 
 namespace App\Http\Controllers;
@@ -8,6 +7,8 @@ use App\Services\HairStylistRequestService;
 use App\Http\Resources\HairStylistRequestResource;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Support\Facades\Validator;
+use Illuminate\Validation\ValidationException;
 
 class HairStylistRequestController extends Controller
 {
@@ -24,6 +25,19 @@ class HairStylistRequestController extends Controller
     {
         $validatedData = $request->validated();
         $validatedData['user_id'] = Auth::id(); // Ensure the user_id is the authenticated user's ID
+
+        // Custom validation for user_id existence
+        $validator = Validator::make($validatedData, [
+            'user_id' => 'exists:users,id',
+            'service_details' => 'required',
+            'preferred_date' => 'required|date',
+            'preferred_time' => 'required',
+        ]);
+
+        if ($validator->fails()) {
+            throw new ValidationException($validator);
+        }
+
         try {
             $hairStylistRequest = $this->hairStylistRequestService->createRequest($validatedData);
         } catch (\Exception $e) {
