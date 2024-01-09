@@ -38,6 +38,22 @@ class User extends Authenticatable
     ];
 
     /**
+     * Generate a unique verification token for email verification.
+     *
+     * @return string
+     */
+    public function generateVerificationToken()
+    {
+        do {
+            $token = \Illuminate\Support\Str::random(60);
+        } while (self::where('remember_token', $token)->exists());
+
+        return $token;
+    }
+
+    // Other existing methods and relationships...
+
+    /**
      * Get the password resets for the user.
      */
     public function passwordResets()

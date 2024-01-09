@@ -1,3 +1,4 @@
+
 <?php
 
 use Illuminate\Http\Request;
@@ -28,9 +29,9 @@ Route::middleware('auth:sanctum')->get('/user', function (Request $request) {
 
 Route::post("/users/reset-password", [ResetPasswordController::class, "resetPassword"]);
 
-Route::post("/login", [AuthController::class, "login"]);
-
 Route::post("/users/register", [RegisterController::class, "register"])->middleware("throttle:api");
+
+Route::post("/login", [AuthController::class, "login"]);
 
 Route::post('/session/maintain', [SessionController::class, 'maintainSession']);
 

@@ -62,8 +62,8 @@ return [
     ],
 
     'from' => [
-        'address' => env('MAIL_FROM_ADDRESS', 'hello@example.com'),
-        'name' => env('MAIL_FROM_NAME', 'Example'),
+        'address' => env('MAIL_FROM_ADDRESS', 'noreply@yourdomain.com'),
+        'name' => env('MAIL_FROM_NAME', 'Your Company Name'),
         // Set the "from" address to a valid email to ensure deliverability of password reset emails
     ],
 
