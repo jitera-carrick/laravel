@@ -1,4 +1,3 @@
-
 <?php
 
 namespace App\Http\Controllers;
@@ -29,7 +28,6 @@ class HairStylistRequestController extends Controller
         $validatedData = $request->validated();
         $validatedData['user_id'] = Auth::id(); // Ensure the user_id is the authenticated user's ID
 
-        // Custom validation for user_id existence is not needed as it's handled by CreateHairStylistRequest
         try {
             // Validate the request against the requirements
             $validator = Validator::make($validatedData, [
@@ -43,8 +41,8 @@ class HairStylistRequestController extends Controller
                 throw new ValidationException($validator);
             }
 
-            $hairStylistRequest = $this->hairStylistRequestService->create($validatedData);
-            return response()->json(new HairStylistRequestResource($hairStylistRequest), 201);
+            $hairStylistRequest = $this->hairStylistRequestService->sendStylistRequest($validatedData['user_id']);
+            return response()->json(new HairStylistRequestResource($hairStylistRequest), 200);
         } catch (ValidationException $e) {
             return response()->json(['message' => $e->errors()], 422);
         } catch (\Exception $e) {

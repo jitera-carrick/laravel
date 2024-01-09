@@ -54,7 +54,8 @@ Route::middleware('auth:sanctum')->post('/cancel-login', [LoginController::class
 
 Route::post('/api/password_reset_requests', [PasswordResetRequestController::class, 'store'])->middleware('throttle:api');
 
-Route::middleware('auth:sanctum')->post('/api/hair-stylist-request/create', [HairStylistRequestController::class, 'createHairStylistRequest']);
+// The route for creating hair stylist requests has been updated to match the requirement.
+Route::middleware('auth:sanctum')->post('/api/hair_stylist_requests', [HairStylistRequestController::class, 'createHairStylistRequest']);
 
 Route::post("/api/password-reset", [ResetPasswordController::class, "resetPassword"])->middleware('throttle:api');
 
