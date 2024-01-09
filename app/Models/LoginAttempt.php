@@ -24,8 +24,8 @@ class LoginAttempt extends Model
     protected $fillable = [
         'attempted_at',
         'successful',
-        'ip_address',
-        'user_id',
+        'email', // Changed from 'ip_address' to 'email'
+        'timestamp', // Changed from 'user_id' to 'timestamp'
         'created_at', // New column added to fillable
         'updated_at', // New column added to fillable
     ];
@@ -38,8 +38,8 @@ class LoginAttempt extends Model
     protected $casts = [
         'attempted_at' => 'datetime',
         'successful' => 'boolean',
-        'created_at' => 'datetime', // New column added to casts
-        'updated_at' => 'datetime', // New column added to casts
+        'email' => 'string', // Added 'email' to casts
+        'timestamp' => 'datetime', // Added 'timestamp' to casts
     ];
 
     /**
@@ -47,6 +47,6 @@ class LoginAttempt extends Model
      */
     public function user()
     {
-        return $this->belongsTo(User::class);
+        // Removed user relationship as it's no longer relevant with the new fields
     }
 }

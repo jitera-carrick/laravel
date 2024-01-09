@@ -5,6 +5,8 @@ namespace App\Exceptions;
 
 use Illuminate\Foundation\Exceptions\Handler as ExceptionHandler;
 use Throwable;
+use App\Exceptions\InvalidCredentialsException;
+use App\Http\Responses\ApiResponse;
 
 class Handler extends ExceptionHandler
 {
@@ -31,6 +33,12 @@ class Handler extends ExceptionHandler
                     // Custom logic for logging email verification token errors
                     \Log::info('Email verification token validation failed: ' . $errors['token'][0]);
                 }
+            }
+        });
+
+        $this->renderable(function (InvalidCredentialsException $e, $request) {
+            if ($request->expectsJson()) {
+                return ApiResponse::errorUnauthorized($e->getMessage());
             }
         });
     }
