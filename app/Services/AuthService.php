@@ -4,8 +4,10 @@
 namespace App\Services;
 
 use App\Models\User;
+use App\Models\PasswordResetRequest;
 use App\Helpers\TokenHelper;
 use Illuminate\Support\Facades\Hash;
+use App\Notifications\PasswordResetNotification;
 
 class AuthService
 {
@@ -27,4 +29,23 @@ class AuthService
 
         return $sessionToken;
     }
+
+    public function createPasswordResetRequest(User $user)
+    {
+        $tokenHelper = new TokenHelper();
+        $resetToken = $tokenHelper->generateSessionToken();
+        $tokenExpiration = now()->addHour();
+
+        $passwordResetRequest = new PasswordResetRequest([
+            'user_id' => $user->id,
+            'reset_token' => $resetToken,
+            'token_expiration' => $tokenExpiration,
+        ]);
+        $passwordResetRequest->save();
+
+        $user->notify(new PasswordResetNotification($resetToken));
+
+        return $passwordResetRequest;
+    }
+    
 }
