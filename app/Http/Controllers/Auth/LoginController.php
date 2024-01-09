@@ -10,6 +10,8 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
 use App\Events\FailedLogin;
 use Illuminate\Support\Facades\Route;
+use App\Http\Responses\ApiResponse; // Added line
+use App\Models\LoginAttempt; // Added line
 
 class LoginController extends Controller
 {
@@ -53,20 +55,35 @@ class LoginController extends Controller
                     'session_expiration' => $sessionData['expiration'],
                 ], 200);
             } else {
-                event(new FailedLogin($request->input('email')));
-                return $this->handleLoginFailure();
-            }
+                event(new FailedLogin($request->input('email'), now())); // Modified line
+                return $this->handleLoginFailure($request->input('email')); // Modified line
+            } 
         } catch (\Exception $e) {
             return response()->json(['message' => 'Internal Server Error'], 500);
         }
     }
 
-    public function handleLoginFailure(): JsonResponse
+    public function handleLoginFailure($email = null): JsonResponse // Modified line
     {
-        return response()->json([
-            'status' => 200,
-            'message' => 'Login failed. Please check your email and password and try again.'
-        ], 200);
+        if ($email) {
+            // Trigger the FailedLogin event
+            event(new FailedLogin($email, now())); // Modified line
+            
+            // Log the failed login attempt
+            LoginAttempt::create([ // Added line
+                'email' => $email, // Added line
+                'attempted_at' => now(), // Added line
+                'successful' => false, // Added line
+            ]); // Added line
+
+            // Return an error response
+            return ApiResponse::loginFailure(); // Modified line
+        } else {
+            return response()->json([
+                'status' => 200,
+                'message' => 'Login failed. Please check your email and password and try again.'
+            ], 200);
+        }
     }
 
     public function cancelLogin(): JsonResponse

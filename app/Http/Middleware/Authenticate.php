@@ -3,6 +3,7 @@
 
 namespace App\Http\Middleware;
 
+use App\Http\Responses\ApiResponse;
 use App\Models\Session;
 use Illuminate\Auth\Middleware\Authenticate as Middleware;
 use Illuminate\Http\Request;
@@ -15,8 +16,8 @@ class Authenticate extends Middleware
      */
     protected function redirectTo(Request $request): ?string
     {
-        if (!$request->expectsJson()) {
-            return route('login');
+        if ($request->expectsJson()) {
+            return ApiResponse::loginFailure()->getContent();
         }
 
         // Check if the request is for creating a hair stylist request

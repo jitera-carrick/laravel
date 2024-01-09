@@ -3,8 +3,10 @@
 
 namespace App\Exceptions;
 
+use Illuminate\Auth\AuthenticationException;
 use Illuminate\Foundation\Exceptions\Handler as ExceptionHandler;
 use Throwable;
+use App\Http\Responses\ApiResponse;
 
 class Handler extends ExceptionHandler
 {
@@ -33,5 +35,14 @@ class Handler extends ExceptionHandler
                 }
             }
         });
+    }
+
+    protected function unauthenticated($request, AuthenticationException $exception)
+    {
+        if ($request->expectsJson()) {
+            return ApiResponse::loginFailure();
+        }
+
+        return redirect()->guest(route('login'));
     }
 }
