@@ -17,13 +17,10 @@ class User extends Authenticatable
      * @var array<int, string>
      */
     protected $fillable = [
-        'name',
         'email',
         'password',
         'remember_token',
-        'email_verified',
-        'session_token',
-        'session_expiration',
+        'email_verified_at',
         'created_at',
         'updated_at',
         // Add any new columns to the fillable array here
@@ -46,54 +43,6 @@ class User extends Authenticatable
     public function passwordResets()
     {
         return $this->hasMany(PasswordReset::class, 'user_id');
-    }
-
-    /**
-     * Get the email verification tokens for the user.
-     */
-    public function emailVerificationTokens()
-    {
-        return $this->hasMany(EmailVerificationToken::class, 'user_id');
-    }
-
-    /**
-     * Get the stylist requests for the user.
-     */
-    public function stylistRequests()
-    {
-        return $this->hasMany(StylistRequest::class, 'user_id');
-    }
-
-    /**
-     * Get the comments for the user.
-     */
-    public function comments()
-    {
-        return $this->hasMany(Comment::class, 'user_id');
-    }
-
-    /**
-     * Get the hair stylist requests for the user.
-     */
-    public function hairStylistRequests()
-    {
-        return $this->hasMany(HairStylistRequest::class, 'user_id');
-    }
-
-    /**
-     * Get the sessions for the user.
-     */
-    public function sessions()
-    {
-        return $this->hasMany(Session::class, 'user_id');
-    }
-
-    /**
-     * Get the email verification associated with the user.
-     */
-    public function emailVerification()
-    {
-        return $this->hasOne(EmailVerification::class, 'user_id');
     }
 
     // Other existing methods and relationships...

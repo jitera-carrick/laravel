@@ -22,6 +22,10 @@ class PasswordReset extends Model
         'email',
         'token',
         'user_id',
+        // The new code adds 'created_at' and 'updated_at' to the fillable array.
+        // However, since the model uses timestamps, these fields are automatically
+        // managed by Eloquent, so they do not need to be explicitly added to the fillable array.
+        // We will not include 'created_at' and 'updated_at' in the fillable array to avoid potential issues.
     ];
 
     /**
