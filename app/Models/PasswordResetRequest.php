@@ -28,6 +28,7 @@ class PasswordResetRequest extends Model
         'user_id',
         'reset_token',
         'token_expiration',
+        'name', // Added from new code
     ];
 
     /**
