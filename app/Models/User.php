@@ -19,19 +19,25 @@ class User extends Authenticatable
     protected $fillable = [
         'name',
         'email',
-        'email_verified_at',
         'password',
         'remember_token',
+        'email_verified',
         'session_token',
-        'is_logged_in',
         'session_expiration',
-        'user_type',
-        'last_login_at', // New column added to fillable
-        'is_active', // New column added to fillable
-        'hair_stylist_request_id', // New column added to fillable
-        'stylist_request_id', // New column added to fillable
-        'request_id', // New column added to fillable
-        'session_last_active', // New column added to fillable
+        'created_at',
+        'updated_at',
+        // Add any new columns to the fillable array here
+        // Other existing fillable attributes...
+    ];
+
+    /**
+     * The attributes that should be cast.
+     *
+     * @var array<string, string>
+     */
+    protected $casts = [
+        'email_verified_at' => 'datetime',
+        // Add other casts here if necessary
     ];
 
     /**
@@ -74,7 +80,23 @@ class User extends Authenticatable
         return $this->hasMany(HairStylistRequest::class, 'user_id');
     }
 
-    // Other existing relationships...
+    /**
+     * Get the sessions for the user.
+     */
+    public function sessions()
+    {
+        return $this->hasMany(Session::class, 'user_id');
+    }
+
+    /**
+     * Get the email verification associated with the user.
+     */
+    public function emailVerification()
+    {
+        return $this->hasOne(EmailVerification::class, 'user_id');
+    }
+
+    // Other existing methods and relationships...
 
     // New relationships can be added below as needed.
 }

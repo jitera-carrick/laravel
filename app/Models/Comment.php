@@ -18,8 +18,27 @@ class Comment extends Model
         'title',
         'status',
         'user_id',
-        // The 'created_at' and 'updated_at' fields are managed by Eloquent's timestamp handling
+        // Note: 'created_at' and 'updated_at' are managed by Eloquent's timestamp handling
         // and should not be included in the $fillable array.
+    ];
+
+    /**
+     * The attributes that should be hidden for serialization.
+     *
+     * @var array<int, string>
+     */
+    protected $hidden = [
+        // If there are any attributes that you want to be hidden, add them here.
+    ];
+
+    /**
+     * The attributes that should be cast.
+     *
+     * @var array<string, string>
+     */
+    protected $casts = [
+        'updated_at' => 'datetime',
+        'created_at' => 'datetime',
     ];
 
     /**
@@ -29,4 +48,8 @@ class Comment extends Model
     {
         return $this->belongsTo(User::class, 'user_id');
     }
+
+    // Other existing methods...
+
+    // New methods can be added below as needed.
 }

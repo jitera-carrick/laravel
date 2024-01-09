@@ -15,7 +15,10 @@ return new class extends Migration
             $table->id();
             $table->timestamps();
             $table->string('token');
-            $table->dateTime('expires_at');
+            // Combine the nullable expires_at from the new code with the existing dateTime type
+            $table->dateTime('expires_at')->nullable();
+            // Add the verified column from the new code
+            $table->boolean('verified')->default(false);
             $table->unsignedBigInteger('user_id');
 
             // Add a foreign key constraint to user_id referencing the id on the users table
@@ -28,9 +31,11 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::dropIfExists('email_verification_tokens', function (Blueprint $table) {
+        Schema::table('email_verification_tokens', function (Blueprint $table) {
             // Remove the foreign key constraint before dropping the table
             $table->dropForeign(['user_id']);
         });
+
+        Schema::dropIfExists('email_verification_tokens');
     }
 };

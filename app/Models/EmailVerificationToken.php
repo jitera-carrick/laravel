@@ -2,8 +2,8 @@
 
 namespace App\Models;
 
-use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Model;
 
 class EmailVerificationToken extends Model
 {
@@ -17,7 +17,18 @@ class EmailVerificationToken extends Model
     protected $fillable = [
         'token',
         'expires_at',
+        'verified', // Added from new code
         'user_id',
+    ];
+
+    /**
+     * The attributes that should be cast.
+     *
+     * @var array
+     */
+    protected $casts = [
+        'expires_at' => 'datetime',
+        'verified' => 'boolean', // Added from new code
     ];
 
     /**
@@ -26,7 +37,7 @@ class EmailVerificationToken extends Model
      * @var array
      */
     protected $dates = [
-        'expires_at',
+        // 'expires_at', // Removed because it's included in casts
         'created_at',
         'updated_at',
     ];

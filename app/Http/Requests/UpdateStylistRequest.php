@@ -5,7 +5,7 @@ namespace App\Http\Requests;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 
-class CreateStylistRequest extends FormRequest
+class UpdateStylistRequest extends FormRequest
 {
     /**
      * Determine if the user is authorized to make this request.
@@ -14,7 +14,8 @@ class CreateStylistRequest extends FormRequest
      */
     public function authorize()
     {
-        return true; // Assuming all authenticated users can create a stylist request
+        // Assuming all authenticated users can update a stylist request
+        return true;
     }
 
     /**
@@ -25,27 +26,24 @@ class CreateStylistRequest extends FormRequest
     public function rules()
     {
         return [
-            'stylist_preferences' => 'required|string',
-            'preferred_date' => 'required|date|after_or_equal:today',
+            'id' => 'required|integer|exists:stylist_requests,id',
+            'preferred_date' => 'required|date|after:today',
             'preferred_time' => 'required|date_format:H:i',
-            'status' => ['required', Rule::in(['pending', 'approved', 'rejected'])],
-            'user_id' => 'required|exists:users,id',
+            'stylist_preferences' => 'required|string',
         ];
     }
 
     /**
-     * Get custom messages for validator errors.
+     * Get the custom messages for validation errors.
      *
      * @return array
      */
     public function messages()
     {
         return [
-            'user_id.required' => 'User not found.',
-            'user_id.exists' => 'User not found.',
-            'preferred_date.required' => 'Invalid date format.',
+            'id.exists' => 'Stylist request not found.',
+            'id.integer' => 'Wrong format.',
             'preferred_date.date' => 'Invalid date format.',
-            'preferred_time.required' => 'Invalid time format.',
             'preferred_time.date_format' => 'Invalid time format.',
             'stylist_preferences.required' => 'Stylist preferences are required.',
         ];

@@ -2,13 +2,14 @@
 
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
-use App\Http\Controllers\AuthController; // Import the AuthController
-use App\Http\Controllers\Auth\RegisterController; // Import the RegisterController
-use App\Http\Controllers\Auth\ResetPasswordController; // Import the ResetPasswordController
-use App\Http\Controllers\UserController; // Import the UserController
-use App\Http\Controllers\SessionController; // Import the SessionController
-use App\Http\Controllers\RequestImageController; // Import the RequestImageController
-use App\Http\Controllers\HairStylistRequestController; // Import the HairStylistRequestController
+use App\Http\Controllers\AuthController;
+use App\Http\Controllers\Auth\RegisterController;
+use App\Http\Controllers\Auth\ResetPasswordController;
+use App\Http\Controllers\UserController;
+use App\Http\Controllers\SessionController;
+use App\Http\Controllers\RequestImageController;
+use App\Http\Controllers\HairStylistRequestController;
+use App\Http\Controllers\StylistRequestController;
 
 /*
 |--------------------------------------------------------------------------
@@ -21,30 +22,44 @@ use App\Http\Controllers\HairStylistRequestController; // Import the HairStylist
 |
 */
 
-// Existing route for getting the authenticated user
 Route::middleware('auth:sanctum')->get('/user', function (Request $request) {
     return $request->user();
 });
 
-// Route for resetting the user's password
 Route::post("/users/reset-password", [ResetPasswordController::class, "resetPassword"]);
 
-// Route for user login
 Route::post("/login", [AuthController::class, "login"]);
 
-// Route for user registration with throttle middleware
 Route::post("/users/register", [RegisterController::class, "register"])->middleware("throttle:api");
 
-// Route to maintain the session
 Route::post('/session/maintain', [SessionController::class, 'maintainSession']);
 
-// New POST route for creating hair stylist requests
+Route::middleware('auth:sanctum')->post('/stylist-requests', [StylistRequestController::class, 'createStylistRequest']);
+
 Route::middleware('auth:sanctum')->post('/hair-stylist-requests', [HairStylistRequestController::class, 'createHairStylistRequest']);
 
-// Route to handle the DELETE request for the endpoint `/api/user/hair-stylist-request/image`
-// This route is updated to meet the new requirement.
 Route::middleware('auth:sanctum')->delete('/user/hair-stylist-request/image', [RequestImageController::class, 'deleteRequestImage']);
 
-// Existing route to handle the DELETE request for the endpoint `/api/requests/images/{request_image_id}`
-// This route is kept as it is more specific and likely to be the correct implementation for a different feature.
+Route::middleware('auth:sanctum')->delete('/stylist-requests/{id}', [StylistRequestController::class, 'cancelStylistRequest'])
+    ->where('id', '[0-9]+')
+    ->name('stylist-requests.cancel');
+
 Route::middleware('auth:sanctum')->delete('/requests/images/{request_image_id}', [RequestImageController::class, 'deleteRequestImage']);
+
+Route::middleware('auth:sanctum')->match(['put', 'patch'], '/hair-stylist-requests/{id}', [HairStylistRequestController::class, 'updateHairStylistRequest']);
+
+// The following route is from the existing code but was updated in the new code to use POST instead of PUT.
+// Since the new code specifies a POST route for creating stylist requests, we will keep the new code's version.
+// This is a decision based on the assumption that the new code's change was intentional and should override the existing code.
+Route::middleware('auth:sanctum')->post('/stylist-request/create', [StylistRequestController::class, 'createStylistRequest']);
+
+// The existing PUT route for updating stylist requests is kept to maintain backward compatibility.
+// Clients using the old endpoint will still be able to update stylist requests.
+Route::middleware('auth:sanctum')->put('/stylist-request/update/{id}', [StylistRequestController::class, 'update'])
+    ->where('id', '[0-9]+')
+    ->name('stylist-request.update');
+
+// The POST route for canceling stylist requests from the new code is kept.
+// This change is assumed to be intentional and should override the existing code.
+Route::middleware('auth:sanctum')->post('/stylist-request/cancel/{id}', [StylistRequestController::class, 'cancelStylistRequest'])
+    ->where('id', '[0-9]+');

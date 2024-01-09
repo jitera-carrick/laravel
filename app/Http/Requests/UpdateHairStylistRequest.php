@@ -46,6 +46,7 @@ class UpdateHairStylistRequest extends FormRequest
     public function rules()
     {
         return [
+            'id' => 'required|integer|exists:stylist_requests,id',
             'user_id' => ['required', 'integer', 'exists:users,id', Rule::exists('users', 'id')->where(function ($query) {
                 return $query->where('id', Auth::id());
             })],
@@ -53,6 +54,10 @@ class UpdateHairStylistRequest extends FormRequest
             'area' => 'required|string',
             'menu' => 'required|string',
             'hair_concerns' => 'nullable|string|max:3000',
+            'preferred_date' => 'required|date|after:today',
+            'preferred_time' => 'required|date_format:H:i',
+            'stylist_preferences' => 'nullable|string',
+            'status' => ['required', Rule::in(['pending', 'approved', 'rejected', 'cancelled'])], // Assuming these are the enum values
             'image_paths' => 'nullable|array',
             'image_paths.*' => 'nullable|file|mimes:png,jpg,jpeg|max:5120',
             'details' => 'required|string',
