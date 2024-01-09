@@ -13,7 +13,7 @@ class AddNewColumnsToRequestsTable extends Migration
             $table->text('service_details');
             $table->date('preferred_date');
             $table->time('preferred_time');
-            $table->enum('status', ['pending', 'approved', 'rejected', 'completed'])->default('pending');
+            $table->enum('status', ['pending', 'approved', 'rejected', 'completed'])->default('pending')->after('preferred_time');
         });
     }
 

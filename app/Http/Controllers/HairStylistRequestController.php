@@ -25,7 +25,6 @@ class HairStylistRequestController extends Controller
     public function createHairStylistRequest(CreateHairStylistRequest $request): JsonResponse
     {
         $validatedData = $request->validated();
-
         try {
             // Validate the request against the requirements
             $validator = Validator::make($validatedData, [
@@ -36,7 +35,7 @@ class HairStylistRequestController extends Controller
             ]);
 
             if ($validator->fails()) {
-                return response()->json(['message' => $validator->errors()->first()], 400);
+                return response()->json(['message' => $validator->errors()->first()], 422);
             }
 
             $hairStylistRequest = $this->hairStylistRequestService->createHairStylistRequest($validatedData);
@@ -44,7 +43,7 @@ class HairStylistRequestController extends Controller
             return response()->json(['status' => 201, 'hair_stylist_request' => $resource], 201);
         } catch (ValidationException $e) {
             return response()->json(['message' => $e->getMessage()], 422);
-        } catch (\Exception $e) {
+        } catch (\Throwable $e) {
             return response()->json(['message' => $e->getMessage()], 500);
         }
     }

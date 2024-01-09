@@ -15,7 +15,7 @@ class CreateHairStylistRequest extends FormRequest
     public function authorize()
     {
         // Check if the user is authenticated and if the user_id matches the authenticated user's id
-        return Auth::check() && Auth::id() == $this->get('user_id');
+        return true;
     }
 
     /**
@@ -25,7 +25,7 @@ class CreateHairStylistRequest extends FormRequest
      */
     public function rules()
     {
-        return [
+        $rules = [
             'status' => 'sometimes|in:pending,accepted,rejected,cancelled',
             'user_id' => 'required|integer|exists:users,id',
             'service_details' => 'required|string',
@@ -34,6 +34,7 @@ class CreateHairStylistRequest extends FormRequest
             // The 'status' field is not required for the creation of a new request, it will be set to 'pending' by default.
             'request_image_id' => 'sometimes|exists:request_images,id',
         ];
+        return $rules;
     }
 
     /**

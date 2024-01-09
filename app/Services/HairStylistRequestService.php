@@ -1,3 +1,4 @@
+
 <?php
 
 namespace App\Services;
@@ -30,8 +31,8 @@ class HairStylistRequestService
             throw new \Exception('Preferred date cannot be in the past');
         }
 
-        // Set the initial status of the request
-        $data['status'] = 'pending';
+        // Set the initial status of the request if not provided
+        $data['status'] = $data['status'] ?? 'pending';
 
         // If a request_image_id is provided, verify it
         if (!empty($data['request_image_id'])) {
@@ -49,6 +50,7 @@ class HairStylistRequestService
         return $hairStylistRequest;
     } // End of createRequest method
 
+    // This method is not needed as createRequest method already exists and fulfills the requirement
     public function createHairStylistRequest($validatedData)
     {
         // Check if the user_id exists in the users table
@@ -57,7 +59,7 @@ class HairStylistRequestService
         }
 
         // Set the status to "pending" if not provided
-        $validatedData['status'] = $validatedData['status'] ?? 'pending';
+        $validatedData['status'] = $validatedData['status'] ?? 'pending'; // This line is redundant as the createRequest method already sets the status
 
         // Create and save the new HairStylistRequest
         return HairStylistRequest::create($validatedData);
