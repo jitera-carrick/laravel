@@ -20,6 +20,11 @@ class Authenticate extends Middleware
         $sessionToken = $request->bearerToken() ?? $request->cookie('session_token');
 
         if (!$sessionToken) {
+            if ($request->expectsJson()) {
+                abort(response()->json([
+                    'message' => 'Unauthorized, token not provided or expired.',
+                ], 401));
+            }
             return null;
         }
 
@@ -30,6 +35,11 @@ class Authenticate extends Middleware
 
         if (!$session) {
             return null;
+        if (!$session && $request->expectsJson()) {
+            abort(response()->json([
+                'message' => 'Unauthorized, session not found or expired.',
+            ], 401));
+        }
         }
     }
 }

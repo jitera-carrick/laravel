@@ -1,6 +1,34 @@
 
 <?php
 
+use App\Http\Requests\LoginRequest;
+use App\Services\AuthService;
+use App\Http\Resources\UserResource;
+use App\Http\Responses\ApiResponse;
+
+class LoginController extends Controller
+{
+    protected $authService;
+
+    public function __construct(AuthService $authService)
+    {
+        $this->authService = $authService;
+    }
+
+    public function login(LoginRequest $request)
+    {
+        try {
+            $user = $this->authService->authenticateUser($request->email, $request->password);
+            if ($user) {
+                return new UserResource($user);
+            } else {
+                return new ApiResponse('Unauthorized', 401);
+            }
+        } catch (\Exception $e) {
+            return new ApiResponse($e->getMessage(), 500);
+        }
+    }
+}
 namespace App\Http\Controllers\Auth;
 
 use App\Http\Controllers\Controller;
