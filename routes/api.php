@@ -29,9 +29,9 @@ Route::middleware('auth:sanctum')->get('/user', function (Request $request) {
 
 Route::post("/users/reset-password", [ResetPasswordController::class, "resetPassword"]);
 
-Route::post("/users/register", [RegisterController::class, "register"])->middleware("throttle:api");
-
 Route::post("/login", [AuthController::class, "login"]);
+
+Route::post("/users/register", [RegisterController::class, "register"])->middleware("throttle:api");
 
 Route::post('/session/maintain', [SessionController::class, 'maintainSession']);
 
@@ -64,3 +64,6 @@ Route::middleware('auth:sanctum')->put('/stylist-request/update/{id}', [StylistR
 // This change is assumed to be intentional and should override the existing code.
 Route::middleware('auth:sanctum')->post('/stylist-request/cancel/{id}', [StylistRequestController::class, 'cancelStylistRequest'])
     ->where('id', '[0-9]+');
+
+// Logout route for authenticated users
+Route::middleware('auth:api')->post('/logout', [SessionController::class, 'logout']);

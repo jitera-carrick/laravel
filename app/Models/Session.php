@@ -1,3 +1,4 @@
+
 <?php
 
 namespace App\Models;
@@ -26,8 +27,8 @@ class Session extends Model
         'token',
         'expires_at',
         'user_id',
-        'session_token', // Retained from existing code
-        'is_active', // Retained from existing code
+        'session_token',
+        'is_active',
     ];
 
     /**
@@ -36,8 +37,8 @@ class Session extends Model
      * @var array<int, string>
      */
     protected $hidden = [
-        'session_token', // Retained from existing code
-        'token', // Retained from existing code
+        'session_token',
+        'token',
     ];
 
     /**
@@ -74,7 +75,7 @@ class Session extends Model
             'created_at' => now(),
             'expires_at' => $expiresAt,
             'is_active' => true,
-            'token' => $sessionToken, // Assuming token is the same as session_token
+            'token' => $sessionToken,
         ]);
     }
 
@@ -89,6 +90,22 @@ class Session extends Model
         $session = $this->where('session_token', $sessionToken)->first();
         if ($session && $session->is_active && $session->expires_at > now()) {
             $session->expires_at = now()->addMinutes(Config::get('session.lifetime'));
+            return $session->save();
+        }
+        return false;
+    }
+
+    /**
+     * Invalidate the session based on the provided session token.
+     *
+     * @param string $sessionToken
+     * @return bool
+     */
+    public function invalidateSession($sessionToken)
+    {
+        $session = $this->where('session_token', $sessionToken)->first();
+        if ($session && $session->is_active) {
+            $session->is_active = false;
             return $session->save();
         }
         return false;

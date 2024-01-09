@@ -10,9 +10,11 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Carbon;
 use Illuminate\Http\Request;
 use App\Models\Session;
+use App\Http\Middleware\Authenticate;
 
 class SessionController extends Controller
 {
+    use Authenticate;
     protected $sessionService;
 
     public function __construct(SessionService $sessionService)
@@ -47,6 +49,7 @@ class SessionController extends Controller
 
     public function logout(Request $request): JsonResponse
     {
+        $this->middleware('auth');
         $sessionToken = $request->input('session_token');
 
         try {
@@ -57,11 +60,9 @@ class SessionController extends Controller
             }
 
             $session->invalidateSession();
+            $this->sessionService->invalidateSession($sessionToken);
 
-            $user = $session->user;
-            $user->logoutUser();
-
-            return response()->json(['message' => 'User has been logged out successfully.']);
+            return response()->json(['message' => 'Logout successful.'], 200);
         } catch (\Exception $e) {
             return response()->json(['message' => 'An error occurred during logout.'], 500);
         }

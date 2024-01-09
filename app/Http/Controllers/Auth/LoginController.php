@@ -1,34 +1,6 @@
 
 <?php
 
-use App\Http\Requests\LoginRequest;
-use App\Services\AuthService;
-use App\Http\Resources\UserResource;
-use App\Http\Responses\ApiResponse;
-
-class LoginController extends Controller
-{
-    protected $authService;
-
-    public function __construct(AuthService $authService)
-    {
-        $this->authService = $authService;
-    }
-
-    public function login(LoginRequest $request)
-    {
-        try {
-            $user = $this->authService->authenticateUser($request->email, $request->password);
-            if ($user) {
-                return new UserResource($user);
-            } else {
-                return new ApiResponse('Unauthorized', 401);
-            }
-        } catch (\Exception $e) {
-            return new ApiResponse($e->getMessage(), 500);
-        }
-    }
-}
 namespace App\Http\Controllers\Auth;
 
 use App\Http\Controllers\Controller;
@@ -42,6 +14,7 @@ use App\Models\User;
 use App\Models\Session;
 use App\Services\RecaptchaService; // Import the RecaptchaService
 use Carbon\Carbon; // Import Carbon for date handling
+use Illuminate\Http\Request; // Added import for Request
 
 class LoginController extends Controller
 {   
@@ -106,30 +79,20 @@ class LoginController extends Controller
     public function logout(Request $request)
     {
         try {
-            $sessionToken = $request->cookie('session_token'); // Use the cookie method to retrieve the session token
-            $session = Session::where('session_token', $sessionToken)
-                              ->where('is_active', true)
-                              ->first();
-
-            if ($session) {
-                $user = $session->user;
-                $user->is_logged_in = false;
-                $user->save();
-
-                $session->is_active = false;
-                $session->save();
-
-                Cookie::queue(Cookie::forget('session_token'));
-
+            $sessionToken = $request->bearerToken(); // Retrieve the token from the request header
+            if (!$sessionToken) {
                 return response()->json([
-                    'status' => 200,
-                    'message' => 'Logout successful.'
+                    'status' => 400,
+                    'message' => 'No session token provided.'
                 ]);
             }
 
+            $user = $request->user(); // Retrieve the authenticated user
+            $user->tokens()->where('token', hash('sha256', $sessionToken))->delete(); // Revoke the token
+
             return response()->json([
-                'status' => 400,
-                'message' => 'No active session found.'
+                'status' => 200,
+                'message' => 'Logout successful.'
             ]);
         } catch (\Exception $e) {
             return response()->json([

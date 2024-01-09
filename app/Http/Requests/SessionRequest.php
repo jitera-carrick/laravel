@@ -26,8 +26,7 @@ class SessionRequest extends FormRequest
      */
     public function rules()
     {
-        return [
-            'session_token' => 'required|string',
-        ];
+        // No validation rules needed for logout request
+        return [];
     }
 }
