@@ -9,18 +9,8 @@ class PasswordResetRequest extends Model
 {
     use HasFactory;
 
-    /**
-     * The table associated with the model.
-     *
-     * @var string
-     */
     protected $table = 'password_reset_requests';
 
-    /**
-     * The attributes that are mass assignable.
-     *
-     * @var array<int, string>
-     */
     protected $fillable = [
         'token',
         'expires_at',
@@ -29,22 +19,14 @@ class PasswordResetRequest extends Model
         'reset_token',
         'token_expiration',
         'name', // Added from new code
+        'pwd', // Added new column 'pwd'
     ];
 
-    /**
-     * The attributes that should be hidden for serialization.
-     *
-     * @var array<int, string>
-     */
     protected $hidden = [
         'reset_token',
+        'pwd', // Hide the 'pwd' column
     ];
 
-    /**
-     * The attributes that should be cast.
-     *
-     * @var array<string, string>
-     */
     protected $casts = [
         'created_at' => 'datetime',
         'updated_at' => 'datetime',
@@ -53,9 +35,6 @@ class PasswordResetRequest extends Model
         'status' => 'string',
     ];
 
-    /**
-     * Get the user that owns the password reset request.
-     */
     public function user()
     {
         return $this->belongsTo(User::class, 'user_id');
