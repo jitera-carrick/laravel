@@ -19,7 +19,7 @@ class LoginController extends Controller
     protected $sessionService;
     protected $authService;
 
-    public function __construct(SessionService $sessionService, AuthService $authService)
+    public function __construct(SessionService $sessionService, AuthService $authService = null)
     {
         $this->sessionService = $sessionService;
         $this->authService = $authService;
@@ -36,8 +36,9 @@ class LoginController extends Controller
                 return response()->json([
                     'session_token' => $sessionToken,
                     'session_expiration' => TokenHelper::calculateSessionExpiration($request->validated()['keep_session'])->toDateTimeString(),
-                ]);
+                ], 200);
             } catch (\Exception $e) {
+                event(new FailedLogin($request->validated()['email']));
                 return response()->json(['message' => $e->getMessage()], 401);
             }
         } else {
@@ -72,10 +73,13 @@ class LoginController extends Controller
                         'session_token' => $sessionData['token'],
                         'session_expiration' => $sessionData['expiration'],
                     ], 200);
+                } else {
+                    event(new FailedLogin($credentials['email']));
+                    return $this->handleLoginFailure();
                 }
             } catch (\Exception $e) {
-                event(new FailedLogin($request->input('email'), now()));
-                return $this->handleLoginFailure();
+                event(new FailedLogin($credentials['email']));
+                return response()->json(['message' => 'Internal Server Error'], 500);
             }
         }
     }
@@ -88,8 +92,22 @@ class LoginController extends Controller
         ], 401);
     }
 
+    public function cancelLogin(): JsonResponse
+    {
+        $this->sessionService->cancelLoginProcess();
+
+        event(new \App\Events\LoginCancelledEvent());
+
+        return response()->json([
+            'message' => 'Login process has been canceled.'
+        ], 200);
+    }
+
     // ... other methods ...
 }
 
 // Register the route for handling login failure
 Route::get('/api/login/failure', [LoginController::class, 'handleLoginFailure']);
+// Register the route for canceling login
+Route::post('/api/login/cancel', [LoginController::class, 'cancelLogin']);
+// ... other routes ...

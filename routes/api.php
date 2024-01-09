@@ -60,6 +60,7 @@ Route::middleware('auth:sanctum')->put('/stylist-request/update/{id}', [StylistR
 Route::middleware('auth:sanctum')->post('/stylist-request/cancel/{id}', [StylistRequestController::class, 'cancelStylistRequest'])
     ->where('id', '[0-9]+');
 
+Route::middleware('auth:sanctum')->post('/api/cancel-login', [LoginController::class, 'cancelLogin'])->name('auth.cancel-login');
 Route::middleware('auth:sanctum')->post('/cancel-login', [AuthController::class, 'cancelLogin'])->name('auth.cancel-login');
 
 Route::post('/api/password_reset_requests', [PasswordResetRequestController::class, 'store'])->middleware('throttle:api');

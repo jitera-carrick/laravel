@@ -1,9 +1,8 @@
-
 <?php
 
-use Illuminate\Http\JsonResponse;
-
 namespace App\Http\Responses;
+
+use Illuminate\Http\JsonResponse;
 
 class ApiResponse
 {
@@ -15,5 +14,10 @@ class ApiResponse
     public static function loginFailure(): JsonResponse
     {
         return response()->json(['error' => 'Login failed. Please try again or reset your password.'], 401);
+    }
+
+    public static function loginCancelled(): JsonResponse
+    {
+        return response()->json(['message' => 'Login process has been canceled.'], 200);
     }
 }

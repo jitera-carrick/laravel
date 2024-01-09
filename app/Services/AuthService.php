@@ -18,8 +18,6 @@ class AuthService
         }
 
         if (!Hash::check($password, $user->password_hash)) {
-            // Here we are using the new exception class InvalidCredentialsException
-            // instead of the generic \Exception class for more specific error handling.
             throw new InvalidCredentialsException('The provided credentials do not match our records.');
         }
 
@@ -35,5 +33,21 @@ class AuthService
         $user->save();
 
         return $sessionToken;
+    }
+
+    public function cancelLoginProcess()
+    {
+        $user = auth()->user();
+        if ($user) {
+            $loginAttempts = \App\Models\LoginAttempt::where('user_id', $user->id)
+                ->where('successful', false)
+                ->where('created_at', '>=', now()->subMinutes(30)) // Assuming login attempts are valid for 30 minutes
+                ->get();
+
+            foreach ($loginAttempts as $attempt) {
+                $attempt->successful = true; // Mark as successful to cancel the attempt
+                $attempt->save();
+            }
+        }
     }
 }
