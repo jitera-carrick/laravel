@@ -17,14 +17,17 @@ class Authenticate extends Middleware
             return route('login');
         }
 
+        // Custom logic for unauthenticated email verification requests
+        if ($request->is('email/verify/*') && !$request->user()) {
+            if ($request->expectsJson()) {
+                return response()->json(['message' => 'Authentication required'], 401);
+            }
+            return route('login');
+        }
+
         $sessionToken = $request->bearerToken() ?? $request->cookie('session_token');
 
         if (!$sessionToken) {
-            if ($request->expectsJson()) {
-                abort(response()->json([
-                    'message' => 'Unauthorized, token not provided or expired.',
-                ], 401));
-            }
             return null;
         }
 
@@ -35,11 +38,6 @@ class Authenticate extends Middleware
 
         if (!$session) {
             return null;
-        if (!$session && $request->expectsJson()) {
-            abort(response()->json([
-                'message' => 'Unauthorized, session not found or expired.',
-            ], 401));
-        }
         }
     }
 }

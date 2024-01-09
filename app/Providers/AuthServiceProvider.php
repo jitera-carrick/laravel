@@ -1,3 +1,4 @@
+
 <?php
 
 namespace App\Providers;
@@ -16,6 +17,7 @@ class AuthServiceProvider extends ServiceProvider
         //
     ];
 
+    // No changes required for email verification logic in AuthServiceProvider
     /**
      * Register any authentication / authorization services.
      */

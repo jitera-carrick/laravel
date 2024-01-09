@@ -1,3 +1,4 @@
+
 <?php
 
 namespace App\Http;
@@ -42,6 +43,9 @@ class Kernel extends HttpKernel
             // \Laravel\Sanctum\Http\Middleware\EnsureFrontendRequestsAreStateful::class,
             \Illuminate\Routing\Middleware\ThrottleRequests::class.':api',
             \Illuminate\Routing\Middleware\SubstituteBindings::class,
+            // Add middleware to ensure the request is from a verified user if necessary
+            'verified' => \Illuminate\Auth\Middleware\EnsureEmailIsVerified::class,
+            // Add any additional middleware required for email verification if necessary
         ],
     ];
 
