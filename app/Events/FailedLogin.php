@@ -1,11 +1,17 @@
 
 <?php
 
-use App\Models\User;
+namespace App\Events;
 
 class FailedLogin
 {
     public $email;
+    public $timestamp;
 
-    // ... rest of the class
+    public function __construct($email, $timestamp)
+    {
+        $this->email = $email;
+        $this->timestamp = $timestamp;
+    }
 }
+?>

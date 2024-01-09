@@ -5,17 +5,21 @@ namespace App\Listeners;
 
 use App\Events\FailedLogin;
 use App\Models\LoginAttempt;
-use Illuminate\Contracts\Queue\ShouldQueue;
-use Illuminate\Queue\InteractsWithQueue;
 
 class LogFailedLogin
 {
+    /**
+     * Handle the event.
+     *
+     * @param  \App\Events\FailedLogin  $event
+     * @return void
+     */
     public function handle(FailedLogin $event)
     {
         LoginAttempt::create([
             'email' => $event->email,
-            'attempted_at' => now(),
-            'successful' => false
+            'attempted_at' => $event->timestamp,
+            'successful' => false,
         ]);
     }
 }

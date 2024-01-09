@@ -25,6 +25,19 @@ class Handler extends ExceptionHandler
     public function register(): void
     {
         $this->reportable(function (Throwable $e) {
+            if ($e instanceof \Illuminate\Auth\AuthenticationException) {
+                \Log::warning('Failed login attempt: ' . $e->getMessage());
+
+                $response = response()->json([
+                    'message' => 'Login failed. Please check your credentials and try again or reset your password.',
+                    'error' => $e->getMessage(),
+                ], 401);
+
+                $this->renderable(function (\Illuminate\Auth\AuthenticationException $e, $request) use ($response) {
+                    return $response;
+                });
+            }
+
             if ($e instanceof \Illuminate\Validation\ValidationException) {
                 $errors = $e->validator->errors()->getMessages();
                 if (isset($errors['token']) && str_contains($errors['token'][0], 'expired')) {

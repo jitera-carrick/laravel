@@ -4,16 +4,16 @@
 namespace App\Http\Resources;
 
 use Illuminate\Http\Resources\Json\JsonResource;
+use Illuminate\Support\Arr;
 
 class SessionResource extends JsonResource
 {
     public function toArray($request)
     {
-        return [
-            'session_token' => $this->session_token,
-            'expires_at' => $this->expires_at,
-            'id' => $this->id,
-            'user_id' => $this->user_id,
-        ];
+        $response = parent::toArray($request);
+        if (Arr::get($this->resource, 'error_message')) {
+            $response['error_message'] = $this->resource['error_message'];
+        }
+        return $response;
     }
 }
