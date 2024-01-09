@@ -1,3 +1,4 @@
+
 <?php
 
 namespace App\Http\Controllers;
@@ -7,8 +8,6 @@ use App\Services\HairStylistRequestService;
 use App\Http\Resources\HairStylistRequestResource;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Http\JsonResponse;
-use Illuminate\Support\Facades\Validator;
-use Illuminate\Validation\ValidationException;
 
 class HairStylistRequestController extends Controller
 {
@@ -17,7 +16,7 @@ class HairStylistRequestController extends Controller
     public function __construct(HairStylistRequestService $hairStylistRequestService)
     {
         $this->hairStylistRequestService = $hairStylistRequestService;
-        $this->middleware('auth');
+        $this->middleware('auth:sanctum');
         // Other constructor code...
     }
 
@@ -26,25 +25,13 @@ class HairStylistRequestController extends Controller
         $validatedData = $request->validated();
         $validatedData['user_id'] = Auth::id(); // Ensure the user_id is the authenticated user's ID
 
-        // Custom validation for user_id existence
-        $validator = Validator::make($validatedData, [
-            'user_id' => 'exists:users,id',
-            'service_details' => 'required',
-            'preferred_date' => 'required|date',
-            'preferred_time' => 'required',
-        ]);
-
-        if ($validator->fails()) {
-            throw new ValidationException($validator);
-        }
-
+        // Removed custom validation for user_id existence as it's handled by CreateHairStylistRequest
         try {
-            $hairStylistRequest = $this->hairStylistRequestService->createRequest($validatedData);
+            $hairStylistRequest = $this->hairStylistRequestService->create($validatedData);
+            return response()->json(new HairStylistRequestResource($hairStylistRequest), 201);
         } catch (\Exception $e) {
             return response()->json(['message' => $e->getMessage()], 400);
         }
-
-        return response()->json(new HairStylistRequestResource($hairStylistRequest), 201);
     }
 
     // ... other methods ...

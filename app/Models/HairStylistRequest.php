@@ -1,7 +1,7 @@
 
 <?php
 
-namespace App\Models; // No change, just context for the diff
+namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -25,11 +25,11 @@ class HairStylistRequest extends Model
     protected $fillable = [
         'service_details', // New field from new code
         'preferred_date', // New field from new code
-        'preferred_time', // Corrected field from new code
+        'preferred_time', // New field from new code
         'status', // Common field in both versions
         'user_id', // Common field in both versions
         'created_at', // Common field in both versions
-        'updated_at' // Common field in both versions
+        'updated_at', // Common field in both versions
     ];
  
     /**
@@ -38,9 +38,8 @@ class HairStylistRequest extends Model
      * @var array<int, string>
      */ 
     protected $hidden = [
-        // If there are any columns that should be hidden for arrays, add them here.
         // No hidden fields specified in both versions
-    ]; // No change, just context for the diff
+    ];
 
     /**
      * The attributes that should be cast.
@@ -48,7 +47,7 @@ class HairStylistRequest extends Model
      * @var array<string, string>
      */
     protected $casts = [
-        'preferred_date' => 'date', // New cast from new code
+        'preferred_date' => 'date', // Corrected cast from new code
         'preferred_time' => 'datetime', // New cast from new code
         'created_at' => 'datetime', // Common cast in both versions
         'updated_at' => 'datetime', // Common cast in both versions
@@ -62,7 +61,7 @@ class HairStylistRequest extends Model
     public function user()
     {
         return $this->belongsTo(User::class, 'user_id');
-    } // No change, just context for the diff
+    }
 
     /**
      * Get the request images for the hair stylist request.
@@ -72,7 +71,7 @@ class HairStylistRequest extends Model
         return $this->hasMany(RequestImage::class, 'hair_stylist_request_id');
     }
 
-    /** // No change, just context for the diff
+    /**
      * Update the status of the hair stylist request to "canceled".
      *
      * @param int $requestId
@@ -84,7 +83,7 @@ class HairStylistRequest extends Model
         if ($request) {
             $request->status = 'canceled';
             return $request->save();
-        } // No change, just context for the diff
+        }
         return false;
     }
 

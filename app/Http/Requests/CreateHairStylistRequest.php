@@ -1,3 +1,4 @@
+
 <?php
 
 namespace App\Http\Requests;
@@ -30,7 +31,7 @@ class CreateHairStylistRequest extends FormRequest
             'service_details' => 'required|string',
             'preferred_date' => 'required|date|after_or_equal:today',
             'preferred_time' => 'required|string',
-            'status' => 'required|in:pending,approved,rejected',
+            'status' => 'sometimes|in:pending,approved,rejected',
             'request_image_id' => 'sometimes|exists:request_images,id',
         ];
     }
