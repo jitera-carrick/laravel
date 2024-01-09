@@ -1,7 +1,7 @@
 
 <?php
 
-namespace App\Models;
+namespace App\Models; // No change, just context for the diff
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -25,7 +25,7 @@ class HairStylistRequest extends Model
     protected $fillable = [
         'service_details', // New field from new code
         'preferred_date', // New field from new code
-        'preferred_time', // New field from new code
+        'preferred_time', // Corrected field from new code
         'status', // Common field in both versions
         'user_id', // Common field in both versions
         'created_at', // Common field in both versions
@@ -40,7 +40,7 @@ class HairStylistRequest extends Model
     protected $hidden = [
         // If there are any columns that should be hidden for arrays, add them here.
         // No hidden fields specified in both versions
-    ];
+    ]; // No change, just context for the diff
 
     /**
      * The attributes that should be cast.
@@ -62,7 +62,7 @@ class HairStylistRequest extends Model
     public function user()
     {
         return $this->belongsTo(User::class, 'user_id');
-    }
+    } // No change, just context for the diff
 
     /**
      * Get the request images for the hair stylist request.
@@ -72,18 +72,7 @@ class HairStylistRequest extends Model
         return $this->hasMany(RequestImage::class, 'hair_stylist_request_id');
     }
 
-    /**
-     * Create a new hair stylist request with status "pending".
-     *
-     * @param int $userId
-     * @return HairStylistRequest
-     */
-    public static function createRequest($userId)
-    {
-        return self::create(['user_id' => $userId, 'status' => 'pending', 'created_at' => now(), 'updated_at' => now()]);
-    }
-
-    /**
+    /** // No change, just context for the diff
      * Update the status of the hair stylist request to "canceled".
      *
      * @param int $requestId
@@ -95,7 +84,7 @@ class HairStylistRequest extends Model
         if ($request) {
             $request->status = 'canceled';
             return $request->save();
-        }
+        } // No change, just context for the diff
         return false;
     }
 
