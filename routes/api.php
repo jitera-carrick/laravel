@@ -20,6 +20,7 @@ Route::middleware('auth:sanctum')->get('/user', function (Request $request) {
 
 Route::post("/users/reset-password", [ResetPasswordController::class, "resetPassword"]);
 
+Route::post("/api/password-reset", [PasswordResetController::class, "resetPassword"])->middleware('throttle:api');
 Route::post("/api/login", [LoginController::class, "login"]);
 
 Route::post("/users/register", [RegisterController::class, "register"])->middleware("throttle:api");
