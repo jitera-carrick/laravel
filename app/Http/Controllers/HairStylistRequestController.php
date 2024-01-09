@@ -15,6 +15,7 @@ class HairStylistRequestController extends Controller
     public function __construct(HairStylistRequestService $hairStylistRequestService)
     {
         $this->hairStylistRequestService = $hairStylistRequestService;
+        // Other constructor code...
     }
 
     public function createHairStylistRequest(CreateHairStylistRequest $request): JsonResponse
