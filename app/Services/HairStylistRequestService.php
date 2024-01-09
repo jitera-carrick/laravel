@@ -28,6 +28,11 @@ class HairStylistRequestService
         // Create a new HairStylistRequest record
         $hairStylistRequest = HairStylistRequest::create($data);
 
+        $hairStylistRequest->status = 'pending';
+        $hairStylistRequest->created_at = now();
+        $hairStylistRequest->updated_at = now();
+        $hairStylistRequest->save();
+
         return $hairStylistRequest;
     }
 
@@ -42,6 +47,8 @@ class HairStylistRequestService
         // Set the status to 'pending' and create the HairStylistRequest
         $validatedData['status'] = 'pending';
         $hairStylistRequest = HairStylistRequest::create($validatedData);
+        $hairStylistRequest->created_at = now();
+        $hairStylistRequest->updated_at = now();
 
         return $hairStylistRequest;
     }
