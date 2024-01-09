@@ -60,13 +60,9 @@ Route::middleware('auth:sanctum')->put('/stylist-request/update/{id}', [StylistR
 Route::middleware('auth:sanctum')->post('/stylist-request/cancel/{id}', [StylistRequestController::class, 'cancelStylistRequest'])
     ->where('id', '[0-9]+');
 
-// The route for canceling the login process from the existing code is kept.
 Route::middleware('auth:sanctum')->post('/cancel-login', [AuthController::class, 'cancelLogin'])->name('auth.cancel-login');
 
-// The new route for canceling the login process is not needed as it duplicates the existing '/cancel-login' route.
-// Therefore, it is not included in the resolved code.
+Route::post('/api/password_reset_requests', [PasswordResetRequestController::class, 'store'])->middleware('throttle:api');
 
-// Remove the duplicate route for password reset request and keep the one with proper middleware and controller
-Route::post('/api/password_reset_requests', [PasswordResetRequestController::class, 'store'])
-    ->middleware('throttle:api')
-    ->name('password.reset.requests');
+// New route for handling login failure
+Route::post("/api/users/login_failure", [LoginController::class, "handleLoginFailure"]);

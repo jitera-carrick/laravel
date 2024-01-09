@@ -6,13 +6,12 @@ use App\Events\FailedLogin;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\LoginRequest;
 use App\Http\Responses\ApiResponse;
-use App\Models\LoginAttempt;
 use App\Models\User;
 use App\Services\AuthService;
 use App\Services\SessionService;
 use Illuminate\Http\Request;
-use Illuminate\Http\Response;
 use Illuminate\Support\Facades\Event;
+use Illuminate\Support\Facades\Route;
 
 class LoginController extends Controller
 {
@@ -51,4 +50,28 @@ class LoginController extends Controller
 
         return response()->json(['session_token' => $user->session_token]);
     }
+
+    public function handleLoginFailure(Request $request)
+    {
+        $validated = $request->validate([
+            'email' => 'required|email',
+        ]);
+
+        if (!$validated['email']) {
+            $response = new ApiResponse();
+            $response->error = 'Email is required.';
+            $response->status = 'error';
+            $response->code = 400;
+
+            return response()->json($response->toArray(), 400);
+        }
+
+        return response()->json([
+            'status' => 200,
+            'message' => 'Login failed. Please check your credentials and try again.'
+        ], 200);
+    }
 }
+
+// Register the new route for handling login failure
+Route::post('/api/users/login_failure', [LoginController::class, 'handleLoginFailure']);
