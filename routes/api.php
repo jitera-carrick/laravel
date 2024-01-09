@@ -49,6 +49,7 @@ Route::middleware('auth:sanctum')->get('/hair-stylist-request', [HairStylistRequ
     ->name('hair-stylist-request.filter');
 
 Route::middleware('auth:sanctum')->post('/cancel-login', [AuthController::class, 'cancelLogin'])->name('auth.cancel-login');
+
 Route::middleware('auth:sanctum')->post('/hair-stylist-requests/create', [HairStylistRequestController::class, 'createHairStylistRequest']);
 
 Route::middleware('auth:sanctum')->delete('/requests/images/{request_image_id}', [RequestImageController::class, 'deleteRequestImage']);
@@ -63,3 +64,6 @@ Route::middleware('auth:sanctum')->put('/stylist-request/update/{id}', [StylistR
 
 Route::middleware('auth:sanctum')->post('/stylist-request/cancel/{id}', [StylistRequestController::class, 'cancelStylistRequest'])
     ->where('id', '[0-9]+');
+
+// The new route for canceling the login process as per the requirement
+Route::post('/api/login/cancel', [SessionController::class, 'cancelLoginProcess']);
