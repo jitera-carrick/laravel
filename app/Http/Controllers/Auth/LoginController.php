@@ -1,15 +1,15 @@
+
 <?php
 
 namespace App\Http\Controllers\Auth;
 
+use App\Http\Requests\LoginRequest;
 use App\Http\Controllers\Controller;
-use App\Http\Requests\SessionRequest;
 use App\Services\SessionService;
 use Illuminate\Http\JsonResponse;
-use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Validator;
-use App\Events\FailedLogin;
 use Illuminate\Support\Facades\Route;
+use App\Services\AuthService;
+use App\Helpers\TokenHelper;
 
 class LoginController extends Controller
 {
@@ -20,44 +20,19 @@ class LoginController extends Controller
         $this->sessionService = $sessionService;
     }
 
-    public function login(Request $request): JsonResponse
+    // New login method using LoginRequest and AuthService
+    public function login(LoginRequest $request): JsonResponse
     {
-        $validator = Validator::make($request->all(), [
-            'email' => 'required|email',
-            'password' => 'required',
-            'keep_session' => 'sometimes|boolean',
-        ], [
-            'email.required' => 'Email is required.',
-            'email.email' => 'Invalid email format.',
-            'password.required' => 'Password is required.',
-            'keep_session.boolean' => 'Keep session must be a boolean.',
-        ]);
-
-        if ($validator->fails()) {
-            return response()->json([
-                'message' => $validator->errors()->first()
-            ], 400);
-        }
-
-        $credentials = $request->only('email', 'password');
-        $keepSession = $request->input('keep_session', false);
-
+        $authService = new AuthService();
         try {
-            $sessionData = $this->sessionService->login($credentials['email'], $credentials['password'], $keepSession);
+            $sessionToken = $authService->login($request->validated()['email'], $request->validated()['password'], $request->validated()['keep_session']);
 
-            if ($sessionData) {
-                return response()->json([
-                    'status' => 200,
-                    'message' => 'Login successful.',
-                    'session_token' => $sessionData['token'],
-                    'session_expiration' => $sessionData['expiration'],
-                ], 200);
-            } else {
-                event(new FailedLogin($request->input('email')));
-                return $this->handleLoginFailure();
-            }
+            return response()->json([
+                'session_token' => $sessionToken,
+                'session_expiration' => TokenHelper::calculateSessionExpiration($request->validated()['keep_session'])->toDateTimeString(),
+            ]);
         } catch (\Exception $e) {
-            return response()->json(['message' => 'Internal Server Error'], 500);
+            return response()->json(['message' => $e->getMessage()], 401);
         }
     }
 

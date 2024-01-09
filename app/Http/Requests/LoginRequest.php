@@ -24,12 +24,15 @@ class LoginRequest extends FormRequest
      */
     public function rules()
     {
-        return [
+        $rules = [
             'email' => 'required|string|email',
             'password' => 'required|string',
             'keep_session' => 'boolean',
         ];
+        return $rules;
     }
+
+    // No additional explanation needed.
 
     /**
      * Get the sanitized input data from the request.

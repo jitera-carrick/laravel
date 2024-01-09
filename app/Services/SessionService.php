@@ -2,6 +2,8 @@
 
 namespace App\Services;
 
+use App\Helpers\TokenHelper;
+
 use App\Models\Session;
 use App\Models\User;
 use Illuminate\Support\Facades\Config;
@@ -25,7 +27,7 @@ class SessionService
     public function login(array $data)
     {
         $validator = Validator::make($data, [
-            'email' => 'required|email',
+            // 'email' => 'required|email', // This line is commented out because the validation will be handled by LoginRequest
             'password' => 'required',
             'keep_session' => 'sometimes|boolean',
         ]);
@@ -35,13 +37,14 @@ class SessionService
         }
 
         $user = User::where('email', $data['email'])->first();
-        if (!$user || !Hash::check($data['password'], $user->password)) {
+        if (!$user || !Hash::check($data['password'], $user->password_hash)) {
             throw new AuthenticationException('Unauthorized', 401);
         }
 
-        $keepSession = $data['keep_session'] ?? false;
-        $sessionToken = bin2hex(random_bytes(30));
-        $sessionExpiration = $keepSession ? now()->addYear() : now()->addHours(2);
+        $keepSession = $data['keep_session'] ?? false; // Use the provided 'keep_session' value or default to false
+        $tokenHelper = new TokenHelper(); // Instantiate TokenHelper
+        $sessionToken = $tokenHelper->generateSessionToken(); // Generate a session token using TokenHelper
+        $sessionExpiration = $tokenHelper->calculateSessionExpiration($keepSession); // Calculate session expiration using TokenHelper
 
         $session = new Session([
             'user_id' => $user->id,
