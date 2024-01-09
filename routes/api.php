@@ -1,4 +1,3 @@
-
 <?php
 
 use Illuminate\Http\Request;
@@ -11,8 +10,8 @@ use App\Http\Controllers\SessionController;
 use App\Http\Controllers\RequestImageController;
 use App\Http\Controllers\HairStylistRequestController;
 use App\Http\Controllers\StylistRequestController;
-use App\Http\Controllers\LoginController; // Added for the new login endpoint
-use App\Http\Controllers\PasswordResetRequestController; // Added controller for handling password reset requests
+use App\Http\Controllers\LoginController;
+use App\Http\Controllers\PasswordResetRequestController;
 use App\Models\User;
 
 /*
@@ -53,6 +52,7 @@ Route::middleware('auth:sanctum')->delete('/requests/images/{request_image_id}',
 
 Route::middleware('auth:sanctum')->match(['put', 'patch'], '/hair-stylist-requests/{id}', [HairStylistRequestController::class, 'updateHairStylistRequest']);
 
+// The route for creating a stylist request is duplicated in the new code, so we keep only one.
 Route::middleware('auth:sanctum')->post('/stylist-request/create', [StylistRequestController::class, 'createStylistRequest']);
 
 Route::middleware('auth:sanctum')->put('/stylist-request/update/{id}', [StylistRequestController::class, 'update'])

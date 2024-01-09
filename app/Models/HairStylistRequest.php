@@ -11,6 +11,13 @@ class HairStylistRequest extends Model
     use HasFactory;
 
     /**
+     * Indicates if the model should be timestamped.
+     *
+     * @var bool
+     */
+    public $timestamps = true;
+
+    /**
      * The table associated with the model.
      *
      * @var string
@@ -18,25 +25,34 @@ class HairStylistRequest extends Model
     protected $table = 'hair_stylist_requests';
 
     /**
+     * The model's default values for attributes.
+     *
+     * @var array
+     */
+    protected $attributes = [
+        // Default values for the attributes can be defined here.
+    ];
+
+    /**
      * The attributes that are mass assignable.
      *
      * @var array<int, string>
-     */ 
+     */
     protected $fillable = [
-        'service_details', // New field from new code
-        'preferred_date', // New field from new code
-        'preferred_time', // New field from new code
-        'status', // Common field in both versions
-        'user_id', // Common field in both versions
-        'created_at', // Common field in both versions
-        'updated_at' // Common field in both versions
+        'service_details',
+        'preferred_date',
+        'preferred_time',
+        'status',
+        'user_id',
+        'created_at',
+        'updated_at'
     ];
  
     /**
      * The attributes that should be hidden for serialization.
      *
      * @var array<int, string>
-     */ 
+     */
     protected $hidden = [
         // If there are any columns that should be hidden for arrays, add them here.
         // No hidden fields specified in both versions
@@ -48,10 +64,10 @@ class HairStylistRequest extends Model
      * @var array<string, string>
      */
     protected $casts = [
-        'preferred_date' => 'date', // New cast from new code
-        'preferred_time' => 'datetime', // New cast from new code
-        'created_at' => 'datetime', // Common cast in both versions
-        'updated_at' => 'datetime', // Common cast in both versions
+        'preferred_date' => 'date',
+        'preferred_time' => 'datetime',
+        'created_at' => 'datetime',
+        'updated_at' => 'datetime',
     ];
 
     /**
@@ -70,17 +86,6 @@ class HairStylistRequest extends Model
     public function requestImages()
     {
         return $this->hasMany(RequestImage::class, 'hair_stylist_request_id');
-    }
-
-    /**
-     * Create a new hair stylist request with status "pending".
-     *
-     * @param int $userId
-     * @return HairStylistRequest
-     */
-    public static function createRequest($userId)
-    {
-        return self::create(['user_id' => $userId, 'status' => 'pending', 'created_at' => now(), 'updated_at' => now()]);
     }
 
     /**
