@@ -1,3 +1,4 @@
+
 <?php
 
 namespace App\Http\Controllers;
@@ -9,6 +10,9 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Validation\ValidationException;
+use App\Models\HairStylistRequest;
+use Illuminate\Http\Request;
+use Illuminate\Http\Response;
 
 class HairStylistRequestController extends Controller
 {
@@ -49,4 +53,20 @@ class HairStylistRequestController extends Controller
     }
 
     // ... other methods ...
+
+    /**
+     * Handle the incoming request to create a hair stylist request.
+     *
+     * @param  \App\Http\Requests\CreateHairStylistRequest  $request
+     * @return \Illuminate\Http\Response
+     */
+    public function __invoke(CreateHairStylistRequest $request)
+    {
+        try {
+            $hairStylistRequest = app(HairStylistRequestService::class)->sendStylistRequest($request->validated()['user_id']);
+            return new ApiResponse(new HairStylistRequestResource($hairStylistRequest), true, 'Hair stylist request created successfully.');
+        } catch (\Exception $e) {
+            return new ApiResponse(null, false, $e->getMessage());
+        }
+    }
 }

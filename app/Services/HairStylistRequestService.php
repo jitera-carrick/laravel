@@ -47,4 +47,23 @@ class HairStylistRequestService
 
         return $hairStylistRequest;
     } // End of createRequest method
-}
+
+    public function sendStylistRequest(int $userId): HairStylistRequest
+    {
+        $user = User::find($userId);
+        if (!$user) {
+            throw new \Exception('Invalid user_id provided');
+        }
+
+        $hairStylistRequest = new HairStylistRequest([
+            'user_id' => $userId,
+            'status' => 'pending',
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
+        $hairStylistRequest->save();
+
+        return $hairStylistRequest;
+    }
+} // End of HairStylistRequestService class
