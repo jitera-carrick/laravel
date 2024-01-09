@@ -1,3 +1,4 @@
+
 <?php
 
 namespace App\Http\Controllers\Auth;
@@ -12,8 +13,10 @@ use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Carbon;
 use App\Models\User;
 use App\Models\PasswordResetToken;
+use App\Models\PasswordReset; // Added from patch
 use Illuminate\Support\Facades\Mail;
 use App\Http\Requests\ValidateResetTokenRequest;
+use App\Http\Requests\ValidatePasswordResetTokenRequest; // Added from patch
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Http\Request;
 use App\Http\Resources\SuccessResource;
@@ -34,16 +37,20 @@ class ResetPasswordController extends Controller
         // ...
     }
 
-    public function validateResetToken(ResetPasswordRequest $request): JsonResponse
+    // The validateResetToken method has been updated according to the patch
+    public function validateResetToken(ValidatePasswordResetTokenRequest $request): JsonResponse
     {
         $token = $request->token;
-        $passwordResetToken = PasswordResetToken::where('token', $token)
-            ->where('used', false)
-            ->where('expires_at', '>', Carbon::now())
-            ->first();
+        $passwordReset = PasswordReset::where('token', $token)->first();
 
-        if (!$passwordResetToken) {
+        if (!$passwordReset) {
             return new ErrorResource(['message' => 'Token is invalid or expired.']);
+        }
+
+        $isTokenExpired = $passwordReset->isTokenExpired();
+
+        if ($isTokenExpired) {
+            return new ErrorResource(['message' => 'Token is expired']);
         }
 
         return new SuccessResource(['message' => 'Token is valid.']);
@@ -53,7 +60,7 @@ class ResetPasswordController extends Controller
 
     // Existing methods remain unchanged
     // ...
-}
+
     public function resetPassword(Request $request): JsonResponse
     {
         // Merge validation rules and messages from both versions
@@ -133,28 +140,6 @@ class ResetPasswordController extends Controller
             DB::rollBack();
             return ApiResponse::error(['message' => 'An error occurred while resetting the password.'], 500);
         }
-    }
-
-    public function validateResetToken(ValidateResetTokenRequest $request): JsonResponse
-    {
-        $token = $request->input('token');
-        $passwordResetToken = PasswordResetToken::where('token', $token)
-            ->where('used', false)
-            ->first();
-
-        if (!$passwordResetToken) {
-            return new ErrorResource(['message' => 'Invalid or expired password reset token.']);
-        }
-
-        $tokenLifetime = config('auth.passwords.users.expire') * 60;
-        $tokenCreatedAt = Carbon::parse($passwordResetToken->created_at);
-        $tokenExpired = $tokenCreatedAt->addSeconds($tokenLifetime)->isPast();
-
-        if ($tokenExpired) {
-            return new ErrorResource(['message' => 'Token is expired']);
-        }
-
-        return new SuccessResource(['message' => 'Token is valid']);
     }
 
     // ... other methods ...
