@@ -27,10 +27,11 @@ class CreateHairStylistRequest extends FormRequest
     public function rules()
     {
         return [
+            // Existing rules are retained...
+            'user_id' => 'required|exists:users,id',
             'service_details' => 'required|string',
             'preferred_date' => 'required|date',
             'preferred_time' => 'required|date_format:H:i',
-            'user_id' => 'required|exists:users,id',
             // Retain other existing rules...
             'area_id' => 'required|array|min:1',
             'menu_id' => 'required|array|min:1',

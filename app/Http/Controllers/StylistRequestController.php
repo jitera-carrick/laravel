@@ -1,3 +1,4 @@
+
 <?php
 
 namespace App\Http\Controllers;
@@ -29,7 +30,7 @@ class StylistRequestController extends Controller
             $validatedData = $request->validated();
             $validatedData['user_id'] = Auth::id(); // Ensure the user_id is the authenticated user's ID
             $stylistRequest = $this->stylistRequestService->createStylistRequest($validatedData);
-
+            // Return a JSON response with a confirmation message and the ID of the newly created request.
             return response()->json([
                 'status' => 201,
                 'stylist_request' => $stylistRequest

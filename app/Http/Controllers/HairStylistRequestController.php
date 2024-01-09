@@ -20,6 +20,7 @@ class HairStylistRequestController extends Controller
     public function createHairStylistRequest(CreateHairStylistRequest $request): JsonResponse
     {
         $validatedData = $request->validated();
+        $validatedData['status'] = 'pending'; // Set the status to 'pending' before creating the request
         $hairStylistRequest = $this->hairStylistRequestService->createHairStylistRequest($validatedData);
 
         return response()->json(new HairStylistRequestResource($hairStylistRequest), 201);

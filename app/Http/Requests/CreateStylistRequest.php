@@ -1,9 +1,11 @@
+
 <?php
 
 namespace App\Http\Requests;
 
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
+use App\Models\User; // Added line
 
 class CreateStylistRequest extends FormRequest
 {
@@ -25,11 +27,12 @@ class CreateStylistRequest extends FormRequest
     public function rules()
     {
         return [
+            // Other existing validation rules... (Comment updated)
             'stylist_preferences' => 'required|string',
             'preferred_date' => 'required|date|after_or_equal:today',
             'preferred_time' => 'required|date_format:H:i',
             'status' => ['required', Rule::in(['pending', 'approved', 'rejected'])],
-            'user_id' => 'required|exists:users,id',
+            'user_id' => 'required|exists:users,id', // No change in this line
         ];
     }
 
