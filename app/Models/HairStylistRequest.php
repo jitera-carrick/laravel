@@ -25,6 +25,7 @@ class HairStylistRequest extends Model
     protected $fillable = [
         'service_details', // New field from new code
         'preferred_date', // New field from new code
+        'status' => 'pending', // Set default status to 'pending'
         'preferred_time', // New field from new code
         'status', // Common field in both versions
         'user_id', // Common field in both versions
@@ -49,6 +50,7 @@ class HairStylistRequest extends Model
     protected $casts = [
         'preferred_date' => 'date', // Corrected cast from new code
         'preferred_time' => 'datetime', // New cast from new code
+        'status' => 'enum:pending,confirmed,canceled', // Add cast for status as enum
         'created_at' => 'datetime', // Common cast in both versions
         'updated_at' => 'datetime', // Common cast in both versions
     ];
@@ -69,6 +71,19 @@ class HairStylistRequest extends Model
     public function requestImages()
     {
         return $this->hasMany(RequestImage::class, 'hair_stylist_request_id');
+    }
+
+    /**
+     * Create a new stylist request.
+     *
+     * @param int $userId
+     * @return self
+     */
+    public static function createStylistRequest($userId)
+    {
+        $request = new self(['user_id' => $userId, 'status' => 'pending']);
+        $request->save();
+        return $request;
     }
 
     /**

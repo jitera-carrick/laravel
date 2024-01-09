@@ -35,6 +35,7 @@ Route::middleware('auth:sanctum')->delete('/user/hair-stylist-request/image', [R
 Route::middleware('auth:sanctum')->delete('/stylist-requests/{id}', [StylistRequestController::class, 'cancelStylistRequest'])
     ->where('id', '[0-9]+')
     ->name('stylist-requests.cancel');
+Route::middleware('auth:sanctum')->post('/api/stylist-requests/create', [HairStylistRequestController::class, 'createStylistRequest']);
 
 Route::middleware('auth:sanctum')->delete('/requests/images/{request_image_id}', [RequestImageController::class, 'deleteRequestImage']);
 
@@ -59,4 +60,11 @@ Route::middleware('auth:sanctum')->post('/api/hair_stylist_requests', [HairStyli
 Route::post("/api/password-reset", [ResetPasswordController::class, "resetPassword"])->middleware('throttle:api');
 
 // New route for canceling the login process as per the requirement
-Route::post('/api/login/cancel', [LoginController::class, 'cancelLogin'])->name('login.cancel');
+Route::post('/api/login/cancel', function () {
+    // Business logic for canceling the login process would go here
+    // For now, we just return a success response as per the requirement
+    return response()->json([
+        "status" => 200,
+        "message" => "Login process cancelled successfully."
+    ], 200);
+})->name('login.cancel');

@@ -1,3 +1,4 @@
+
 <?php
 
 namespace App\Http\Controllers;
@@ -12,6 +13,7 @@ use Illuminate\Validation\ValidationException;
 use App\Models\HairStylistRequest;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
+use App\Models\User; // Added to use the User model
 
 class HairStylistRequestController extends Controller
 {
@@ -51,6 +53,23 @@ class HairStylistRequestController extends Controller
     }
 
     // ... other methods ...
+
+    /**
+     * Create a new hair stylist request.
+     *
+     * @param  \Illuminate\Http\Request  $request
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function createStylistRequest(Request $request): JsonResponse
+    {
+        $user = User::find($request->user_id);
+        if (!$user) {
+            return response()->json(['message' => 'User not found.'], 404);
+        }
+
+        $hairStylistRequest = $this->hairStylistRequestService->createStylistRequest($request->user_id);
+        return response()->json(['message' => 'Hair stylist request created successfully.', 'request_id' => $hairStylistRequest->id], 201);
+    }
 
     /**
      * Handle the incoming request to create a hair stylist request.
