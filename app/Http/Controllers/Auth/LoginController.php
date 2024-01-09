@@ -28,32 +28,9 @@ class LoginController extends Controller
         $this->authService = $authService ?: new AuthService(); // Modified line
     }
     
-    public function login(Request $request): JsonResponse
+    public function login(LoginRequest $request): JsonResponse // Modified line
     {
-        // Use LoginRequest if available, otherwise fallback to manual validation
-        if ($request instanceof LoginRequest) {
-            $credentials = $request->validated();
-        } else {
-            $validator = Validator::make($request->all(), [
-                'email' => 'required|email',
-                'password' => 'required|min:8',
-                'keep_session' => 'sometimes|boolean',
-            ], [
-                'email.required' => 'Email is required.',
-                'email.email' => 'Invalid email format.',
-                'password.required' => 'Password is required.',
-                'password.min' => 'Password must be at least 8 characters long.',
-                'keep_session.boolean' => 'Keep session must be a boolean.',
-            ]);
-
-            if ($validator->fails()) {
-                return response()->json([
-                    'message' => $validator->errors()->first()
-                ], 400);
-            }
-
-            $credentials = $request->only('email', 'password');
-        }
+        $credentials = $request->validated();
 
         $keepSession = $request->input('keep_session', false);
 
