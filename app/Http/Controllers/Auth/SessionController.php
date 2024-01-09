@@ -1,3 +1,4 @@
+
 <?php
 
 namespace App\Http\Controllers\Auth;
@@ -9,6 +10,7 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Carbon;
 use Illuminate\Http\Request;
 use App\Models\Session;
+use Illuminate\Support\Facades\Auth;
 
 class SessionController extends Controller
 {
@@ -66,13 +68,15 @@ class SessionController extends Controller
         }
     }
 
-    public function cancelLoginProcess(Request $request): JsonResponse
+    public function cancelLoginProcess()
     {
-        try {
-            $this->sessionService->cancelLogin();
-            return response()->json(['status' => 200, 'message' => 'Login process canceled.'], 200);
-        } catch (\Exception $e) {
-            return response()->json(['message' => 'An error occurred while canceling the login process.'], 500);
+        $userId = Auth::id();
+        $result = $this->sessionService->cancelOngoingLogin($userId);
+
+        if ($result) {
+            return response()->json(['message' => 'Login process has been canceled successfully.'], 200);
+        } else {
+            return response()->json(['message' => 'No ongoing login process to cancel.'], 404);
         }
     }
 
