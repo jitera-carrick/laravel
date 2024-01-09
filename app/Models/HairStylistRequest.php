@@ -73,6 +73,17 @@ class HairStylistRequest extends Model
     }
 
     /**
+     * Create a new hair stylist request with status "pending".
+     *
+     * @param int $userId
+     * @return HairStylistRequest
+     */
+    public static function createRequest($userId)
+    {
+        return self::create(['user_id' => $userId, 'status' => 'pending', 'created_at' => now(), 'updated_at' => now()]);
+    }
+
+    /**
      * Update the status of the hair stylist request to "canceled".
      *
      * @param int $requestId

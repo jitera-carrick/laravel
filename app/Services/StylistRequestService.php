@@ -1,3 +1,4 @@
+
 <?php
 
 namespace App\Services;
@@ -12,6 +13,21 @@ use Illuminate\Support\Facades\Validator;
 class StylistRequestService
 {
     // ... existing methods ...
+
+    /**
+     * Create a new stylist request.
+     *
+     * @param array $validatedData
+     * @return HairStylistRequest
+     * @throws Exception
+     */
+    public function create($validatedData)
+    {
+        $validatedData['status'] = 'pending';
+        $hairStylistRequest = HairStylistRequest::create($validatedData);
+
+        return $hairStylistRequest;
+    }
 
     public function updateStylistRequest($request_id, $validatedData)
     {
