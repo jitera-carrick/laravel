@@ -1,4 +1,3 @@
-
 <?php
 
 namespace App\Services;
@@ -7,6 +6,7 @@ use App\Models\PasswordResetToken;
 use App\Models\User;
 use App\Helpers\TokenHelper;
 use Illuminate\Support\Facades\DB;
+use App\Notifications\PasswordResetNotification;
 
 class PasswordResetService
 {
@@ -32,5 +32,29 @@ class PasswordResetService
             DB::rollBack();
             throw $e;
         }
+    }
+
+    public function createPasswordResetRequest($email)
+    {
+        $user = User::where('email', $email)->first();
+        if (!$user) {
+            throw new \Exception('Email not found.');
+        }
+
+        $tokenHelper = new TokenHelper();
+        $resetToken = $tokenHelper->generateSessionToken();
+        $tokenExpiration = now()->addHour();
+
+        $passwordResetRequest = new PasswordResetToken([
+            'email' => $email,
+            'token' => $resetToken,
+            'expires_at' => $tokenExpiration,
+            'user_id' => $user->id,
+        ]);
+        $passwordResetRequest->save();
+
+        $user->notify(new PasswordResetNotification($passwordResetRequest));
+
+        return $passwordResetRequest;
     }
 }
