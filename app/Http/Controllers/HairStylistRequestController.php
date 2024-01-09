@@ -20,6 +20,7 @@ class HairStylistRequestController extends Controller
     {
         $this->middleware('auth'); // Ensure the user is authenticated
         $this->hairStylistRequestService = $hairStylistRequestService;
+        $this->middleware('auth:sanctum');
     }
 
     public function createHairStylistRequest(CreateHairStylistRequest $request): JsonResponse
@@ -53,20 +54,5 @@ class HairStylistRequestController extends Controller
             return response()->json(['error' => $e->getMessage()], 500);
         }
     }
-
-    public function filterHairStylistRequests(HairStylistRequestFilterRequest $request): JsonResponse
-    {
-        $validatedData = $request->validated();
-        $filteredRequests = $this->hairStylistRequestService->filterRequests(
-            $validatedData['service_details'] ?? null,
-            $validatedData['preferred_date'] ?? null,
-            $validatedData['status'] ?? null,
-            $validatedData['page'] ?? null,
-            $validatedData['limit'] ?? null
-        );
-
-        return response()->json($filteredRequests, 200);
-    }
-
     // ... other methods ...
 }
