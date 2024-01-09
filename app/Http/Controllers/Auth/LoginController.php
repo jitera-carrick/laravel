@@ -9,9 +9,11 @@ use App\Http\Responses\ApiResponse;
 use App\Models\User;
 use App\Services\AuthService;
 use App\Services\SessionService;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Route;
+use Illuminate\Support\Facades\Validator;
 
 class LoginController extends Controller
 {
@@ -26,11 +28,27 @@ class LoginController extends Controller
 
     public function login(Request $request)
     {
-        $validated = $request->validate([
+        $validator = Validator::make($request->all(), [
             'email' => 'required|email',
             'password' => 'required',
-            // Assuming 'keep_session' is a boolean, add validation if needed
+            'keep_session' => 'sometimes|boolean'
+        ], [
+            'email.required' => 'Email is required.',
+            'email.email' => 'Invalid email format.',
+            'password.required' => 'Password is required.',
+            'keep_session.boolean' => 'Keep Session must be a boolean.'
         ]);
+
+        if ($validator->fails()) {
+            $response = new ApiResponse();
+            $response->error = $validator->errors()->first();
+            $response->status = 'error';
+            $response->code = 400;
+
+            return response()->json($response->toArray(), 400);
+        }
+
+        $validated = $validator->validated();
 
         $user = User::where('email', $validated['email'])->first();
 
@@ -48,7 +66,12 @@ class LoginController extends Controller
         $sessionData = $this->sessionService->createSessionToken($user, $validated['keep_session'] ?? false);
         $user->updateSessionInfo($sessionData['session_token'], $sessionData['session_expiration']);
 
-        return response()->json(['session_token' => $user->session_token]);
+        return new JsonResponse([
+            'status' => 200,
+            'message' => 'Login successful.',
+            'session_token' => $sessionData['session_token'],
+            'session_expiration' => $sessionData['session_expiration']
+        ], 200);
     }
 
     public function handleLoginFailure(Request $request)

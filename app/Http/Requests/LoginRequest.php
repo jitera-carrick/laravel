@@ -1,4 +1,3 @@
-
 <?php
 
 namespace App\Http\Requests;
@@ -29,6 +28,21 @@ class LoginRequest extends FormRequest
             'email' => 'required|email',
             'password' => 'required|string',
             'keep_session' => 'sometimes|boolean',
+        ];
+    }
+
+    /**
+     * Get the custom messages for validation errors.
+     *
+     * @return array
+     */
+    public function messages()
+    {
+        return [
+            'email.required' => 'Email is required.',
+            'email.email' => 'Invalid email format.',
+            'password.required' => 'Password is required.',
+            'keep_session.boolean' => 'Keep Session must be a boolean.',
         ];
     }
 }
