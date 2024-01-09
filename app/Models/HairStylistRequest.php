@@ -22,24 +22,28 @@ class HairStylistRequest extends Model
      * @var array<int, string>
      */
     protected $fillable = [
-        'requested_date',
-        'service_type',
-        'status',
-        'additional_notes',
-        'user_id',
-        'details', // Keep existing fillable fields from the old code
-        'request_image_id', // Keep existing fillable fields from the old code
-        'created_at', // Keep existing fillable fields from the old code
-        'updated_at', // Keep existing fillable fields from the old code
+        'service_details', // New field from new code
+        'preferred_date', // New field from new code
+        'preferred_time', // New field from new code
+        'status', // Common field in both versions
+        'user_id', // Common field in both versions
+        'created_at', // Common field in both versions
+        'updated_at', // Common field in both versions
+        'requested_date', // Existing field from old code
+        'service_type', // Existing field from old code
+        'additional_notes', // Existing field from old code
+        'details', // Existing field from old code
+        'request_image_id', // Existing field from old code
     ];
 
     /**
-     * The attributes that should be hidden for arrays.
+     * The attributes that should be hidden for serialization.
      *
      * @var array<int, string>
      */
     protected $hidden = [
         // If there are any columns that should be hidden for arrays, add them here.
+        // No hidden fields specified in both versions
     ];
 
     /**
@@ -48,13 +52,17 @@ class HairStylistRequest extends Model
      * @var array<string, string>
      */
     protected $casts = [
-        'created_at' => 'datetime',
-        'updated_at' => 'datetime',
-        // Add new date/time columns to the $casts array if needed
+        'preferred_date' => 'date', // New cast from new code
+        'preferred_time' => 'datetime', // New cast from new code
+        'created_at' => 'datetime', // Common cast in both versions
+        'updated_at' => 'datetime', // Common cast in both versions
+        // Add any additional casts from the existing code if needed
     ];
 
     /**
-     * Get the user that owns the hair stylist request.
+     * Define the many-to-one relationship with User.
+     *
+     * @return \Illuminate\Database\Eloquent\Relations\BelongsTo
      */
     public function user()
     {
@@ -85,7 +93,6 @@ class HairStylistRequest extends Model
         return false;
     }
 
-    // Other existing relationships...
-
-    // New relationships can be added below as needed.
+    // Other existing relationships and methods from the old code should be included here.
+    // Ensure that no existing functionality is removed.
 }
