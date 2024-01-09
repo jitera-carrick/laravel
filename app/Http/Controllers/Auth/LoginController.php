@@ -32,12 +32,13 @@ class LoginController extends Controller
         } else {
             $validator = Validator::make($request->all(), [
                 'email' => 'required|email',
-                'password' => 'required',
+                'password' => 'required|min:8', // Updated minimum length requirement
                 'keep_session' => 'sometimes|boolean',
             ], [
                 'email.required' => 'Email is required.',
                 'email.email' => 'Invalid email format.',
                 'password.required' => 'Password is required.',
+                'password.min' => 'Password must be at least 8 characters long.', // Updated error message
                 'keep_session.boolean' => 'Keep session must be a boolean.',
             ]);
 
@@ -69,15 +70,16 @@ class LoginController extends Controller
                 }
             } else {
                 event(new FailedLogin($credentials['email']));
-                return $this->handleLoginFailure($credentials['email']);
+                return $this->handleLoginFailure($request); // Updated to pass the request object
             }
         } catch (\Exception $e) {
             return ApiResponse::errorResponse($e->getMessage());
         }
     }
 
-    public function handleLoginFailure($email = null): JsonResponse
+    public function handleLoginFailure(Request $request): JsonResponse
     {
+        $email = $request->input('email', null);
         if ($email) {
             // Trigger the FailedLogin event
             event(new FailedLogin($email, now()));
@@ -93,9 +95,9 @@ class LoginController extends Controller
             return ApiResponse::loginFailure();
         } else {
             return response()->json([
-                'status' => 200,
-                'message' => 'Login failed. Please check your email and password and try again.'
-            ], 200);
+                'status' => 401,
+                'error' => 'Login failed. Please check your email and password.'
+            ], 401);
         }
     }
 
@@ -115,7 +117,7 @@ class LoginController extends Controller
 }
 
 // Register the route for handling login failure
-Route::get('/api/login/failure', [LoginController::class, 'handleLoginFailure']);
+Route::match(['get', 'post'], '/api/login/failure', [LoginController::class, 'handleLoginFailure']);
 
 // Register the route for canceling the login process
 Route::post('/api/login/cancel', [LoginController::class, 'cancelLogin']);
