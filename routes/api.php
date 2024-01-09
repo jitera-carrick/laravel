@@ -11,6 +11,7 @@ use App\Http\Controllers\RequestImageController;
 use App\Http\Controllers\HairStylistRequestController;
 use App\Http\Controllers\StylistRequestController;
 use App\Http\Controllers\LoginController; // Added for the new login endpoint
+use App\Http\Controllers\PasswordResetRequestController; // Added controller for handling password reset requests
 use App\Models\User;
 
 /*
@@ -39,9 +40,7 @@ Route::post('/session/maintain', [SessionController::class, 'maintainSession']);
 
 Route::middleware('auth:sanctum')->post('/stylist-requests', [StylistRequestController::class, 'createStylistRequest']);
 
-// Consolidating the routes for creating hair stylist requests
 Route::middleware('auth:sanctum')->post('/hair-stylist-requests', [HairStylistRequestController::class, 'createHairStylistRequest']);
-Route::middleware('auth:sanctum')->post('/hair-stylist-requests/create', [HairStylistRequestController::class, 'createHairStylistRequest']);
 
 Route::middleware('auth:sanctum')->delete('/user/hair-stylist-request/image', [RequestImageController::class, 'deleteRequestImage']);
 
@@ -62,24 +61,8 @@ Route::middleware('auth:sanctum')->put('/stylist-request/update/{id}', [StylistR
 Route::middleware('auth:sanctum')->post('/stylist-request/cancel/{id}', [StylistRequestController::class, 'cancelStylistRequest'])
     ->where('id', '[0-9]+');
 
-// New route to handle POST request to /api/hair_stylist_requests with validation for user_id
-// This route is removed because it conflicts with the existing '/hair-stylist-requests' route and does not follow the controller action pattern.
-// Route::middleware('auth:sanctum')->post('/hair_stylist_requests', function (Request $request) {
-//     $validatedData = $request->validate([
-//         'user_id' => 'required|exists:users,id',
-//     ]);
-//
-//     // Assuming the existence of a method in HairStylistRequestController to handle the request creation
-//     return app(HairStylistRequestController::class)->createHairStylistRequest($request);
-// });
-
 // The route for canceling the login process from the existing code is kept.
 Route::middleware('auth:sanctum')->post('/cancel-login', [AuthController::class, 'cancelLogin'])->name('auth.cancel-login');
 
-// The route for creating hair stylist requests from the existing code is kept.
-// This route is removed because it conflicts with the '/hair-stylist-requests' route added in the new code.
-// Route::middleware('auth:sanctum')->post('/hair-stylist-requests/create', [HairStylistRequestController::class, 'createHairStylistRequest']);
-
-// The new route for canceling the login process as per the requirement from the existing code is kept.
-// This route is removed because it conflicts with the '/api/login' route added in the new code.
-// Route::post('/api/login/cancel', [SessionController::class, 'cancelLoginProcess']);
+// Added new route for password reset request as per the requirement
+Route::post('/api/password_reset_requests', [PasswordResetRequestController::class, 'store'])->middleware('throttle:api');
