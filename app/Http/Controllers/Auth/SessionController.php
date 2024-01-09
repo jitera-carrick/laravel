@@ -1,4 +1,3 @@
-
 <?php
 
 namespace App\Http\Controllers\Auth;
@@ -67,19 +66,15 @@ class SessionController extends Controller
         }
     }
 
-    public function cancelLoginProcess(): JsonResponse
+    public function cancelLoginProcess(Request $request): JsonResponse
     {
         try {
             $this->sessionService->cancelLogin();
-            return response()->json(['message' => 'Login process has been canceled.'], 200);
+            return response()->json(['status' => 200, 'message' => 'Login process canceled.'], 200);
         } catch (\Exception $e) {
             return response()->json(['message' => 'An error occurred while canceling the login process.'], 500);
         }
     }
 
-    // ... other methods ...
-
-    // ... other methods ...
-}
     // ... other methods ...
 }
