@@ -17,8 +17,7 @@ class HairStylistRequestController extends Controller
     public function __construct(HairStylistRequestService $hairStylistRequestService)
     {
         $this->hairStylistRequestService = $hairStylistRequestService;
-        $this->middleware('auth');
-        // Other constructor code...
+        $this->middleware('auth:sanctum');
     }
 
     public function createHairStylistRequest(CreateHairStylistRequest $request): JsonResponse
@@ -26,25 +25,27 @@ class HairStylistRequestController extends Controller
         $validatedData = $request->validated();
         $validatedData['user_id'] = Auth::id(); // Ensure the user_id is the authenticated user's ID
 
-        // Custom validation for user_id existence
-        $validator = Validator::make($validatedData, [
-            'user_id' => 'exists:users,id',
-            'service_details' => 'required',
-            'preferred_date' => 'required|date',
-            'preferred_time' => 'required',
-        ]);
-
-        if ($validator->fails()) {
-            throw new ValidationException($validator);
-        }
-
+        // Custom validation for user_id existence is not needed as it's handled by CreateHairStylistRequest
         try {
-            $hairStylistRequest = $this->hairStylistRequestService->createRequest($validatedData);
-        } catch (\Exception $e) {
-            return response()->json(['message' => $e->getMessage()], 400);
-        }
+            // Validate the request against the requirements
+            $validator = Validator::make($validatedData, [
+                'service_details' => 'required|string',
+                'preferred_date' => 'required|date',
+                'preferred_time' => 'required|string',
+                'user_id' => 'required|exists:users,id',
+            ]);
 
-        return response()->json(new HairStylistRequestResource($hairStylistRequest), 201);
+            if ($validator->fails()) {
+                throw new ValidationException($validator);
+            }
+
+            $hairStylistRequest = $this->hairStylistRequestService->create($validatedData);
+            return response()->json(new HairStylistRequestResource($hairStylistRequest), 201);
+        } catch (ValidationException $e) {
+            return response()->json(['message' => $e->errors()], 422);
+        } catch (\Exception $e) {
+            return response()->json(['message' => $e->getMessage()], 500);
+        }
     }
 
     // ... other methods ...

@@ -35,6 +35,7 @@ class PasswordResetRequest extends Model
         'expires_at' => 'datetime',
         'token_expiration' => 'datetime',
         'status' => 'string',
+        // Add casts for new columns if necessary
     ];
 
     public function user()

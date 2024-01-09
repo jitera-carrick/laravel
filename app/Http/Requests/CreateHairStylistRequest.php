@@ -30,7 +30,7 @@ class CreateHairStylistRequest extends FormRequest
             'service_details' => 'required|string',
             'preferred_date' => 'required|date|after_or_equal:today',
             'preferred_time' => 'required|string',
-            'status' => 'required|in:pending,approved,rejected',
+            // The 'status' field is not required for the creation of a new request, it will be set to 'pending' by default.
             'request_image_id' => 'sometimes|exists:request_images,id',
         ];
     }
@@ -50,7 +50,7 @@ class CreateHairStylistRequest extends FormRequest
             'preferred_date.date' => 'Invalid date format.',
             'preferred_date.after_or_equal' => 'The preferred date must be today or a future date.',
             'preferred_time.required' => 'Preferred time is required.',
-            'status.required' => 'The status field is required and must be one of the valid options: pending, approved, rejected.',
+            // Removed the 'status.required' message as the status field is not required for request creation.
             'request_image_id.sometimes' => 'The request image id field is optional but must exist in the request_images table if provided.',
         ];
     }
